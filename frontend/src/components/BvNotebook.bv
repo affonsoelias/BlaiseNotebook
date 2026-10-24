@@ -595,11 +595,14 @@
           try {
             const data = JSON.parse(evt.target.result);
             if (data && data.cells && Array.isArray(data.cells)) {
-              self.cells = data.cells;
+              if (self.cells && typeof self.cells.splice === 'function') {
+                self.cells.splice(0, self.cells.length, ...data.cells);
+              } else {
+                self.cells = data.cells;
+              }
               if (data.metadata && data.metadata.name) {
                 self.notebookName = data.metadata.name;
               }
-              alert('Notebook carregado com sucesso! (' + data.cells.length + ' células)');
             }
           } catch(err) {
             alert('Erro ao carregar notebook: ' + err.message);
@@ -676,6 +679,11 @@
           self.kernelStatus = 'connected';
         }
       end;
+    end;
+
+  created:
+    begin
+      this.loadSampleDemo();
     end;
 
   mounted:
