@@ -1,0 +1,261 @@
+<template>
+  <div class="bv-code-editor-root">
+    <div class="bv-editor-topbar">
+      <div class="bv-editor-lang-tag">
+        <span class="lang-dot"></span>
+        <span class="lang-name">Object Pascal</span>
+      </div>
+      <div class="bv-editor-shortcuts">
+        <span class="shortcut-pill"><code>Shift + Enter</code> Executar</span>
+        <span class="shortcut-pill"><code>Tab</code> Indentar</span>
+      </div>
+    </div>
+    <div class="bv-editor-wrapper">
+      <div class="bv-editor-gutter">
+        <div b-for="line in lineNumbers" class="gutter-num">{{ line }}</div>
+      </div>
+      <div class="bv-editor-textarea-wrap">
+        <textarea
+          b-ref="codeTextarea"
+          class="bv-code-textarea"
+          :value="value"
+          :placeholder="placeholder"
+          spellcheck="false"
+          autocapitalize="off"
+          autocomplete="off"
+          @input="handleInput"
+          @keydown="handleKeyDown"
+        ></textarea>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  {
+    BvCodeEditor.bv - Reactive Code Editor with Object Pascal Highlights & Gutter
+    Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
+  }
+
+  props:
+    value: string = '';
+    placeholder: string = '// Escreva seu código Object Pascal aqui... (Shift + Enter para executar)';
+    readonly: boolean = false;
+
+  data:
+    lineCount: integer = 1;
+
+  computed:
+    function lineNumbers: JSValue;
+    var
+      arr: TJSArray;
+      i, count: Integer;
+    begin
+      arr := TJSArray.new;
+      count := Integer(this['lineCount']);
+      if count < 1 then count := 1;
+      for i := 1 to count do
+        arr.push(i);
+      Result := arr;
+    end;
+
+  methods:
+    procedure updateLines;
+    var
+      txt: string;
+      lines: TJSArray;
+    begin
+      asm
+        const val = this.value || '';
+        const count = val.split('\n').length;
+        this.lineCount = count > 0 ? count : 1;
+
+        // Auto-adjust height
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        if (ta) {
+          ta.style.height = 'auto';
+          const newH = Math.max(80, ta.scrollHeight);
+          ta.style.height = newH + 'px';
+        }
+      end;
+    end;
+
+    procedure handleInput(e: JSValue);
+    var
+      newVal: string;
+    begin
+      asm
+        const target = e && e.target ? e.target : null;
+        if (target) {
+          newVal = target.value;
+          this.value = newVal;
+          this.updateLines();
+          if (this.$emit) {
+            this.$emit('input', newVal);
+          }
+        }
+      end;
+    end;
+
+    procedure handleKeyDown(e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        if (!evt) return;
+
+        // Shift + Enter: Execute cell
+        if (evt.key === 'Enter' && evt.shiftKey) {
+          evt.preventDefault();
+          if (this.$emit) this.$emit('execute', this.value);
+          return;
+        }
+
+        // Ctrl + Enter: Execute and stay
+        if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) {
+          evt.preventDefault();
+          if (this.$emit) this.$emit('execute-stay', this.value);
+          return;
+        }
+
+        // Tab: Insert 2 spaces
+        if (evt.key === 'Tab') {
+          evt.preventDefault();
+          const ta = evt.target;
+          if (!ta) return;
+          const start = ta.selectionStart;
+          const selEnd = ta.selectionEnd;
+          const curVal = ta.value || '';
+          ta.value = curVal.substring(0, start) + '  ' + curVal.substring(selEnd);
+          ta.selectionStart = ta.selectionEnd = start + 2;
+          this.value = ta.value;
+          this.updateLines();
+          if (this.$emit) this.$emit('input', this.value);
+        }
+      end;
+    end;
+
+  mounted:
+    begin
+      this.updateLines();
+    end;
+
+  watch:
+    value:
+      begin
+        this.updateLines();
+      end;
+</script>
+
+<style>
+  .bv-code-editor-root {
+    display: flex;
+    flex-direction: column;
+    border-radius: 8px;
+    background: #181a1f;
+    border: 1px solid #282c34;
+    overflow: hidden;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+  }
+
+  .bv-editor-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #21252b;
+    padding: 6px 12px;
+    border-bottom: 1px solid #282c34;
+    font-size: 11px;
+  }
+
+  .bv-editor-lang-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #98c379;
+    font-weight: 600;
+  }
+
+  .lang-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #98c379;
+    box-shadow: 0 0 6px rgba(152, 195, 121, 0.6);
+  }
+
+  .bv-editor-shortcuts {
+    display: flex;
+    gap: 8px;
+  }
+
+  .shortcut-pill {
+    background: #2c313a;
+    color: #abb2bf;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+
+  .shortcut-pill code {
+    color: #61afef;
+    font-weight: bold;
+    background: transparent;
+    padding: 0;
+  }
+
+  .bv-editor-wrapper {
+    display: flex;
+    position: relative;
+    background: #1e1e24;
+    min-height: 80px;
+  }
+
+  .bv-editor-gutter {
+    width: 44px;
+    flex-shrink: 0;
+    background: #1b1d23;
+    padding: 10px 0;
+    user-select: none;
+    border-right: 1px solid #282c34;
+    text-align: right;
+  }
+
+  .gutter-num {
+    height: 22px;
+    line-height: 22px;
+    padding-right: 10px;
+    color: #5c6370;
+    font-size: 12px;
+  }
+
+  .bv-editor-textarea-wrap {
+    flex: 1;
+    display: flex;
+    position: relative;
+  }
+
+  .bv-code-textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px 14px;
+    background: transparent;
+    color: #e5e9f0;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: inherit;
+    font-size: 13.5px;
+    line-height: 22px;
+    white-space: pre;
+    overflow-x: auto;
+    overflow-y: hidden;
+    tab-size: 2;
+  }
+
+  .bv-code-textarea::placeholder {
+    color: #4b5263;
+    font-style: italic;
+  }
+</style>

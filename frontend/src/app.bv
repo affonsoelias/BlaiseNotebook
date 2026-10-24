@@ -1,0 +1,156 @@
+<template>
+  <div translate="no" class="notranslate">
+    <!-- RESPONSIVE DRAWER (MENU LATERAL) -->
+    <bv-drawer ref="appDrawer" title="📐 BlaiseNotebook">
+      <div class="drawer-nav">
+        <a href="#/" class="drawer-link" @click="closeDrawer" style="background: #10b981; color: white; font-weight: bold;">📐 Notebook Interativo</a>
+        <a href="#/charts" class="drawer-link" @click="closeDrawer">📊 Galeria de Gráficos (Chart.js)</a>
+      </div>
+    </bv-drawer>
+
+    <!-- NAVBAR PRINCIPAL DO BLAISENOTEBOOK -->
+    <nav class="navbar">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="drawer-btn" type="button" @click="toggleDrawer" title="Menu">☰</button>
+        <span style="font-size: 24px;">📐</span>
+        <strong class="brand">BlaiseNotebook</strong>
+      </div>
+
+      <div class="nav-links">
+        <a href="#/" style="background: #10b981; color: white; font-weight: bold; border-radius: 4px; padding: 5px 14px; box-shadow: 0 2px 6px rgba(16,185,129,0.3);">📐 Notebook Interativo</a>
+        <a href="#/charts" style="background: #3b82f6; color: white; border-radius: 4px; padding: 5px 12px;">📊 Galeria Chart.js</a>
+      </div>
+
+      <div class="lang-switcher">
+        <button class="lang-btn" :class="{ 'active-lang': $i18n.locale === 'pt' }" @click="$setLocale('pt')">🇧🇷 PT</button>
+        <button class="lang-btn" :class="{ 'active-lang': $i18n.locale === 'en' }" @click="$setLocale('en')">🇺🇸 EN</button>
+      </div>
+
+      <div class="theme-switcher">
+        <button class="theme-toggle-btn" @click="$theme.toggle()" :title="$theme.isDark ? 'Modo Claro' : 'Modo Escuro'">
+          <span b-if="$theme.isDark">☀️</span>
+          <span b-if="!$theme.isDark">🌙</span>
+        </button>
+        <select class="theme-select" :value="$theme.current" @change="onThemeSelect($event)">
+          <option value="flatly">Flatly</option>
+          <option value="cosmo">Cosmo</option>
+          <option value="lux">Lux</option>
+          <option value="zephyr">Zephyr</option>
+          <option value="darkly">Darkly</option>
+          <option value="cyborg">Cyborg</option>
+          <option value="solar">Solar</option>
+          <option value="vapor">Vapor</option>
+          <option value="pulse">Pulse</option>
+        </select>
+      </div>
+
+      <span class="nav-msg">{{ mensagem }}</span>
+    </nav>
+
+    <!-- CONTAINER PRINCIPAL DO NOTEBOOK -->
+    <div class="notebook-main-canvas-wrapper">
+      <router-view></router-view>
+    </div>
+
+    <!-- RODAPÉ PERMANENTE -->
+    <div class="footer-status desktop-only-footer">
+       📐 <strong>BlaiseNotebook v1.0</strong> | Object Pascal + Synopse mORMot 2 + Python4Delphi | Licença: <strong>Modified LGPL v2.1 (com Static Linking Exception)</strong> | Tema: <strong>{{ $theme.current.toUpperCase() }}</strong>
+    </div>
+  </div>
+</template>
+
+<script>
+  {
+    App.bv - Root Application Component for BlaiseNotebook
+    Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
+  }
+
+  data:
+    mensagem: string = 'Ciência de Dados & IA em Object Pascal';
+
+  provide:
+    begin
+      Result := TJSObject.new;
+      Result['getAmbiente'] := function(): TJSObject
+        begin
+           Result := TJSObject.new;
+           Result['id'] := 42;
+           Result['status'] := 'BlaiseNotebook Active 🚀';
+        end;
+    end;
+
+  created:
+    begin
+      TJSObject(this['$store'])['appVersion'] := '1.0.0-SCIENTIFIC';
+      TJSObject(this['$store'])['user'] := 'Pascal Scientist 🔬';
+
+      I18nAddMessages('pt', '{"nav":{"notebook":"Notebook 📐","charts":"Gráficos 📊"}}');
+      I18nAddMessages('en', '{"nav":{"notebook":"Notebook 📐","charts":"Charts 📊"}}');
+      I18nSetLocale('pt');
+    end;
+
+  methods:
+    procedure onThemeSelect(e: JSValue);
+    var
+      sel: string;
+    begin
+      sel := string(TJSObject(TJSObject(e)['target'])['value']);
+      if sel <> '' then
+        ThemeSet(sel);
+    end;
+
+    procedure toggleDrawer;
+    begin
+      TriggerRef(this, 'appDrawer', 'toggle');
+    end;
+
+    procedure closeDrawer;
+    begin
+      TriggerRef(this, 'appDrawer', 'close');
+    end;
+
+  { Router Configuration: Maps URI hashes to Component Tags }
+  router:
+    routes:
+      '/': 'notebook-view-page';
+      '/notebook': 'notebook-view-page';
+      '/charts': 'charts-page';
+</script>
+
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #1e293b; }
+  .navbar { background: #0f172a; padding: 10px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid #1e293b; }
+  .brand { color: #10b981; font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
+  .nav-links { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .nav-links a { color: #cbd5e1; text-decoration: none; font-size: 13.5px; padding: 5px 12px; border-radius: 4px; transition: all 0.2s; }
+  .nav-links a:hover { background: rgba(255,255,255,0.1); color: #10b981; }
+  .lang-switcher { display: flex; gap: 6px; margin-left: 10px; }
+  .lang-btn { background: rgba(255,255,255,0.08); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
+  .lang-btn:hover { background: rgba(255,255,255,0.2); }
+  .lang-btn.active-lang { background: #10b981; color: white; border-color: #10b981; font-weight: bold; }
+  .theme-switcher { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
+  .theme-toggle-btn { background: rgba(255,255,255,0.08); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 4px 8px; font-size: 13px; border-radius: 4px; cursor: pointer; }
+  .theme-toggle-btn:hover { background: rgba(255,255,255,0.2); }
+  .theme-select { background: #1e293b; color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 4px 6px; font-size: 12px; border-radius: 4px; outline: none; cursor: pointer; }
+  .drawer-btn { background: rgba(255,255,255,0.12); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; padding: 5px 10px; font-size: 16px; cursor: pointer; transition: background 0.2s; }
+  .drawer-btn:hover { background: rgba(255,255,255,0.25); }
+  .drawer-nav { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+  .drawer-link { color: inherit; text-decoration: none; padding: 10px 14px; border-radius: 6px; font-size: 15px; font-weight: 500; display: block; transition: all 0.2s; }
+  .drawer-link:hover { background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 600; }
+  .nav-msg { color: #94a3b8; font-size: 12px; margin-left: auto; }
+  .notebook-main-canvas-wrapper { width: 100%; min-height: calc(100vh - 80px); padding-bottom: 40px; }
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .desktop-only-footer { display: none; }
+    .notebook-main-canvas-wrapper { padding-bottom: 75px; }
+  }
+  .footer-status { position: fixed; bottom: 0; left: 0; width: 100%; background: #0f172a; color: #94a3b8; font-size: 11px; padding: 4px 12px; text-align: right; border-top: 1px solid #1e293b; z-index: 100; }
+  .footer-status strong { color: #10b981; }
+
+  /* Dark Mode Integration */
+  html[data-bs-theme="dark"] body, body.theme-dark {
+    background: #0b0f19;
+    color: #e2e8f0;
+  }
+</style>

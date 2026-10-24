@@ -1,0 +1,19 @@
+<template>
+  <div class="notebook-view-page">
+    <bv-notebook></bv-notebook>
+  </div>
+</template>
+
+<script>
+  {
+    NotebookView.bv - Primary View Hosting the BlaiseNotebook Interactive Canvas
+    Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
+  }
+</script>
+
+<style>
+  .notebook-view-page {
+    width: 100%;
+    min-height: 100vh;
+  }
+</style>

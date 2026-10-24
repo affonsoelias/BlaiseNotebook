@@ -1,0 +1,350 @@
+<template>
+  <div class="bv-cell-container" :class="cellClasses">
+    <!-- BARRA LATERAL ESQUERDA: INDICADOR DE EXECUÇÃO -->
+    <div class="cell-gutter">
+      <div b-if="isCode" class="cell-prompt" :class="{ 'prompt-running': cell && cell.status === 'running' }">
+        <span b-if="cell && cell.status === 'running'" class="prompt-spin">⏳</span>
+        <span b-if="cell && cell.status !== 'running' && cell.execution_count > 0">In [{{ cell.execution_count }}]:</span>
+        <span b-if="cell && cell.status !== 'running' && (!cell.execution_count || cell.execution_count === 0)">In [ ]:</span>
+      </div>
+      <div b-if="isMarkdown" class="cell-prompt prompt-md">
+        <span>Md [ ]:</span>
+      </div>
+    </div>
+
+    <!-- CORPO PRINCIPAL DA CÉLULA -->
+    <div class="cell-main-content">
+      <!-- BARRA DE FERRAMENTAS SUPERIOR DA CÉLULA -->
+      <div class="cell-action-bar">
+        <div class="cell-type-selector">
+          <button
+            class="type-pill"
+            :class="{ 'type-pill-active': isCode }"
+            @click="switchType('code')"
+          >
+            ⚡ Pascal Code
+          </button>
+          <button
+            class="type-pill"
+            :class="{ 'type-pill-active': isMarkdown }"
+            @click="switchType('markdown')"
+          >
+            📝 Markdown
+          </button>
+        </div>
+
+        <div class="cell-quick-tools">
+          <button
+            b-if="isCode"
+            class="btn-cell-run"
+            title="Executar Célula (Shift + Enter)"
+            :disabled="cell && cell.status === 'running'"
+            @click="runThisCell"
+          >
+            ▶ Executar
+          </button>
+          <button class="btn-tool" title="Mover para cima" :disabled="index === 0" @click="moveUp">▲</button>
+          <button class="btn-tool" title="Mover para baixo" :disabled="index >= total - 1" @click="moveDown">▼</button>
+          <button class="btn-tool" title="Inserir célula abaixo" @click="insertBelow">➕</button>
+          <button class="btn-tool btn-danger-tool" title="Excluir Célula" @click="deleteThisCell">🗑️</button>
+        </div>
+      </div>
+
+      <!-- ÁREA DE CÓDIGO (SE FOR CODE) -->
+      <div b-if="isCode" class="cell-editor-box">
+        <bv-code-editor
+          :value="cell.source"
+          @input="onSourceChange"
+          @execute="runThisCell"
+          @execute-stay="runThisCell"
+        ></bv-code-editor>
+
+        <!-- ÁREA DE SAÍDA (OUTPUTS, CHART.JS, TABELAS) -->
+        <bv-output
+          :outputs="cell.outputs"
+          :status="cell.status"
+          :execution-count="cell.execution_count"
+          :execution-time-ms="cell.execution_time_ms"
+          @clear="clearCellOutputs"
+        ></bv-output>
+      </div>
+
+      <!-- ÁREA DE DOCUMENTAÇÃO (SE FOR MARKDOWN) -->
+      <div b-if="isMarkdown" class="cell-markdown-box">
+        <bv-markdown
+          :value="cell.source"
+          @input="onSourceChange"
+        ></bv-markdown>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+  {
+    BvCell.bv - Polymorphic Notebook Cell (Code + Output / Markdown)
+    Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
+  }
+
+  props:
+    cell: JSValue = null;
+    index: integer = 0;
+    total: integer = 1;
+
+  computed:
+    function isCode: boolean;
+    begin
+      asm
+        const c = this.cell;
+        return !!(c && c.type === 'code');
+      end;
+    end;
+
+    function isMarkdown: boolean;
+    begin
+      asm
+        const c = this.cell;
+        return !!(c && c.type === 'markdown');
+      end;
+    end;
+
+    function cellClasses: JSValue;
+    begin
+      asm
+        const c = this.cell || {};
+        return {
+          'cell-is-code': c.type === 'code',
+          'cell-is-md': c.type === 'markdown',
+          'cell-status-running': c.status === 'running',
+          'cell-status-error': c.status === 'error',
+          'cell-status-success': c.status === 'success'
+        };
+      end;
+    end;
+
+  methods:
+    procedure runThisCell;
+    begin
+      asm
+        if (this.$emit) this.$emit('run', this.cell, this.index);
+      end;
+    end;
+
+    procedure onSourceChange(newVal: string);
+    begin
+      asm
+        if (this.cell) {
+          this.cell.source = newVal;
+        }
+        if (this.$emit) this.$emit('change', this.cell);
+      end;
+    end;
+
+    procedure switchType(newType: string);
+    begin
+      asm
+        if (this.cell && this.cell.type !== newType) {
+          this.cell.type = newType;
+          if (this.$emit) this.$emit('change-type', this.cell, newType);
+        }
+      end;
+    end;
+
+    procedure moveUp;
+    begin
+      asm
+        if (this.$emit) this.$emit('move-up', this.index);
+      end;
+    end;
+
+    procedure moveDown;
+    begin
+      asm
+        if (this.$emit) this.$emit('move-down', this.index);
+      end;
+    end;
+
+    procedure insertBelow;
+    begin
+      asm
+        if (this.$emit) this.$emit('insert-below', this.index);
+      end;
+    end;
+
+    procedure deleteThisCell;
+    begin
+      asm
+        if (this.$emit) this.$emit('delete', this.index);
+      end;
+    end;
+
+    procedure clearCellOutputs;
+    begin
+      asm
+        if (this.cell) {
+          this.cell.outputs = [];
+          this.cell.status = 'idle';
+          this.cell.execution_time_ms = 0;
+        }
+      end;
+    end;
+</script>
+
+<style>
+  .bv-cell-container {
+    display: flex;
+    gap: 12px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+    transition: all 0.2s ease;
+  }
+
+  .bv-cell-container:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  }
+
+  .cell-status-running {
+    border-color: #f59e0b !important;
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
+  }
+
+  .cell-status-error {
+    border-color: #f87171 !important;
+  }
+
+  .cell-gutter {
+    width: 65px;
+    flex-shrink: 0;
+    padding-top: 32px;
+  }
+
+  .cell-prompt {
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    text-align: right;
+  }
+
+  .prompt-running {
+    color: #d97706;
+  }
+
+  .prompt-md {
+    color: #94a3b8;
+  }
+
+  .prompt-spin {
+    display: inline-block;
+    animation: pulse 1s infinite alternate;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(0.9); opacity: 0.6; }
+    100% { transform: scale(1.1); opacity: 1; }
+  }
+
+  .cell-main-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cell-action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed #f1f5f9;
+  }
+
+  .cell-type-selector {
+    display: flex;
+    gap: 4px;
+    background: #f1f5f9;
+    padding: 2px;
+    border-radius: 6px;
+  }
+
+  .type-pill {
+    background: transparent;
+    border: none;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .type-pill:hover {
+    color: #1e293b;
+  }
+
+  .type-pill-active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+
+  .cell-quick-tools {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .btn-cell-run {
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-cell-run:hover {
+    background: #059669;
+  }
+
+  .btn-cell-run:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .btn-tool {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #64748b;
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .btn-tool:hover {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .btn-tool:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn-danger-tool:hover {
+    background: #fee2e2;
+    color: #dc2626;
+    border-color: #fca5a5;
+  }
+</style>

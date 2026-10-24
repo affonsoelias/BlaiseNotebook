@@ -1,0 +1,39 @@
+# Node / NPM
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# BlaiseVue Transpiled & Built artifacts
+frontend/generated/
+frontend/dist/
+*.temp_lib.zip
+temp_lib.zip
+
+# Free Pascal / Lazarus Binaries & Object Files
+*.o
+*.ppu
+*.a
+*.exe
+*.dll
+*.so
+*.dylib
+*.rst
+*.rsj
+*.dbg
+*.compiled
+*.or
+
+# Server build outputs
+server/bin/
+frontend/server/bin/
+
+# Lazarus IDE internal files
+*.lps
+backup/
+*.bak
+
+# OS / Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

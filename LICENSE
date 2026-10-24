@@ -1,0 +1,59 @@
+================================================================================
+BLAISENOTEBOOK OPEN SOURCE DUAL LICENSE AGREEMENT
+================================================================================
+
+BlaiseNotebook is open-source software and follows the standard Lazarus /
+Free Pascal / BlaiseVue licensing model:
+
+- The BlaiseNotebook Kernel / CLI Tools & Server Executables:
+  Licensed under the GNU General Public License v2 (GNU GPL v2).
+
+- The BlaiseNotebook Core Libraries, Components & Scientific Runtime:
+  Licensed under the Modified GNU LGPL v2.1 with a Static Linking Exception.
+
+STATIC LINKING EXCEPTION:
+As a special exception, the copyright holders of this library give you
+permission to link this library with independent modules to produce an
+executable, regardless of the license terms of these independent modules,
+and to copy and distribute the resulting executable under terms of your choice,
+provided that you also meet, for each linked independent module, the terms
+and conditions of the license of that module. An independent module is a
+module which is not derived from or based on this library. If you modify
+this library, you may extend this exception to your version of the library,
+but you are not obligated to do so. If you do not wish to do so, delete this
+exception statement from your version.
+
+This allows developers, scientists, and engineers to build proprietary models,
+data science pipelines, and commercial applications without having to open-source
+their private business logic or scientific algorithms, while ensuring the
+BlaiseNotebook platform and runtime remain open and accessible to all.
+
+================================================================================
+GNU LESSER GENERAL PUBLIC LICENSE Version 2.1
+================================================================================
+
+                  GNU LESSER GENERAL PUBLIC LICENSE
+                       Version 2.1, February 1999
+
+ Copyright (C) 1991, 1999 Free Software Foundation, Inc.
+ 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+[This is the first released version of the Lesser GPL.  It also counts
+ as the successor of the GNU Library Public License, version 2, hence
+ the version number 2.1.]
+
+                            Preamble
+
+  The licenses for most software are designed to take away your
+freedom to share and change it.  By contrast, the GNU General Public
+Licenses are intended to guarantee your freedom to share and change
+free software--to make sure the software is free for all its users.
+
+  This license, the Lesser General Public License, applies to some
+specially designated software packages--typically libraries--of the
+Free Software Foundation and other authors who decide to use it.  You
+can use it too, but we suggest you first think carefully about whether
+this license or the ordinary General Public License is the better
+strategy to use in any particular case, based on the explanations below.
