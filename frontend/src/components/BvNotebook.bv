@@ -48,9 +48,6 @@
       </div>
 
       <div class="toolbar-group">
-        <button class="tb-btn tb-btn-accent" @click="loadSampleDemo">
-          🎲 Carregar Demo Científico
-        </button>
         <button class="tb-btn" @click="exportNotebookJson">
           💾 Salvar (.bynb)
         </button>
