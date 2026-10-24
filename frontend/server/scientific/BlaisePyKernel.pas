@@ -6,8 +6,8 @@ unit BlaisePyKernel;
 
   Provides seamless interoperability between Object Pascal and Python:
   - Initializes Python runtime with auto-discovery of local Python 3.x installations
-  - Bridges NumPy, Pandas, Scikit-learn, and Matplotlib into BlaiseNotebook cells
-  - Captures outputs, figures, and DataFrames directly into BlaiseVue reactive outputs
+  - Bridges NumPy, Pandas, and Scikit-learn into BlaiseNotebook cells
+  - Exclusively emits interactive Chart.js (<bv-chart>) configurations and responsive tables
 }
 
 {$mode objfpc}{$H+}
@@ -33,18 +33,18 @@ type
     class function Exec(const ACode: string): Boolean;
     class function EvalStr(const AExpr: string): string;
 
-    // Visualization bridges directly to BlaiseVue outputs
-    class procedure ShowPlot(const ATitle: string = 'Matplotlib Plot');
+    // Visualization bridges directly to BlaiseVue Chart.js (<bv-chart>) and data tables
     class procedure ShowDataFrame(const AVarName: string; const ATitle: string = 'Pandas DataFrame'; AMaxRows: Integer = 50);
-    class procedure ShowSeriesChart(const AVarName: string; const ATitle: string = 'Series Chart'; const AChartType: string = 'line');
+    class procedure ShowSeriesChart(const AVarName: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
+    class procedure ShowDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
   end;
 
 // Convenience global routines for notebook cells
 procedure PyRun(const ACode: string);
 function PyEval(const AExpr: string): string;
-procedure ShowPyPlot(const ATitle: string = 'Matplotlib Plot');
 procedure ShowPyDataFrame(const AVarName: string; const ATitle: string = 'Pandas DataFrame'; AMaxRows: Integer = 50);
-procedure ShowPySeriesChart(const AVarName: string; const ATitle: string = 'Series Chart'; const AChartType: string = 'line');
+procedure ShowPySeriesChart(const AVarName: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
+procedure ShowPyDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
 
 implementation
 
@@ -184,33 +184,6 @@ begin
   end;
 end;
 
-class procedure TBlaisePy.ShowPlot(const ATitle: string);
-var
-  PyHelper: string;
-  PngBase64: string;
-begin
-  EnsureEngine;
-  // Script to encode the current matplotlib figure to base64
-  PyHelper :=
-    'import io, base64'#10 +
-    'import matplotlib.pyplot as plt'#10 +
-    '__buf__ = io.BytesIO()'#10 +
-    'plt.savefig(__buf__, format="png", bbox_inches="tight", dpi=120)'#10 +
-    '__buf__.seek(0)'#10 +
-    '__b64_img__ = base64.b64encode(__buf__.read()).decode("ascii")'#10 +
-    'plt.close("all")'#10;
-
-  Exec(PyHelper);
-  PngBase64 := EvalStr('__b64_img__');
-  if PngBase64 <> '' then
-  begin
-    // Trim any accidental quotes
-    if (Length(PngBase64) >= 2) and (PngBase64[1] = '''') and (PngBase64[Length(PngBase64)] = '''') then
-      PngBase64 := Copy(PngBase64, 2, Length(PngBase64) - 2);
-    TBlaiseOutput.ShowImage(ATitle, PngBase64);
-  end;
-end;
-
 class procedure TBlaisePy.ShowDataFrame(const AVarName: string; const ATitle: string; AMaxRows: Integer);
 var
   PyHelper: string;
@@ -233,7 +206,6 @@ begin
 
   if (ColsJson <> '') and (RowsJson <> '') then
   begin
-    // If Python string has enclosing quotes from EvalStringAsStr, clean them:
     if (Length(ColsJson) >= 2) and (ColsJson[1] = '''') and (ColsJson[Length(ColsJson)] = '''') then
       ColsJson := Copy(ColsJson, 2, Length(ColsJson) - 2);
     if (Length(RowsJson) >= 2) and (RowsJson[1] = '''') and (RowsJson[Length(RowsJson)] = '''') then
@@ -260,9 +232,37 @@ begin
       '__c_values__ = [float(x) for x in __s__.values]'#10 +
       '__chart_json__ = json.dumps({'#10 +
       '  "labels": __c_labels__,'#10 +
-      '  "datasets": [{"label": "%s", "data": __c_values__, "borderColor": "#3b82f6", "backgroundColor": "rgba(59, 130, 246, 0.2)"}]'#10 +
+      '  "datasets": [{"label": "%s", "data": __c_values__, "borderColor": "#3b82f6", "backgroundColor": "rgba(59, 130, 246, 0.2)", "tension": 0.3}]'#10 +
       '})'#10,
       [AVarName, ATitle]);
+
+  Exec(PyHelper);
+  DataJson := EvalStr('__chart_json__');
+  if DataJson <> '' then
+  begin
+    if (Length(DataJson) >= 2) and (DataJson[1] = '''') and (DataJson[Length(DataJson)] = '''') then
+      DataJson := Copy(DataJson, 2, Length(DataJson) - 2);
+    TBlaiseOutput.ShowChart(ATitle, AChartType, DataJson);
+  end;
+end;
+
+class procedure TBlaisePy.ShowDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string; const AChartType: string);
+var
+  PyHelper: string;
+  DataJson: string;
+begin
+  EnsureEngine;
+  PyHelper :=
+    Format(
+      'import json'#10 +
+      '__df__ = %s'#10 +
+      '__c_labels__ = [str(x) for x in __df__["%s"]]'#10 +
+      '__c_values__ = [float(x) for x in __df__["%s"]]'#10 +
+      '__chart_json__ = json.dumps({'#10 +
+      '  "labels": __c_labels__,'#10 +
+      '  "datasets": [{"label": "%s", "data": __c_values__, "borderColor": "#10b981", "backgroundColor": "rgba(16, 185, 129, 0.2)", "tension": 0.3, "fill": True}]'#10 +
+      '})'#10,
+      [AVarName, AXCol, AYCol, ATitle]);
 
   Exec(PyHelper);
   DataJson := EvalStr('__chart_json__');
@@ -286,11 +286,6 @@ begin
   Result := TBlaisePy.EvalStr(AExpr);
 end;
 
-procedure ShowPyPlot(const ATitle: string);
-begin
-  TBlaisePy.ShowPlot(ATitle);
-end;
-
 procedure ShowPyDataFrame(const AVarName: string; const ATitle: string; AMaxRows: Integer);
 begin
   TBlaisePy.ShowDataFrame(AVarName, ATitle, AMaxRows);
@@ -299,6 +294,11 @@ end;
 procedure ShowPySeriesChart(const AVarName: string; const ATitle: string; const AChartType: string);
 begin
   TBlaisePy.ShowSeriesChart(AVarName, ATitle, AChartType);
+end;
+
+procedure ShowPyDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string; const AChartType: string);
+begin
+  TBlaisePy.ShowDataFrameChart(AVarName, AXCol, AYCol, ATitle, AChartType);
 end;
 
 initialization

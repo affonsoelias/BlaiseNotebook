@@ -26,7 +26,7 @@ By unifying the reactive Single File Component architecture of **BlaiseVue**, ha
 ┌──────────────────────────────────────┐  ┌──────────────────────────────┐
 │       Native Pascal Engine           │  │    Python4Delphi Bridge      │
 │   Math, Vectors, Linear Regression,  │  │  pandas, numpy, scikit-learn │
-│   Matrix Operations, NumPascal       │  │  matplotlib base64 plots     │
+│   Matrix Operations, NumPascal       │  │  Reactive Chart.js outputs     │
 └──────────────────────────────────────┘  └──────────────────────────────┘
 ```
 
@@ -53,7 +53,7 @@ By unifying the reactive Single File Component architecture of **BlaiseVue**, ha
 - [x] **WebSocket Execution Protocol**:
   - `execute_cell`: Transmits cell code, cell ID, and execution count.
   - `stream`: Streams partial `stdout` / `stderr` in real-time as computations proceed.
-  - `display_data`: Pushes rich structured payloads (Chart.js JSON configs, table rows/cols, Base64 images).
+  - `display_data`: Pushes rich structured payloads (Chart.js JSON configs, table rows/cols).
   - `execute_reply`: Returns execution status, completion timestamps, and elapsed time in milliseconds.
 - [x] **Dynamic Sandbox Execution**:
   - Dynamic Free Pascal compilation harness (`uCodeRunner.pas`) invoking `fpc.exe` with real-time output pipes.
@@ -66,8 +66,8 @@ By unifying the reactive Single File Component architecture of **BlaiseVue**, ha
   - Advanced record `TVector` with descriptive statistics (mean, median, standard deviation, variance).
   - Random dataset generators and linear regression fitting (`TLinearRegression`) in pure compiled Pascal.
 - [x] **Output Magic Delimiter Protocol (`BlaiseOutput.pas`)**:
-  - Magic delimiter `@@BLAISE_PAYLOAD@@:` for zero-copy streaming of tables, charts, and images.
-  - Global helper procedures: `ShowChart`, `ShowTable`, `ShowImage`.
+  - Magic delimiter `@@BLAISE_PAYLOAD@@:` for zero-copy streaming of tables, charts.
+  - Global helper procedures: `ShowChart`, `ShowTable`, `ShowPySeriesChart`.
 - [x] **Python4Delphi / Python4Lazarus Bridge (`BlaisePyKernel.pas`)**:
   - Embedded Python 3.13 integration via CPython API.
   - Automatic detection of local Python DLLs (`python313.dll`, `python312.dll`).

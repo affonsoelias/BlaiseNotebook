@@ -5,7 +5,7 @@ unit BlaiseOutput;
   Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
   
   Allows Object Pascal scripts executing in a cell to emit structured outputs
-  (rich data tables, Chart.js visual configurations, images) directly to
+  (rich data tables, Chart.js visual configurations) directly to
   the BlaiseVue frontend via JSON magic stream delimiters.
 }
 
@@ -25,13 +25,11 @@ type
     class procedure Print(const S: string);
     class procedure ShowTable(const ATitle: string; const AColumns: array of string; const ARowsJson: string);
     class procedure ShowChart(const ATitle, AChartType, ADataJson: string; const AOptionsJson: string = '{}');
-    class procedure ShowImage(const ATitle, ABase64Png: string);
   end;
 
 // Global helper procedures for intuitive cell scripts
 procedure ShowTable(const ATitle: string; const AColumns: array of string; const ARowsJson: string);
 procedure ShowChart(const ATitle, AChartType, ADataJson: string; const AOptionsJson: string = '{}');
-procedure ShowImage(const ATitle, ABase64Png: string);
 
 implementation
 
@@ -43,11 +41,6 @@ end;
 procedure ShowChart(const ATitle, AChartType, ADataJson: string; const AOptionsJson: string);
 begin
   TBlaiseOutput.ShowChart(ATitle, AChartType, ADataJson, AOptionsJson);
-end;
-
-procedure ShowImage(const ATitle, ABase64Png: string);
-begin
-  TBlaiseOutput.ShowImage(ATitle, ABase64Png);
 end;
 
 { TBlaiseOutput }
@@ -89,22 +82,6 @@ begin
 
   Payload := Format('{"type":"chart","title":"%s","chartType":"%s","data":%s,"options":%s}',
     [ATitle, AChartType, ADataJson, Opt]);
-
-  WriteLn(BLAISE_PAYLOAD_TAG + Payload);
-  Flush(Output);
-end;
-
-class procedure TBlaiseOutput.ShowImage(const ATitle, ABase64Png: string);
-var
-  Src: string;
-  Payload: string;
-begin
-  Src := ABase64Png;
-  if not (Copy(Src, 1, 5) = 'data:') then
-    Src := 'data:image/png;base64,' + Src;
-
-  Payload := Format('{"type":"image","title":"%s","src":"%s"}',
-    [ATitle, Src]);
 
   WriteLn(BLAISE_PAYLOAD_TAG + Payload);
   Flush(Output);

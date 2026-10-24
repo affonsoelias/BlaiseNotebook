@@ -76,16 +76,6 @@
           </div>
         </div>
 
-        <!-- 5. IMAGEM ESTÁTICA (PNG BASE64 - MATPLOTLIB/SEABORN) -->
-        <div b-if="out.type === 'image'" class="bv-out-image-card">
-          <div class="image-card-header">
-            <span>🖼️ {{ out.title || 'Figura / Gráfico Python' }}</span>
-          </div>
-          <div class="image-wrapper">
-            <img :src="out.src" alt="Plot Output" class="out-img" />
-          </div>
-        </div>
-
       </div>
     </div>
   </div>
