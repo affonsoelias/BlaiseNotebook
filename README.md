@@ -1,57 +1,118 @@
 # 📐 BlaiseNotebook
 
-**BlaiseNotebook** é uma plataforma pioneira no ecossistema Object Pascal para Ciência de Dados, Inteligência Artificial e Computação Científica Interativa — combinando a produtividade de notebooks interativos (como Jupyter / Colab) com a extrema performance compilada do **Free Pascal**, a reatividade do **BlaiseVue**, o poder dos servidores assíncronos **Synopse mORMot 2** e o ecossistema científico do **Python** via **Python4Delphi / Python4Lazarus**.
+**BlaiseNotebook** is a pioneering, interactive web-based computational notebook environment for the **Object Pascal** ecosystem (similar to Jupyter Notebook and Google Colab), engineered specifically for **Data Science**, **Artificial Intelligence**, and **High-Performance Scientific Computing**.
+
+By unifying the reactive Single File Component architecture of **BlaiseVue**, hardware-accelerated charting via **Chart.js (`<bv-chart>`)**, ultra-fast asynchronous execution through **Synopse mORMot 2**, native **Free Pascal** mathematical routines, and an out-of-the-box bridge to the Python scientific stack via **Python4Delphi / Python4Lazarus** (`numpy`, `pandas`, `scikit-learn`, `matplotlib`), BlaiseNotebook brings modern exploratory data analysis to Object Pascal developers worldwide.
 
 ---
 
-## 📜 Licença
+## 🏛️ System Architecture
 
-O projeto segue rigorosamente o modelo de licenciamento oficial do **Lazarus IDE**, **Free Pascal** e **BlaiseVue**:
-
-- **Core Framework, Componentes e Runtime Científico**:
-  Licenciado sob a **Modified GNU LGPL v2.1 com Static Linking Exception**.
-  Permite o desenvolvimento de aplicações, bibliotecas e rotinas proprietárias ou de código aberto sem impor a abertura do código-fonte do utilizador final.
-- **Kernel / Binários e Ferramentas CLI**:
-  Licenciados sob a **GNU General Public License v2 (GPL v2)**.
-
-Consulte o arquivo [LICENSE](LICENSE) para detalhes legais completos.
-
----
-
-## 🌟 Funcionalidades da Etapa 1 (Frontend BlaiseVue & Visualização)
-
-1. **Workspace Interativo `<bv-notebook>`**:
-   - Barra de ferramentas global: Executar Todas (`▶▶ Run All`), Adicionar Célula de Código Pascal (`+ Code`), Adicionar Markdown (`+ Markdown`), Limpar Saídas, Salvar/Exportar (`.bynb`) e Abrir.
-   - Status reativo do Kernel WebSocket (`🟢 Conectado`, `🟡 Executando`, `⚪ Standalone`).
-   - Divisores interativos entre células para inserção ágil.
-
-2. **Célula Polimórfica `<bv-cell>`**:
-   - Alternância em tempo real entre **Código Pascal** e **Documentação Markdown**.
-   - Indicador de execução clássico (`In [ 1 ]:`, `In [ * ]:` com animação de execução, `In [ ]:`).
-   - Ações por célula: Executar (`Shift + Enter`), mover para cima/baixo, duplicar, excluir.
-
-3. **Editor de Código Pascal `<bv-code-editor>`**:
-   - Gutter com numeração de linhas sincronizada.
-   - Realce visual e indentação inteligente (`Tab` = 2 espaços).
-   - Atalhos: `Shift + Enter` para executar, `Ctrl + Enter` para executar sem avançar.
-
-4. **Documentação Markdown `<bv-markdown>`**:
-   - Renderização rica de cabeçalhos (`#`, `##`), listas, negrito, itálico, citações, blocos de código e fórmulas matemáticas (`$ ... $`, `$$ ... $$`).
-   - Modo de edição ao dar duplo clique, com retorno rápido via `Ctrl + Enter`.
-
-5. **Área de Saída Multiformato `<bv-output>`**:
-   - **Terminal Console (`stdout`/`stderr`)**: Logs de execução e depuração.
-   - **Tabelas de Dados**: Visualizador responsivo para DataFrames e datasets.
-   - **Gráficos Reativos com Chart.js (`<bv-chart>`)**: Suporte nativo a gráficos de Linhas, Barras, Pizza e Dispersão alimentados diretamente pelo Pascal/Python.
-   - **Figuras Python**: Visualização de plots Base64 do Matplotlib/Seaborn.
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│                   BlaiseVue Frontend (Web SPA / WebUI)                  │
+│   <bv-notebook>  •  <bv-cell>  •  <bv-code-editor>  •  <bv-output>     │
+│   Reactive Chart.js (<bv-chart>)  •  Interactive Markdown & Math       │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Bidirectional WebSocket ($ws)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│               Synopse mORMot 2 Kernel (Native Pascal Server)           │
+│   Async HTTP / WebSocket Server  •  Cell Execution Orchestrator        │
+│   Dynamic FPC Compilation Sandbox  •  Real-time Output Streaming       │
+└───────────────────┬────────────────────────────────┬───────────────────┘
+                    │                                │
+                    ▼                                ▼
+┌──────────────────────────────────────┐  ┌──────────────────────────────┐
+│       Native Pascal Engine           │  │    Python4Delphi Bridge      │
+│   Math, Vectors, Linear Regression,  │  │  pandas, numpy, scikit-learn │
+│   Matrix Operations, NumPascal       │  │  matplotlib base64 plots     │
+└──────────────────────────────────────┘  └──────────────────────────────┘
+```
 
 ---
 
-## 🚀 Como Executar o Frontend
+## 🗺️ Project Roadmap & Implementation Plan
+
+### ✅ Stage 1: BlaiseVue Frontend & Reactive UI Components *(Completed)*
+- [x] **`<bv-notebook>` Container**: Global toolbar (Run All, Add Code/Markdown, Clear Outputs, Save `.bynb`, Open, Load Demo), reactive WebSocket kernel status pill, inter-cell insertion dividers.
+- [x] **`<bv-cell>` Component**: Polymorphic cell supporting Pascal Code and Markdown, execution counter (`In [ 1 ]:` / `In [ * ]:` / `In [ ]:`), cell-level controls (reorder, delete, type toggle).
+- [x] **`<bv-code-editor>`**: Monospace code editor with synchronized line numbers gutter, smart tab indentation (2 spaces), `Shift + Enter` execution shortcut, and `Ctrl + Enter` in-place execution.
+- [x] **`<bv-markdown>`**: Rich Markdown renderer supporting headers, formatted text, blockquotes, lists, code blocks, and math blocks (`$ ... $`, `$$ ... $$`) with double-click inline editing.
+- [x] **`<bv-output>` Multi-Format Output Area**:
+  - `stdout`/`stderr`: Console logs with timestamps and monospace terminal styling.
+  - `table`: Responsive data table viewer for tabular datasets and DataFrames.
+  - `chart`: Hardware-accelerated canvas charts powered by **Chart.js** via `<bv-chart>`.
+  - `image`: Render Base64 plots generated by Matplotlib / Seaborn.
+- [x] **Clean SPA Layout**: Standalone navigation bar focused exclusively on BlaiseNotebook and Chart.js gallery.
+
+---
+
+### 🚧 Stage 2: mORMot 2 Kernel & WebSocket Execution Engine *(In Progress)*
+- [ ] **mORMot 2 HTTP & WebSocket Server**: Low-latency, high-throughput server hosting static assets and handling bidirectional cell communication over `/ws`.
+- [ ] **Jupyter-Compatible JSON Protocol**:
+  - `execute_request`: Transmits cell code, cell ID, and execution parameters.
+  - `stream`: Streams partial `stdout` / `stderr` in real-time as computations proceed.
+  - `display_data`: Pushes rich structured payloads (Chart.js JSON configs, table rows/cols, Base64 images).
+  - `execute_reply`: Returns execution status, completion timestamps, and elapsed time in milliseconds.
+- [ ] **Execution Worker & Sandbox**:
+  - Dynamic Free Pascal compilation and runner harness with stdout/stderr capture.
+  - Error diagnostic parsing (FPC line and column errors highlighted in cell output).
+
+---
+
+### 📋 Stage 3: Dual Scientific Engines (Native Pascal + Python4Delphi)
+- [ ] **Native Pascal Scientific Unit (`BlaiseMathKernel.pas`)**:
+  - Vector and matrix operations, descriptive statistics (mean, median, standard deviation, variance).
+  - Random dataset generators and linear regression fitting in pure compiled Pascal.
+- [ ] **Python4Delphi / Python4Lazarus Bridge (`BlaisePyKernel.pas`)**:
+  - Embedded Python 3.13 integration.
+  - High-level wrappers for `pandas`, `numpy`, and `scikit-learn`.
+- [ ] **Data Bridge (`BlaiseDataBridge.pas`)**:
+  - Automated conversion: Python DataFrames ➡️ HTML table records.
+  - Automated conversion: Python Series / NumPy arrays ➡️ `<bv-chart>` series data.
+  - Automated conversion: Matplotlib `plt.figure` ➡️ Base64 PNG image stream.
+
+---
+
+### 📋 Stage 4: End-to-End Scientific Demo Notebook
+- [ ] Demonstration file `demo_datascience.bynb`:
+  1. High-throughput statistical simulation in pure native Pascal.
+  2. Dataset loading and machine learning training with Pandas & Scikit-learn via Python4Delphi.
+  3. Real-time visualization using `<bv-chart>` comparing ground truth vs. model predictions.
+
+---
+
+## 📜 Licensing Agreement
+
+BlaiseNotebook strictly follows the official licensing model of the **Lazarus IDE**, **Free Pascal**, and **BlaiseVue**:
+
+- **Core Framework, Components & Scientific Runtime**:
+  Licensed under the **Modified GNU LGPL v2.1 with Static Linking Exception**.  
+  *This permits developers, scientists, and commercial entities to build proprietary applications, algorithms, and data pipelines without being required to release their proprietary source code.*
+
+- **Kernel Binaries, CLI Tools & Server Executables**:
+  Licensed under the **GNU General Public License v2 (GNU GPL v2)**.
+
+For full legal terms, refer to the [LICENSE](LICENSE) file.
+
+---
+
+## 🚀 Quick Start (Development)
+
+### Prerequisites
+- [Free Pascal Compiler](https://www.freepascal.org/) (FPC 3.2.2+)
+- [Lazarus IDE](https://www.lazarus-ide.org/) (with `Python4Lazarus` and `BlaiseVue` installed)
+- [Python](https://www.python.org/) 3.10+ (for Python scientific bridge)
+- [BlaiseCLI](https://github.com/affonsoelias/BlaiseVue) (`bv` command on PATH)
+
+### Running the Frontend
 
 ```bash
 cd frontend
 bv run dev
-# ou para servidor de desenvolvimento com HMR:
-bv dev
+# Or start with Hot Module Replacement (HMR):
+bv serve
 ```
+
+Open your browser at **`http://localhost:8080/`**.
