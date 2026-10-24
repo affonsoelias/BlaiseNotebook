@@ -31,7 +31,7 @@ uses
   mormot.net.server,
   mormot.net.ws.core,
   mormot.net.ws.server,
-  ServerModels, CrudCustomer, CrudProduct, AuthService, SwaggerService, RpcService;
+  ServerModels, CrudCustomer, CrudProduct, AuthService, SwaggerService, RpcService, NotebookKernel;
 
 type
   { Real-time WebSocket Protocol for BlaiseVue clients }
@@ -52,6 +52,7 @@ type
     FDistPath: string;
     FServer: TWebSocketServer;
     FWSProtocol: TBlaiseWebSocketProtocol;
+    FNotebookProtocol: TNotebookWebSocketProtocol;
     FStartTime: TDateTime;
     FRequestCount: Int64;
     FItems: TBlaiseItemDynArray;
@@ -126,6 +127,8 @@ begin
   FServer := TWebSocketServer.Create(FPort, nil, nil, 'blaisevue_fullstack', 4);
   FWSProtocol := TBlaiseWebSocketProtocol.CreateProtocol(FRpcDispatcher);
   FServer.WebSocketProtocols.Add(FWSProtocol);
+  FNotebookProtocol := TNotebookWebSocketProtocol.CreateProtocol('ws');
+  FServer.WebSocketProtocols.Add(FNotebookProtocol);
   FServer.OnRequest := DoRequest;
 end;
 

@@ -50,7 +50,7 @@
               </thead>
               <tbody>
                 <tr b-for="row in out.rows">
-                  <td b-for="val in row">{{ val }}</td>
+                  <td b-for="col in out.columns">{{ getCellVal(row, col, $index) }}</td>
                 </tr>
               </tbody>
             </table>
@@ -113,6 +113,22 @@
     end;
 
   methods:
+    function getCellVal(row: JSValue; col: JSValue; idx: integer): string;
+    begin
+      asm
+        if (!row) return '';
+        if (Array.isArray(row)) {
+          return row[idx] !== undefined ? String(row[idx]) : '';
+        }
+        if (typeof row === 'object') {
+          if (col && row[col] !== undefined) return String(row[col]);
+          const keys = Object.keys(row);
+          if (keys[idx] !== undefined) return String(row[keys[idx]]);
+        }
+        return String(row);
+      end;
+    end;
+
     procedure clearOutputs;
     begin
       asm

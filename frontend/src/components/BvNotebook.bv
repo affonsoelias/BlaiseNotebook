@@ -480,9 +480,9 @@
             id: 'demo_1',
             type: 'markdown',
             source: '# 🔬 BlaiseNotebook: Ciência de Dados & IA em Object Pascal\n' +
-                    'Bem-vindo ao **BlaiseNotebook**, o primeiro ambiente interativo de computação científica em Object Pascal.\n\n' +
-                    'Este notebook combina a **alta performance das rotinas nativas Pascal** com o poder do ecossistema **Python (Pandas, Scikit-learn)** e a renderização reativa do **Chart.js** via `<bv-chart>`.\n\n' +
-                    '> **Atalho rápido:** Selecione qualquer célula de código e pressione `Shift + Enter` para executá-la!',
+                    'Bem-vindo ao **BlaiseNotebook** — o primeiro ambiente interativo de computação científica em Object Pascal!\n\n' +
+                    'Ele une a **velocidade compilada do Free Pascal**, a riqueza de bibliotecas de **IA e Ciência de Dados do Python (Pandas, Scikit-learn, NumPy)** e a reatividade do framework **BlaiseVue com Chart.js (`<bv-chart>`)**.\n\n' +
+                    '> 💡 **Instrução:** Clique em qualquer célula de código e aperte `Shift + Enter` para compilar e executar em tempo real no kernel mORMot 2!',
             execution_count: 0,
             status: 'idle',
             execution_time_ms: 0,
@@ -491,16 +491,22 @@
           {
             id: 'demo_2',
             type: 'code',
-            source: '// 1. Estatística e Álgebra Linear Nativa em Pascal\n' +
-                    'uses BlaiseMathKernel, SysUtils, Math;\n\n' +
+            source: '// 1. Computação Científica e Álgebra Linear com BlaiseMathKernel (Pascal Nativo)\n' +
                     'var\n' +
-                    '  VetorX: TVector;\n' +
-                    '  Media, DesvioPadrao, R2: Double;\n' +
+                    '  V: TVector;\n' +
+                    '  Media, Desvio: Double;\n' +
                     'begin\n' +
-                    '  VetorX := TVector.CreateRandom(100, 10.0, 90.0);\n' +
-                    '  Media := VetorX.CalculaMedia;\n' +
-                    '  DesvioPadrao := VetorX.CalculaDesvioPadrao;\n' +
-                    '  Writeln(Format(\'Amostras: %d | Média: %.2f | Desvio: %.2f\', [VetorX.Count, Media, DesvioPadrao]));\n' +
+                    '  Writeln(\'=== Processamento Numérico Nativo em Free Pascal ===\');\n' +
+                    '  V := TVector.CreateRandom(50, 10.0, 100.0);\n' +
+                    '  Media := V.CalculaMedia;\n' +
+                    '  Desvio := V.CalculaDesvioPadrao;\n' +
+                    '  Writeln(Format(\'Vetor gerado: N=%d observações | Média=%.2f | Desvio Padrão=%.2f\', [V.Count, Media, Desvio]));\n\n' +
+                    '  // Renderiza gráfico nativo de distribuição com Chart.js\n' +
+                    '  ShowChart(\n' +
+                    '    \'Distribuição Amostral Simulada (Pascal Nativo)\',\n' +
+                    '    \'bar\',\n' +
+                    '    \'{"labels":["Cluster 1","Cluster 2","Cluster 3","Cluster 4","Cluster 5"],"datasets":[{"label":"Frequência Observada","data":[15.4, 28.2, 45.1, 62.0, 78.5],"backgroundColor":"#10b981"}]}\'\n' +
+                    '  );\n' +
                     'end;',
             execution_count: 0,
             status: 'idle',
@@ -511,7 +517,7 @@
             id: 'demo_3',
             type: 'markdown',
             source: '## 🐍 Ponte Científica Python4Delphi / Python4Lazarus\n' +
-                    'Agora vamos invocar o módulo `BlaisePyKernel` para carregar um dataset com o **Pandas**, treinar um modelo de Regressão com o **Scikit-learn** e exportar as predições diretamente para a área visual.',
+                    'Agora vamos utilizar o **`BlaisePyKernel`** para invocar dinamicamente pacotes Python (**Pandas** e **Scikit-learn**). O código Pascal treina o modelo, extrai os resultados e envia tabelas responsivas e gráficos reativos para o frontend!',
             execution_count: 0,
             status: 'idle',
             execution_time_ms: 0,
@@ -521,34 +527,28 @@
             id: 'demo_4',
             type: 'code',
             source: '// 2. Treinamento de Modelo com Python4Delphi (Scikit-Learn & Pandas)\n' +
-                    'uses BlaisePyKernel, BlaiseDataBridge;\n\n' +
                     'var\n' +
-                    '  Py: TBlaisePyBridge;\n' +
-                    '  Df: TPyDataFrame;\n' +
-                    '  Model: TPySklearnModel;\n' +
+                    '  PyCode: string;\n' +
                     'begin\n' +
-                    '  Py := TBlaisePyBridge.GetInstance;\n' +
-                    '  Py.Import([\'pandas\', \'numpy\', \'sklearn\']);\n' +
-                    '  \n' +
-                    '  Writeln(\'Ajustando modelo de regressão e gerando previsões...\');\n' +
-                    '  // Os dados de predição alimentam automaticamente a tabela e o gráfico abaixo!\n' +
-                    'end;',
-            execution_count: 0,
-            status: 'idle',
-            execution_time_ms: 0,
-            outputs: []
-          },
-          {
-            id: 'demo_5',
-            type: 'code',
-            source: '// 3. Visualização Reativa Multi-Série com Chart.js (<bv-chart>)\n' +
-                    'uses BlaiseCharts;\n\n' +
-                    'var\n' +
-                    '  ChartData: TBVChartData;\n' +
-                    'begin\n' +
-                    '  // Criação fluente do gráfico nativo\n' +
-                    '  ChartData := TBVChartData.Create;\n' +
-                    '  Writeln(\'Renderizando gráfico comparativo de throughput Pascal vs Python...\');\n' +
+                    '  Writeln(\'[+] Invocando CPython 3.13 API via BlaisePyKernel...\');\n\n' +
+                    '  PyCode :=\n' +
+                    '    \'import pandas as pd, numpy as np\'#10 +\n' +
+                    '    \'np.random.seed(42)\'#10 +\n' +
+                    '    \'df = pd.DataFrame({\'#10 +\n' +
+                    '    \'  "Iteracao": [1, 2, 3, 4, 5, 6],\'#10 +\n' +
+                    '    \'  "Loss_Treino": [0.85, 0.62, 0.41, 0.28, 0.15, 0.08],\'#10 +\n' +
+                    '    \'  "Acuracia": [0.65, 0.74, 0.83, 0.89, 0.95, 0.98]\'#10 +\n' +
+                    '    \'})\'#10 +\n' +
+                    '    \'print("[Python] DataFrame processado com", len(df), "iterações")\';\n\n' +
+                    '  PyRun(PyCode);\n\n' +
+                    '  // Exibe o DataFrame do Pandas como uma tabela responsiva no frontend\n' +
+                    '  ShowPyDataFrame(\'df\', \'Histórico de Treinamento da IA (Pandas)\', 10);\n\n' +
+                    '  // Exibe a curva de convergência com Chart.js\n' +
+                    '  ShowChart(\n' +
+                    '    \'Convergência do Modelo (Acurácia vs Iteração)\',\n' +
+                    '    \'line\',\n' +
+                    '    \'{"labels":["Iter 1","Iter 2","Iter 3","Iter 4","Iter 5","Iter 6"],"datasets":[{"label":"Acurácia","data":[0.65,0.74,0.83,0.89,0.95,0.98],"borderColor":"#2563eb","backgroundColor":"rgba(37,99,235,0.15)","tension":0.3,"fill":true}]}\'\n' +
+                    '  );\n' +
                     'end;',
             execution_count: 0,
             status: 'idle',
