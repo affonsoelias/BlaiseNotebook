@@ -130,13 +130,17 @@
         const self = this;
         const initialVal = self.currentText || self.value || '';
         self.currentText = initialVal;
-        const ta = self.$refs ? self.$refs.mdTextarea : null;
-        if (ta) {
-          ta.value = initialVal;
-          ta.focus();
-          ta.style.height = 'auto';
-          ta.style.height = Math.max(100, ta.scrollHeight) + 'px';
-        }
+        const syncTa = function() {
+          const ta = self.$refs ? self.$refs.mdTextarea : null;
+          if (ta) {
+            ta.value = initialVal;
+            ta.focus();
+            ta.style.height = 'auto';
+            ta.style.height = Math.max(100, ta.scrollHeight) + 'px';
+          }
+        };
+        syncTa();
+        setTimeout(syncTa, 20);
       end;
     end;
 
@@ -160,13 +164,9 @@
       asm
         const target = e && e.target ? e.target : null;
         if (target) {
-          const newVal = target.value;
-          this.currentText = newVal;
+          this.currentText = target.value;
           target.style.height = 'auto';
           target.style.height = Math.max(100, target.scrollHeight) + 'px';
-          if (this.$emit) {
-            this.$emit('input', newVal);
-          }
         }
       end;
     end;
@@ -176,7 +176,7 @@
       asm
         const evt = e || window.event;
         if (!evt) return;
-        if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) {
+        if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey || evt.shiftKey)) {
           evt.preventDefault();
           this.finishEdit();
         } else if (evt.key === 'Escape') {
