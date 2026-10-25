@@ -7,14 +7,17 @@
 
 ## 🎯 Vision & Objectives
 
-Transform **BlaiseNotebook** into a premier scientific computing and interactive notebook environment for Object Pascal developers, data scientists, and engineers. The plan is organized into **5 core development milestones** approved for implementation.
+Transform **BlaiseNotebook** into a premier scientific computing and interactive notebook environment for Object Pascal developers, data scientists, and engineers. The plan is organized into progressive development milestones.
 
 ```mermaid
 flowchart LR
     M1["Milestone 1<br/><b>Data Science API</b><br/><i>Concluído</i>"] --> M2["Milestone 2<br/><b>Modular Packages</b><br/><i>Concluído</i>"]
-    M2 --> M3["Milestone 3<br/><b>Stateful Kernel</b><br/><i>Backend & Cache</i>"]
-    M3 --> M4["Milestone 4<br/><b>Frontend UX</b><br/><i>IntelliSense & DataGrid</i>"]
-    M4 --> M5["Milestone 5<br/><b>Dashboard View</b><br/><i>Presentation Mode</i>"]
+    M2 --> M3["Milestone 3<br/><b>Stateful Kernel</b><br/><i>Concluído</i>"]
+    M3 --> M4["Milestone 4<br/><b>Frontend UX</b><br/><i>Concluído</i>"]
+    M4 --> M5["Milestone 5<br/><b>Dashboard View</b><br/><i>Concluído</i>"]
+    M5 --> M6["Milestone 6<br/><b>Editor DX & TOC</b><br/><i>Planejado</i>"]
+    M6 --> M7["Milestone 7<br/><b>Widgets & 3D</b><br/><i>Planejado</i>"]
+    M7 --> M8["Milestone 8<br/><b>Robustness & Export</b><br/><i>Planejado</i>"]
 ```
 
 ---
@@ -76,7 +79,7 @@ flowchart LR
 
 #### 3.1 Sessão Persistente entre Células (Stateful Kernel)
 - [x] **Shared Session Daemon**: Manter o interpretador Python (`CPython 3.13`) e variáveis Pascal/Python em execução contínua no processo do servidor (`kernel/blaise_kernel_daemon.py`).
-- [x] **Preservação de Contexto**: Variáveis e DataFrames gerados na Célula 1 (ex: `DF := TPyDataFrame.Create('dados_vendas')`) ficam imediatamente disponíveis na Célula 2 sem necessidade de recarregamento.
+- [x] **Preservação de Contexto**: Variáveis e DataFrames gerados na Célula 1 (ex: `DF.SaveAs('dados_vendas')`) ficam imediatamente disponíveis na Célula 2 via `DF.Attach('dados_vendas')` sem necessidade de recarregamento.
 - [x] **Reset de Sessão**: Comando `Restart Kernel` (via botão na toolbar e WebSocket action `restart_kernel`) limpa completamente a memória do workspace e reinicia o estado do daemon.
 
 #### 3.2 Cache Inteligente de Compilação (Zero-Delay Re-run)
@@ -112,12 +115,66 @@ flowchart LR
 > **Goal:** Transform analytical notebooks into executive presentations and interactive dashboards with a single click.
 
 #### 5.1 Modo "Apenas Saídas" (Dashboard View)
-- [x] **Toggle Button na Toolbar**: Botão `📊 Dashboard View` no topo da tela.
+- [x] **Toggle Button na Toolbar**: Botão `📊 Dashboard View` no topo da tela e atalho `Ctrl + Shift + D`.
 - [x] **Ocultação de Código**: Esconder editores de código, gutters de linha e indicadores técnicos de compilação.
 - [x] **Layout de Apresentação**:
   - Textos em Markdown/LaTeX renderizados como seções executivas.
   - Tabelas e gráficos em largura total ou cards responsivos lado a lado.
-- [x] **Modo Leitura / Apresentação**: Ideal para compartilhamento em telas de reunião e demonstrações para stakeholders.
+- [x] **Modo Leitura / Apresentação**: Ideal para compartilhamento em telas de reunião, apresentações executivas e impressão/PDF (`window.print()`).
+
+---
+
+### Milestone 6: Produtividade Avançada & Navegação no Editor (Frontend DX) 📋 PLANEJADO
+> **Goal:** Expand user productivity with intuitive notebook navigation, command history, and reusable snippet templates.
+
+#### 6.1 Histórico de Ações e Undo/Redo no Nível do Notebook
+- [ ] **Desfazer/Refazer Global (`Ctrl+Z` / `Ctrl+Y`)**: Manter histórico de ações estruturais no notebook (adição, deleção e reordenação de células).
+- [ ] **Lixeira de Células (Recuperação Rápida)**: Capacidade de restaurar células deletadas acidentalmente via atalho `Z` no modo de comando ou banner de restauração rápida.
+
+#### 6.2 Reordenação de Células via Drag & Drop
+- [ ] **Alça Visual de Arrasto (`⠿`)**: Handle visual na lateral esquerda de cada célula permitindo arrastar e soltar para reposicionar células na ordem desejada.
+- [ ] **Feedback Visual de Posicionamento**: Linha indicadora animada mostrando exatamente onde a célula será solta.
+
+#### 6.3 Tabela de Conteúdos Automática (Outline / TOC)
+- [ ] **Painel Lateral Recolhível**: Drawer lateral que extrai automaticamente títulos Markdown (`#`, `##`, `###`) do notebook.
+- [ ] **Navegação com Rolagem Suave**: Clicar em um item do outline rola a página suavemente até a célula correspondente.
+
+#### 6.4 Snippets & Catálogo de Receitas de Código
+- [ ] **Menu de Inserção Rápida de Templates**: Modal ou submenu na toolbar para inserir receitas prontas (ex: *Carregar CSV & Resumo*, *Split Treino/Teste com Random Forest*, *Histograma + BoxPlot*).
+
+---
+
+### Milestone 7: Visualizações Avançadas & Widgets Interativos (Data Science Pro) 📋 PLANEJADO
+> **Goal:** Enhance data exploration with interactive visual controls, 3D representations, and automated data profiling.
+
+#### 7.1 Widgets e Filtros Interativos Inline
+- [ ] **Controles Visuais Reativos**: Sliders numéricos, caixas de seleção e dropdowns inseríveis nas células que atualizam parâmetros de execução dinamicamente.
+- [ ] **Auto-Reexecução Vinculada**: Ao mover um slider, a célula vinculada recalcula automaticamente o gráfico ou tabela.
+
+#### 7.2 Gráficos 3D e Mapas Geoespaciais
+- [ ] **Superfícies e Dispersão 3D**: Renderização tridimensional interativa via WebGL (Plotly / Three.js) para dados multivariados.
+- [ ] **Mapas Geoespaciais Interativos**: Visualização de pontos geográficos (latitude/longitude), mapas de calor (heatmaps) e clusters geográficos.
+
+#### 7.3 Data Profiler Automático para DataFrames
+- [ ] **Resumo Exploratório com 1 Clique**: Botão no cabeçalho do DataGrid Pro para exibir visão geral de qualidade dos dados: contagem de nulos, tipos inferidos, estatísticas sumárias e mini-gráficos de distribuição (sparklines).
+
+---
+
+### Milestone 8: Robustez do Kernel, Monitoramento & Exportação para Produção 📋 PLANEJADO
+> **Goal:** Deliver bulletproof execution control, real-time resource telemetry, and production-ready export targets.
+
+#### 8.1 Interrupção Segura de Execução (Interrupt Kernel)
+- [ ] **Botão "Parar Execução" (Interrupt)**: Capacidade de abortar uma execução em andamento (loops infinitos, modelos demorados) sem matar o processo do daemon nem perder variáveis da memória.
+
+#### 8.2 Monitor de Recursos em Tempo Real (Telemetry)
+- [ ] **Indicador de Consumo no Header**: Widget discreto na barra superior mostrando consumo de RAM e CPU do daemon Python e latência de compilação FPC.
+
+#### 8.3 Exportação Autossuficiente para Produção
+- [ ] **Exportação para HTML Standalone**: Gerar um único arquivo `.html` autossuficiente com gráficos Chart.js e tabelas embutidas (sem dependência do servidor para visualização).
+- [ ] **Exportação para Script Executável (`.pas` / `.py`)**: Concatenação limpa de todas as células de código em um script executável para automações batch em linha de comando.
+
+#### 8.4 Múltiplos Kernels / Isolamento por Workspace
+- [ ] **Sessões Isoladas por Aba/Workspace**: Permitir que diferentes abas do navegador ou diferentes notebooks rodem com instâncias de daemon e portas dedicadas para evitar colisão de variáveis.
 
 ---
 
@@ -129,7 +186,7 @@ flowchart LR
 | **Gerenciador de Pacotes** | Sistema de pacotes modulares (`packages/core/` e `packages/external/`) | Desacoplamento de bibliotecas, auto-descoberta dinâmica de units e wrappers |
 | **Ponte de Dados & AI** | Python4Delphi / CPython 3.13 + Pandas + Scikit-Learn | Execução otimizada de Data Science e Machine Learning |
 | **Frontend Reativo** | BlaiseVue 4.0 SPA (Transpilador Pascal-to-JS) | Virtual DOM, reatividade por proxy, componentes Single-File (`.bv`) |
-| **Visualização** | Chart.js 4.x + Canvas 2D | Gráficos científicos responsivos acelerados por hardware |
+| **Visualização** | Chart.js 4.x + Canvas 2D / WebGL | Gráficos científicos responsivos acelerados por hardware |
 | **Formato de Arquivo** | `.bynb` (JSON Schema) | Compatibilidade e persistência completa de metadados, código e saídas |
 
 ---
@@ -138,9 +195,12 @@ flowchart LR
 
 1. **Fase 1 (Base Científica - CONCLUÍDO)**: Milestone 1 (Novos gráficos, métodos fluentes e modelos no `BlaiseDataScience.pas`).
 2. **Fase 2 (Arquitetura Modular - CONCLUÍDO)**: Milestone 2 (Desacoplamento em `packages/core/` e `packages/external/`, modularização de Pandas, Sklearn, Math, suporte a `uses` dinâmico e `%pip`).
-3. **Fase 3 (Velocidade e Continuidade - PRÓXIMO)**: Milestone 3 (Cache de compilação, múltiplas saídas e sessão persistente).
-4. **Fase 4 (Interface Avançada)**: Milestone 4 (Autocompletion de Pascal e DataGrid Pro com paginação/ordenação).
-5. **Fase 5 (Apresentação Final)**: Milestone 5 (Dashboard View executivo).
+3. **Fase 3 (Velocidade e Continuidade - CONCLUÍDO)**: Milestone 3 (Cache de compilação, múltiplas saídas e sessão persistente).
+4. **Fase 4 (Interface Avançada - CONCLUÍDO)**: Milestone 4 (Autocompletion de Pascal e DataGrid Pro com paginação/ordenação).
+5. **Fase 5 (Apresentação Final - CONCLUÍDO)**: Milestone 5 (Dashboard View executivo).
+6. **Fase 6 (Produtividade e Navegação - PRÓXIMO)**: Milestone 6 (Undo/Redo global, Drag & Drop de células, Outline/TOC e catálogo de snippets).
+7. **Fase 7 (Widgets e 3D - PLANEJADO)**: Milestone 7 (Widgets interativos inline, gráficos 3D/mapas e Data Profiler).
+8. **Fase 8 (Robustez e Produção - PLANEJADO)**: Milestone 8 (Interrupt de execução, telemetria de recursos e exportação HTML/script standalone).
 
 ---
 
