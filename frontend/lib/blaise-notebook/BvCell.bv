@@ -143,7 +143,10 @@
     begin
       asm
         const c = this.cell || {};
+        const hasOut = Array.isArray(c.outputs) && c.outputs.length > 0;
         return {
+          'cell-has-outputs': hasOut,
+          'cell-no-outputs': !hasOut,
           'cell-is-code': c.type === 'code',
           'cell-is-md': c.type === 'markdown',
           'cell-status-running': c.status === 'running',

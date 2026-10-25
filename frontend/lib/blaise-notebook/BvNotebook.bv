@@ -1,5 +1,5 @@
 <template>
-  <div class="bv-notebook-workspace">
+  <div class="bv-notebook-workspace" :class="{ 'is-dashboard-mode': isDashboardMode }">
     <!-- NOTEBOOK TOP HEADER (BRAND & METADATA) -->
     <header class="notebook-header">
       <div class="header-left">
@@ -54,6 +54,14 @@
       </div>
 
       <div class="toolbar-group">
+        <button
+          class="tb-btn tb-btn-dashboard"
+          :class="{ 'btn-dashboard-active': isDashboardMode }"
+          @click="toggleDashboardMode"
+          title="Alternar Modo Dashboard (Apenas Saídas / Apresentação Executiva)"
+        >
+          {{ isDashboardMode ? '✏️ Modo Edição' : '📊 Dashboard View' }}
+        </button>
         <button class="tb-btn" @click="exportNotebookJson" title="Save notebook (.bynb)">
           💾 Save (.bynb)
         </button>
@@ -61,6 +69,20 @@
           📂 Open
           <input id="hidden-notebook-file-input" type="file" accept=".bynb,.json" style="display:none;" @change="importNotebookJson" />
         </label>
+      </div>
+    </div>
+
+    <!-- EXECUTIVE DASHBOARD MODE BANNER -->
+    <div b-if="isDashboardMode" class="dashboard-banner">
+      <div class="dash-banner-left">
+        <span class="dash-badge">📊 DASHBOARD VIEW</span>
+        <span class="dash-title">{{ notebookName || 'Executive Dashboard' }}</span>
+        <span class="dash-sub">• Apresentação Executiva Interativa (Apenas Saídas)</span>
+      </div>
+      <div class="dash-banner-right">
+        <button class="dash-btn-exit" @click="toggleDashboardMode" title="Retornar ao modo editor">
+          ✏️ Sair do Dashboard
+        </button>
       </div>
     </div>
 
@@ -121,6 +143,7 @@
     kernelStatus: string = 'disconnected'; // 'connected', 'busy', 'disconnected'
     kernelUrl: string = 'ws://localhost:8090/ws';
     isRunning: boolean = false;
+    isDashboardMode: boolean = false;
     cells: JSValue = [];
     executionCounter: integer = 0;
 
@@ -172,7 +195,13 @@
     end;
 
   methods:
-    function createCell(const AType: string; const ASource: string): JSValue;
+    procedure toggleDashboardMode;
+    begin
+      asm
+        this.isDashboardMode = !this.isDashboardMode;
+      end;
+    end;
+    procedure createCell(const AType: string; const ASource: string);
     begin
       asm
         const newId = 'cell_' + Math.random().toString(36).substring(2, 9);
@@ -1548,5 +1577,205 @@
     background: #0f172a !important;
     border-top: 1px solid #1e293b !important;
     color: #94a3b8 !important;
+  }
+  /* ========================================================
+     DASHBOARD VIEW (EXECUTIVE PRESENTATION MODE)
+     ======================================================== */
+  .tb-btn-dashboard {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6) !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
+  }
+
+  .tb-btn-dashboard:hover {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.45);
+  }
+
+  .tb-btn-dashboard.btn-dashboard-active {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.35);
+  }
+
+  /* DASHBOARD TOP BANNER */
+  .dashboard-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, #1e1b4b, #312e81);
+    color: #e0e7ff;
+    padding: 10px 24px;
+    border-bottom: 1px solid #4338ca;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  .dash-banner-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .dash-badge {
+    background: #4f46e5;
+    color: #ffffff;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .dash-title {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #ffffff;
+  }
+
+  .dash-sub {
+    font-size: 12px;
+    color: #c7d2fe;
+  }
+
+  .dash-btn-exit {
+    background: #ffffff;
+    color: #312e81;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  }
+
+  .dash-btn-exit:hover {
+    background: #e0e7ff;
+    transform: translateY(-1px);
+  }
+
+  /* WORKSPACE & CANVAS IN DASHBOARD MODE */
+  .is-dashboard-mode {
+    background: #0b0f19 !important;
+  }
+
+  .is-dashboard-mode .notebook-cells-canvas {
+    max-width: 1280px !important;
+    width: 95% !important;
+    margin: 16px auto !important;
+    padding: 0 10px 60px 10px !important;
+  }
+
+  /* HIDE EDITING CONTROLS, GUTTERS & INSERTERS */
+  .is-dashboard-mode .cell-inserter-divider {
+    display: none !important;
+  }
+
+  .is-dashboard-mode .canvas-bottom-inserter {
+    display: none !important;
+  }
+
+  .is-dashboard-mode .cell-gutter {
+    display: none !important;
+    width: 0 !important;
+    border: none !important;
+  }
+
+  .is-dashboard-mode .cell-header-bar {
+    display: none !important;
+  }
+
+  .is-dashboard-mode .cell-is-code .cell-editor-area {
+    display: none !important;
+  }
+
+  /* HIDE CODE CELLS THAT HAVE NO OUTPUTS */
+  .is-dashboard-mode .cell-no-outputs.cell-is-code {
+    display: none !important;
+  }
+
+  /* EXECUTIVE CELL CARDS */
+  .is-dashboard-mode .bv-cell-container {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    margin-bottom: 24px !important;
+    padding: 0 !important;
+  }
+
+  .is-dashboard-mode .cell-main-content {
+    padding: 0 !important;
+  }
+
+  /* MARKDOWN AS EXECUTIVE PRESENTATION SECTIONS */
+  .is-dashboard-mode .cell-is-md .bv-markdown-root {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .is-dashboard-mode .bv-md-header {
+    display: none !important;
+  }
+
+  .is-dashboard-mode .bv-md-rendered {
+    background: transparent !important;
+    border: none !important;
+    padding: 6px 0 !important;
+    color: #e2e8f0 !important;
+  }
+
+  .is-dashboard-mode .bv-md-rendered h1 {
+    font-size: 26px !important;
+    color: #f8fafc !important;
+    border-bottom: 2px solid #3b82f6 !important;
+    padding-bottom: 6px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .is-dashboard-mode .bv-md-rendered h2 {
+    font-size: 20px !important;
+    color: #93c5fd !important;
+    margin-top: 18px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .is-dashboard-mode .bv-md-rendered p {
+    font-size: 14.5px !important;
+    line-height: 1.6 !important;
+    color: #cbd5e1 !important;
+  }
+
+  /* EXECUTIVE PRESENTATION CARDS FOR OUTPUTS */
+  .is-dashboard-mode .bv-output-root {
+    margin-top: 0 !important;
+    border-radius: 10px !important;
+    border: 1px solid #334155 !important;
+    background: #161b22 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  .is-dashboard-mode .bv-output-header {
+    display: none !important;
+  }
+
+  .is-dashboard-mode .bv-output-items {
+    padding: 14px 18px !important;
+    gap: 20px !important;
+  }
+
+  .is-dashboard-mode .bv-out-chart-card {
+    border-radius: 10px !important;
+    border: 1px solid #334155 !important;
+    background: #0d1117 !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25) !important;
+  }
+
+  .is-dashboard-mode .chart-canvas-container {
+    min-height: 420px !important;
   }
 </style>

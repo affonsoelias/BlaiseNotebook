@@ -112,12 +112,12 @@ flowchart LR
 > **Goal:** Transform analytical notebooks into executive presentations and interactive dashboards with a single click.
 
 #### 5.1 Modo "Apenas Saídas" (Dashboard View)
-- [ ] **Toggle Button na Toolbar**: Botão `📊 Dashboard View` no topo da tela.
-- [ ] **Ocultação de Código**: Esconder editores de código, gutters de linha e indicadores técnicos de compilação.
-- [ ] **Layout de Apresentação**:
+- [x] **Toggle Button na Toolbar**: Botão `📊 Dashboard View` no topo da tela.
+- [x] **Ocultação de Código**: Esconder editores de código, gutters de linha e indicadores técnicos de compilação.
+- [x] **Layout de Apresentação**:
   - Textos em Markdown/LaTeX renderizados como seções executivas.
   - Tabelas e gráficos em largura total ou cards responsivos lado a lado.
-- [ ] **Modo Leitura / Apresentação**: Ideal para compartilhamento em telas de reunião e demonstrações para stakeholders.
+- [x] **Modo Leitura / Apresentação**: Ideal para compartilhamento em telas de reunião e demonstrações para stakeholders.
 
 ---
 
