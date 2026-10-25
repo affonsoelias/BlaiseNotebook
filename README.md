@@ -44,57 +44,9 @@ Comprehensive technical guides and references are available in the [`docs/`](doc
 
 ---
 
-## 🗺️ Project Roadmap & Implementation Status
+## 🗺️ Product Roadmap
 
-All four foundational stages are **100% implemented, tested, and verified**:
-
-### ✅ Stage 1: BlaiseVue Frontend & Reactive UI Components *(Implemented)*
-- [x] **`<bv-notebook>` Canvas**: Clean global toolbar (Run All, Add Code/Markdown, Clear Outputs, Save `.bynb`, Open `.bynb`), reactive WebSocket kernel status pill, and inter-cell insertion dividers.
-- [x] **`<bv-cell>` Component**: Polymorphic cell supporting Pascal Code and Markdown, execution counter (`In [ 1 ]:` / `In [ * ]:` / `In [ ]:`), and cell-level controls (reorder, delete, type toggle).
-- [x] **`<bv-code-editor>`**: Monospace code editor with line numbers gutter, smart indentation (2 spaces), `Shift + Enter` execution shortcut, and `Ctrl + Enter` in-place execution.
-- [x] **`<bv-markdown>`**: Rich Markdown renderer supporting headers, formatted text, blockquotes, lists, and code blocks with double-click inline editing.
-- [x] **In-Cell `<bv-output>` Multi-Format Output Area**:
-  - `stdout`/`stderr`: Real-time console logs with timestamps and monospace terminal styling.
-  - `table`: Responsive data table viewer for tabular datasets and DataFrames.
-  - `chart`: Canvas charts powered by **Chart.js** via `<bv-chart>` rendered **directly underneath the code cell**.
-- [x] **Clean SPA Layout**: Streamlined interface exclusively focused on the notebook environment.
-
----
-
-### ✅ Stage 2: mORMot 2 Kernel & WebSocket Execution Engine *(Implemented)*
-- [x] **mORMot 2 HTTP & WebSocket Server**: Low-latency, high-throughput asynchronous server hosting static SPA assets and handling bidirectional cell communication over `/ws`.
-- [x] **WebSocket Execution Protocol**:
-  - `execute_cell`: Transmits cell code, cell ID, and execution count.
-  - `stream`: Streams partial `stdout` / `stderr` in real-time as computations proceed.
-  - `display_data`: Pushes rich structured payloads (Chart.js JSON configs, table rows/cols).
-  - `execute_reply`: Returns execution status, completion timestamps, and elapsed time in milliseconds.
-- [x] **Dynamic Sandbox Execution**:
-  - Dynamic Free Pascal compilation harness (`uCodeRunner.pas`) invoking `fpc.exe` with real-time output pipes.
-  - Fast execution (typical 200–300ms turnaround for compilation and execution).
-
----
-
-### ✅ Stage 3: Dual Scientific Engines (Native Pascal + Python4Delphi) *(Implemented)*
-- [x] **Native Pascal Scientific Unit (`BlaiseMathKernel.pas`)**:
-  - Advanced record `TVector` with descriptive statistics (mean, median, standard deviation, variance).
-  - Random dataset generators and linear regression fitting (`TLinearRegression`) in pure compiled Pascal.
-- [x] **Output Magic Delimiter Protocol (`BlaiseOutput.pas`)**:
-  - Magic delimiter `@@BLAISE_PAYLOAD@@:` for zero-copy streaming of tables and charts.
-  - Global helper procedures: `ShowChart(Title, ChartType, DataJson)` and `ShowTable(Title, Columns, RowsJson)`.
-- [x] **Python4Delphi / Python4Lazarus Bridge (`BlaisePyKernel.pas`)**:
-  - Embedded Python 3.13 integration via CPython API.
-  - Automatic detection of local Python DLLs (`python313.dll`, `python312.dll`).
-  - Seamless execution: `PyRun` and `PyEval`.
-  - Chart.js visualization bridges: `ShowPyDataFrame` (Pandas tables), `ShowPySeriesChart` (Chart.js series), `ShowPyDataFrameChart` (multi-column Chart.js curves).
-
----
-
-### ✅ Stage 4: End-to-End Scientific Demo Notebook *(Implemented)*
-- [x] Pre-built demo notebook [`demo.bynb`](demo.bynb) (also located at [`examples/demo_datascience.bynb`](examples/demo_datascience.bynb)):
-  1. High-throughput statistical simulation in pure native Pascal (`TVector`).
-  2. Dataset manipulation and training with Pandas & Scikit-learn via Python4Delphi.
-  3. Interactive canvas visualization using `<bv-chart>` directly under each code block.
-- [x] Fully automated WebSocket test harness (`scratch/test_demo_notebook.py`) verifying real-time compilation, Python execution, and Chart.js streaming.
+For the strategic evolutionary roadmap and planned milestones, see [ROADMAP.md](ROADMAP.md).
 
 ---
 
