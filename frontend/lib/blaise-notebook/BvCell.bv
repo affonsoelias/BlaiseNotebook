@@ -1,5 +1,5 @@
 <template>
-  <div class="bv-cell-container" :class="cellClasses">
+  <div class="bv-cell-container" :class="cellClasses" :data-cell-id="cell ? cell.id : ''">
     <!-- LEFT GUTTER: EXECUTION INDICATOR -->
     <div class="cell-gutter">
       <div b-if="isCode" class="cell-prompt" :class="{ 'prompt-running': cell && cell.status === 'running', 'prompt-done': cell && cell.status === 'success', 'prompt-error': cell && cell.status === 'error', 'prompt-aborted': cell && cell.status === 'aborted' }">

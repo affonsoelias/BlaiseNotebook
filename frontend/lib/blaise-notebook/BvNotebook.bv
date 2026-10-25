@@ -55,6 +55,30 @@
 
       <div class="toolbar-group">
         <button
+          class="tb-btn"
+          :disabled="!canUndo"
+          @click="undoAction"
+          title="Desfazer alteração estrutural de células (Ctrl+Z)"
+        >
+          ↩️ Desfazer
+        </button>
+        <button
+          class="tb-btn"
+          :disabled="!canRedo"
+          @click="redoAction"
+          title="Refazer alteração estrutural de células (Ctrl+Y)"
+        >
+          ↪️ Refazer
+        </button>
+        <button
+          b-if="trashCount > 0"
+          class="tb-btn tb-btn-trash"
+          @click="openTrashModal"
+          title="Ver lixeira de células deletadas"
+        >
+          🗑️ Lixeira ({{ trashCount }})
+        </button>
+        <button
           class="tb-btn tb-btn-dashboard"
           :class="{ 'btn-dashboard-active': isDashboardMode }"
           @click="toggleDashboardMode"
@@ -123,6 +147,62 @@
       </div>
     </main>
 
+    <!-- QUICK RESTORE / UNDO FLOATING TOAST -->
+    <div b-if="undoToastVisible" class="notebook-undo-toast">
+      <div class="undo-toast-content">
+        <span class="undo-toast-icon">🗑️</span>
+        <span class="undo-toast-text">{{ undoToastMessage }}</span>
+        <button class="btn-toast-restore" @click="restoreLastDeletedCell">
+          ↩️ Restaurar Célula
+        </button>
+        <button class="btn-toast-close" @click="closeUndoToast" title="Fechar notificação">
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- TRASH MODAL (LIXEIRA DE CÉLULAS) -->
+    <div b-if="showTrashModal" class="trash-modal-backdrop" @click="closeTrashModal">
+      <div class="trash-modal-card" @click="onModalCardClick">
+        <div class="trash-modal-header">
+          <div class="trash-modal-title">
+            <span>🗑️ Lixeira de Células</span>
+            <span class="trash-modal-count">({{ trashCount }} células)</span>
+          </div>
+          <button class="trash-modal-close" @click="closeTrashModal">✕</button>
+        </div>
+        <div class="trash-modal-body">
+          <p class="trash-modal-desc">
+            Células excluídas durante esta sessão. Você pode restaurar qualquer célula de volta ao notebook com código e saídas preservados.
+          </p>
+          <div b-if="trashCount === 0" class="trash-empty-state">
+            A lixeira está vazia. Nenhuma célula deletada nesta sessão.
+          </div>
+          <div class="trash-items-list">
+            <div b-for="item in trashList" :key="item.id" class="trash-item-row">
+              <div class="trash-item-info">
+                <span class="trash-item-type-badge" :class="'badge-' + item.type">
+                  {{ item.type === 'code' ? '⚡ Pascal' : '📝 Markdown' }}
+                </span>
+                <span class="trash-item-index">Posição original: #{{ item.originalIndex + 1 }}</span>
+                <span class="trash-item-time">{{ item.deletedTime }}</span>
+              </div>
+              <pre class="trash-item-snippet">{{ item.snippet }}</pre>
+              <div class="trash-item-actions">
+                <button class="btn-restore-item" @click="restoreTrashItem(item.id)">
+                  ↩️ Restaurar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="trash-modal-footer">
+          <button class="tb-btn" @click="clearTrash">Esvaziar Lixeira</button>
+          <button class="tb-btn tb-btn-primary" @click="closeTrashModal">Fechar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- INFORMATIVE FOOTER -->
     <footer class="notebook-footer">
       <div class="footer-item">Total Cells: <strong>{{ cells.length }}</strong></div>
@@ -144,6 +224,13 @@
     kernelUrl: string = 'ws://localhost:8090/ws';
     isRunning: boolean = false;
     isDashboardMode: boolean = false;
+    canUndo: boolean = false;
+    canRedo: boolean = false;
+    trashCount: integer = 0;
+    trashList: JSValue = [];
+    showTrashModal: boolean = false;
+    undoToastVisible: boolean = false;
+    undoToastMessage: string = '';
     cells: JSValue = [];
     executionCounter: integer = 0;
 
@@ -195,6 +282,178 @@
     end;
 
   methods:
+    procedure pushHistory(const ADesc: string);
+    begin
+      asm
+        if (!this._undoStack) this._undoStack = [];
+        if (!this._redoStack) this._redoStack = [];
+        try {
+          const snapshot = JSON.parse(JSON.stringify(this.cells || []));
+          const histItem = new Object();
+          histItem.description = ADesc || 'Alteração';
+          histItem.cells = snapshot;
+          this._undoStack.push(histItem);
+          if (this._undoStack.length > 50) {
+            this._undoStack.shift();
+          }
+          this._redoStack = [];
+          this.canUndo = this._undoStack.length > 0;
+          this.canRedo = false;
+        } catch(err) {
+          console.error('[BlaiseNotebook] pushHistory error:', err);
+        }
+      end;
+    end;
+
+    procedure undoAction;
+    begin
+      asm
+        if (!this._undoStack || this._undoStack.length === 0) return;
+        try {
+          if (!this._redoStack) this._redoStack = [];
+          const currentSnapshot = JSON.parse(JSON.stringify(this.cells || []));
+          const redoItem = new Object();
+          redoItem.cells = currentSnapshot;
+          this._redoStack.push(redoItem);
+
+          const prev = this._undoStack.pop();
+          this.cells = prev.cells;
+          this.canUndo = this._undoStack.length > 0;
+          this.canRedo = this._redoStack.length > 0;
+          if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        } catch(err) {
+          console.error('[BlaiseNotebook] undoAction error:', err);
+        }
+      end;
+    end;
+
+    procedure redoAction;
+    begin
+      asm
+        if (!this._redoStack || this._redoStack.length === 0) return;
+        try {
+          if (!this._undoStack) this._undoStack = [];
+          const currentSnapshot = JSON.parse(JSON.stringify(this.cells || []));
+          const undoItem = new Object();
+          undoItem.cells = currentSnapshot;
+          this._undoStack.push(undoItem);
+
+          const next = this._redoStack.pop();
+          this.cells = next.cells;
+          this.canUndo = this._undoStack.length > 0;
+          this.canRedo = this._redoStack.length > 0;
+          if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        } catch(err) {
+          console.error('[BlaiseNotebook] redoAction error:', err);
+        }
+      end;
+    end;
+
+    procedure restoreLastDeletedCell;
+    begin
+      asm
+        if (!this._trashList || this._trashList.length === 0) return;
+        this.pushHistory('Restaurar célula');
+        const item = this._trashList.shift();
+        this.trashList = this._trashList.slice();
+        this.trashCount = this._trashList.length;
+        this.undoToastVisible = false;
+        if (this._toastTimer) clearTimeout(this._toastTimer);
+
+        let targetIdx = item.originalIndex;
+        if (targetIdx < 0) targetIdx = 0;
+        if (targetIdx > this.cells.length) targetIdx = this.cells.length;
+
+        this.cells.splice(targetIdx, 0, item.cell);
+        this.cells = this.cells.slice();
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+
+        setTimeout(() => {
+          const el = document.querySelector('[data-cell-id="' + item.cell.id + '"]');
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 60);
+      end;
+    end;
+
+    procedure restoreTrashItem(const AId: string);
+    begin
+      asm
+        if (!this._trashList || this._trashList.length === 0) return;
+        const idx = this._trashList.findIndex(x => x && x.id === AId);
+        if (idx < 0) return;
+        this.pushHistory('Restaurar célula da lixeira');
+        const item = this._trashList.splice(idx, 1)[0];
+        this.trashList = this._trashList.slice();
+        this.trashCount = this._trashList.length;
+
+        let targetIdx = item.originalIndex;
+        if (targetIdx < 0) targetIdx = 0;
+        if (targetIdx > this.cells.length) targetIdx = this.cells.length;
+
+        this.cells.splice(targetIdx, 0, item.cell);
+        this.cells = this.cells.slice();
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+
+        if (this.trashCount === 0) {
+          this.showTrashModal = false;
+        }
+
+        setTimeout(() => {
+          const el = document.querySelector('[data-cell-id="' + item.cell.id + '"]');
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 60);
+      end;
+    end;
+
+    procedure clearTrash;
+    begin
+      asm
+        this._trashList = [];
+        this.trashList = [];
+        this.trashCount = 0;
+        this.undoToastVisible = false;
+        this.showTrashModal = false;
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure openTrashModal;
+    begin
+      asm
+        this.showTrashModal = true;
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure closeTrashModal;
+    begin
+      asm
+        this.showTrashModal = false;
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure closeUndoToast;
+    begin
+      asm
+        this.undoToastVisible = false;
+        if (this._toastTimer) clearTimeout(this._toastTimer);
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure onModalCardClick(e: JSValue);
+    begin
+      asm
+        if (e && typeof e.stopPropagation === 'function') {
+          e.stopPropagation();
+        }
+      end;
+    end;
     procedure toggleDashboardMode;
     begin
       asm
@@ -222,6 +481,7 @@
       newCell: JSValue;
     begin
       asm
+        this.pushHistory('Adicionar célula de código');
         const c = (this.createCell || window.bvCreateCell)('code', '// New Object Pascal code block\n');
         this.cells.push(c);
       end;
@@ -232,6 +492,7 @@
       newCell: JSValue;
     begin
       asm
+        this.pushHistory('Adicionar célula de markdown');
         const c = (this.createCell || window.bvCreateCell)('markdown', '### New Documentation Section\nDescribe your methodology or findings here.');
         this.cells.push(c);
       end;
@@ -240,6 +501,7 @@
     procedure insertCodeAt(idx: integer);
     begin
       asm
+        this.pushHistory('Inserir célula de código');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// Inserted code block\n');
         const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
@@ -254,6 +516,7 @@
     procedure insertMarkdownAt(idx: integer);
     begin
       asm
+        this.pushHistory('Inserir célula de markdown');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('markdown', '### Inserted Documentation\n');
         const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
@@ -268,6 +531,7 @@
     procedure insertBelowIndex(cellOrIdx: JSValue);
     begin
       asm
+        this.pushHistory('Inserir célula abaixo');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// Next step\n');
         let targetIdx = -1;
@@ -291,6 +555,7 @@
     procedure insertCodeBelowIndex(cellOrIdx: JSValue);
     begin
       asm
+        this.pushHistory('Inserir célula de código abaixo');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// New Object Pascal code block\n');
         let targetIdx = -1;
@@ -314,6 +579,7 @@
     procedure insertMarkdownBelowIndex(cellOrIdx: JSValue);
     begin
       asm
+        this.pushHistory('Inserir célula de markdown abaixo');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('markdown', '### New Documentation Section\nDescribe your findings here.');
         let targetIdx = -1;
@@ -338,6 +604,7 @@
     begin
       asm
         if (idx > 0 && idx < this.cells.length) {
+          this.pushHistory('Mover célula para cima');
           const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
           const item = this.cells.splice(idx, 1)[0];
           this.cells.splice(idx - 1, 0, item);
@@ -353,6 +620,7 @@
     begin
       asm
         if (idx >= 0 && idx < this.cells.length - 1) {
+          this.pushHistory('Mover célula para baixo');
           const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
           const item = this.cells.splice(idx, 1)[0];
           this.cells.splice(idx + 1, 0, item);
@@ -371,8 +639,43 @@
           alert('The notebook must contain at least one cell.');
           return;
         }
+        this.pushHistory('Excluir célula #' + (idx + 1));
+
+        const cellToDelete = this.cells[idx];
+        const cloned = JSON.parse(JSON.stringify(cellToDelete));
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        const lines = (cloned.source || '').split('\n');
+        let snippet = lines.slice(0, 3).join('\n');
+        if (lines.length > 3) snippet += '\n...';
+        if (!snippet.trim()) snippet = '(Célula vazia)';
+
+        if (!this._trashList) this._trashList = [];
+        const trashItem = new Object();
+        trashItem.id = cloned.id;
+        trashItem.cell = cloned;
+        trashItem.type = cloned.type || 'code';
+        trashItem.originalIndex = idx;
+        trashItem.deletedTime = timeStr;
+        trashItem.snippet = snippet;
+        this._trashList.unshift(trashItem);
+
+        this.trashList = this._trashList.slice();
+        this.trashCount = this._trashList.length;
+
         const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
         this.cells.splice(idx, 1);
+        this.cells = this.cells.slice();
+
+        this.undoToastMessage = 'Célula #' + (idx + 1) + ' excluída.';
+        this.undoToastVisible = true;
+        if (this._toastTimer) clearTimeout(this._toastTimer);
+        const self = this;
+        this._toastTimer = setTimeout(() => {
+          self.undoToastVisible = false;
+          if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+        }, 6000);
+
         if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
         requestAnimationFrame(() => {
           window.scrollTo({ top: scrollY, behavior: 'instant' });
@@ -384,6 +687,7 @@
     begin
       asm
         if (cell) {
+          this.pushHistory('Alterar tipo de célula');
           cell.type = newType;
         }
       end;
@@ -392,6 +696,7 @@
     procedure clearAllOutputs;
     begin
       asm
+        this.pushHistory('Limpar todas as saídas');
         for (let i = 0; i < this.cells.length; i++) {
           this.cells[i].outputs = [];
           this.cells[i].status = 'idle';
@@ -799,24 +1104,18 @@
       end;
     end;
 
-    procedure restartKernel;
-    begin
-      asm
-        this.clearAllOutputs();
-        this.executionCounter = 0;
-        if (this._ws) {
-          try {
-            this._ws.close();
-          } catch(e) {}
-        }
-        this.connectWebSocket();
-        alert('Kernel restarted successfully.');
-      end;
-    end;
 
     procedure loadSampleDemo;
     begin
       asm
+        this._undoStack = [];
+        this._redoStack = [];
+        this._trashList = [];
+        this.trashList = [];
+        this.canUndo = false;
+        this.canRedo = false;
+        this.trashCount = 0;
+        this.undoToastVisible = false;
         const demoCells = [
           {
             id: 'demo_1',
@@ -1113,6 +1412,72 @@
         window.addEventListener('blaise:interrupt-all', function() { self.interruptKernel(); });
         window.addEventListener('blaise:restart-kernel', function() { self.restartKernel(); });
         window.addEventListener('blaise:clear-outputs', function() { self.clearAllOutputs(); });
+        window.addEventListener('blaise:undo', function() { self.undoAction(); });
+        window.addEventListener('blaise:redo', function() { self.redoAction(); });
+        window.addEventListener('blaise:restore-deleted', function() { self.restoreLastDeletedCell(); });
+
+        const handleNotebookKeyDown = function(e) {
+          const activeEl = document.activeElement;
+          const isInput = activeEl && (
+            activeEl.tagName === 'INPUT' ||
+            activeEl.tagName === 'TEXTAREA' ||
+            activeEl.isContentEditable
+          );
+
+          // Ctrl+Z or Cmd+Z
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
+            if (e.shiftKey) {
+              e.preventDefault();
+              self.redoAction();
+              return;
+            }
+            if (!isInput) {
+              e.preventDefault();
+              self.undoAction();
+              return;
+            }
+          }
+
+          // Ctrl+Y -> Redo
+          if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || e.key === 'Y')) {
+            if (!isInput) {
+              e.preventDefault();
+              self.redoAction();
+              return;
+            }
+          }
+
+          // Escape closes modal / toast
+          if (e.key === 'Escape') {
+            if (self.showTrashModal) {
+              self.closeTrashModal();
+              return;
+            }
+            if (self.undoToastVisible) {
+              self.closeUndoToast();
+              return;
+            }
+          }
+
+          // Key 'z' in command mode (outside inputs) -> Restore last deleted cell or Undo!
+          if (!isInput && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            if (e.key === 'z' || e.key === 'Z') {
+              e.preventDefault();
+              if (self.trashCount > 0) {
+                self.restoreLastDeletedCell();
+              } else if (self.canUndo) {
+                self.undoAction();
+              }
+              return;
+            }
+          }
+        };
+
+        if (window._bvNotebookKeyHandler) {
+          window.removeEventListener('keydown', window._bvNotebookKeyHandler);
+        }
+        window._bvNotebookKeyHandler = handleNotebookKeyDown;
+        window.addEventListener('keydown', handleNotebookKeyDown);
       end;
     end;
 </script>
@@ -1777,5 +2142,332 @@
 
   .is-dashboard-mode .chart-canvas-container {
     min-height: 420px !important;
+  }
+
+  /* DISABLED TOOLBAR BUTTONS */
+  .tb-btn:disabled {
+    opacity: 0.45 !important;
+    cursor: not-allowed !important;
+    background: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+  }
+
+  .tb-btn-trash {
+    background: #fef2f2 !important;
+    border-color: #fecaca !important;
+    color: #b91c1c !important;
+    font-weight: 700 !important;
+  }
+  .tb-btn-trash:hover:not(:disabled) {
+    background: #fee2e2 !important;
+    border-color: #fca5a5 !important;
+  }
+
+  /* FLOATING UNDO / RESTORE TOAST */
+  .notebook-undo-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 28px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    background: #1e293b;
+    color: #f8fafc;
+    border: 1px solid #475569;
+    border-radius: 8px;
+    padding: 10px 16px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+    animation: toastSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes toastSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .undo-toast-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .undo-toast-icon {
+    font-size: 16px;
+  }
+
+  .undo-toast-text {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .btn-toast-restore {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-toast-restore:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .btn-toast-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 14px;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 4px;
+  }
+
+  .btn-toast-close:hover {
+    color: #ffffff;
+    background: #334155;
+  }
+
+  /* TRASH MODAL BACKDROP & CARD */
+  .trash-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeInModal 0.2s ease-out;
+  }
+
+  @keyframes fadeInModal {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .trash-modal-card {
+    background: #ffffff;
+    color: #1e293b;
+    border-radius: 12px;
+    border: 1px solid #cbd5e1;
+    width: 100%;
+    max-width: 680px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+  }
+
+  .trash-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  .trash-modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0f172a;
+  }
+
+  .trash-modal-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+  }
+
+  .trash-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    color: #64748b;
+    cursor: pointer;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .trash-modal-close:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .trash-modal-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .trash-modal-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 14px;
+    line-height: 1.4;
+  }
+
+  .trash-empty-state {
+    padding: 30px 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13.5px;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+  }
+
+  .trash-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .trash-item-row {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: border-color 0.15s ease;
+  }
+
+  .trash-item-row:hover {
+    border-color: #94a3b8;
+  }
+
+  .trash-item-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .trash-item-type-badge {
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+  }
+
+  .trash-item-type-badge.badge-code {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .trash-item-type-badge.badge-markdown {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .trash-item-index {
+    color: #64748b;
+  }
+
+  .trash-item-time {
+    margin-left: auto;
+    color: #94a3b8;
+    font-size: 11px;
+  }
+
+  .trash-item-snippet {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 6px 10px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11.5px;
+    color: #334155;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 80px;
+    overflow-y: auto;
+    margin: 0;
+  }
+
+  .trash-item-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-restore-item {
+    background: #3b82f6;
+    color: #ffffff;
+    border: none;
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-restore-item:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .trash-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  html[data-bs-theme="dark"] .trash-modal-card,
+  html.theme-dark .trash-modal-card {
+    background: #161b22;
+    color: #f0f6fc;
+    border-color: #30363d;
+  }
+
+  html[data-bs-theme="dark"] .trash-modal-header,
+  html.theme-dark .trash-modal-header,
+  html[data-bs-theme="dark"] .trash-modal-footer,
+  html.theme-dark .trash-modal-footer {
+    background: #0d1117;
+    border-color: #30363d;
+  }
+
+  html[data-bs-theme="dark"] .trash-item-row,
+  html.theme-dark .trash-item-row {
+    background: #0d1117;
+    border-color: #30363d;
+  }
+
+  html[data-bs-theme="dark"] .trash-item-snippet,
+  html.theme-dark .trash-item-snippet {
+    background: #161b22;
+    border-color: #30363d;
+    color: #c9d1d9;
   }
 </style>

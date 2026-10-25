@@ -37,7 +37,7 @@ Comprehensive technical guides and references are available in the [`docs/`](doc
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   BlaiseVue Frontend (Web SPA / WebUI)                  │
 │   <bv-notebook>  •  <bv-cell>  •  <bv-code-editor>  •  <bv-output>     │
-│   Syntax Highlighter & Autocomplete  •  DataGrid Pro  •  Dashboard View │
+│   Syntax Highlighter & Autocomplete  •  DataGrid Pro  •  Undo/Redo & Trash │
 │   In-Cell Reactive Chart.js (<bv-chart>)  •  Interactive Markdown      │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │ Bidirectional WebSocket ($ws)
@@ -99,8 +99,7 @@ For full legal terms, refer to the [LICENSE](LICENSE) file.
 ## 🚀 Quick Start
 
 ### Prerequisites
-- [Free Pascal Compiler](https://www.freepascal.org/) (FPC 3.2.2+)
-- [Lazarus IDE](https://www.lazarus-ide.org/) (with `Python4Lazarus` and `BlaiseVue` installed)
+- [Lazarus IDE](https://www.lazarus-ide.org/) (with `Python4Lazarus`)
 - [Python](https://www.python.org/) 3.10+ (with `numpy`, `pandas`, `scikit-learn` installed)
 - [BlaiseVue](https://github.com/affonsoelias/BlaiseVue) (`bv` command on PATH)
 

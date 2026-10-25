@@ -324,6 +324,9 @@ Every `ShowTable(...)` and `DF.ShowTable(...)` renders an interactive DataGrid P
 | `Ctrl + Space` | **IntelliSense Autocomplete** | Opens completion popup with Pascal keywords, data science classes, and standard methods. |
 | Type `.` (dot) | **Member Autocomplete** | Trigger completion list for methods on known objects (e.g. `DF.`, `S.`, `RF.`, `LR.`). |
 | `↑` / `↓` + `Enter` or `Tab` | **Select Suggestion** | Inserts selected method or snippet with automatic cursor positioning (`$0`). |
+| `Ctrl + Z` | **Undo / Desfazer** | Desfaz a última ação estrutural (adição, exclusão, reordenação de células ou limpeza). |
+| `Ctrl + Y` ou `Ctrl + Shift + Z` | **Redo / Refazer** | Refaz a ação estrutural desfeita anteriormente. |
+| `Z` (no modo comando) | **Restaurar Célula** | Restaura instantaneamente a última célula deletada diretamente na sua posição original. |
 | `Ctrl + Shift + D` | **Dashboard View** | Toggles clean executive presentation mode (hides code cells, expands visual outputs). |
 | `Shift + Enter` | **Run Cell & Next** | Compiles and executes current cell, advancing to the next cell. |
 | `Ctrl + Enter` | **Run Cell in Place** | Compiles and executes the current cell while keeping focus. |

@@ -127,9 +127,9 @@ flowchart LR
 ### Milestone 6: Produtividade Avançada & Navegação no Editor (Frontend DX) 📋 PLANEJADO
 > **Goal:** Expand user productivity with intuitive notebook navigation, command history, and reusable snippet templates.
 
-#### 6.1 Histórico de Ações e Undo/Redo no Nível do Notebook
-- [ ] **Desfazer/Refazer Global (`Ctrl+Z` / `Ctrl+Y`)**: Manter histórico de ações estruturais no notebook (adição, deleção e reordenação de células).
-- [ ] **Lixeira de Células (Recuperação Rápida)**: Capacidade de restaurar células deletadas acidentalmente via atalho `Z` no modo de comando ou banner de restauração rápida.
+#### 6.1 Histórico de Ações e Undo/Redo no Nível do Notebook ✅ CONCLUÍDO
+- [x] **Desfazer/Refazer Global (`Ctrl+Z` / `Ctrl+Y`)**: Manter histórico de ações estruturais no notebook (adição, deleção e reordenação de células).
+- [x] **Lixeira de Células (Recuperação Rápida)**: Capacidade de restaurar células deletadas acidentalmente via atalho `Z` no modo de comando ou banner de restauração rápida.
 
 #### 6.2 Reordenação de Células via Drag & Drop
 - [ ] **Alça Visual de Arrasto (`⠿`)**: Handle visual na lateral esquerda de cada célula permitindo arrastar e soltar para reposicionar células na ordem desejada.
