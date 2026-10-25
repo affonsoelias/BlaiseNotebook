@@ -10,7 +10,7 @@
     {
       "id": "cell_intro",
       "type": "markdown",
-      "source": "# 🔬 BlaiseNotebook: Data Science & AI in Object Pascal\n\nWelcome to **BlaiseNotebook** — the first interactive scientific computing environment for Object Pascal (similar to Jupyter Notebook and Google Colab).\n\n### ⚡ Key Features:\n- **Native Pascal Engine**: High-performance numerical computing and linear algebra compiled with Free Pascal.\n- **Python Scientific Bridge (Python4Delphi)**: Seamless access to **NumPy**, **Pandas**, and **Scikit-learn** directly within Pascal workflows.\n- **Reactive Visualizations with Chart.js (`<bv-chart>`)**: Hardware-accelerated canvas charts rendered **directly below each code cell**.\n\n> 💡 **How to run:** Click on any code cell below and press `Shift + Enter` to compile and execute in real time on the mORMot 2 kernel!",
+      "source": "# 🔬 BlaiseNotebook: Data Science & AI in Object Pascal\n\nWelcome to **BlaiseNotebook** — the interactive scientific computing environment for Object Pascal.\n\n### ⚡ Key Capabilities:\n- **Typed Pascal Data Science API (`BlaiseDataScience`)**: Use Pandas DataFrames, Series, and Scikit-Learn models (`TPyRandomForestRegressor`, `TPyLinearRegression`, `TPyKMeans`) with **100% native Pascal code** — zero Python strings required!\n- **Native Mathematics Kernel (`BlaiseMathKernel`)**: High-performance vectorized computations and statistics with `TVector`.\n- **Reactive Visualizations (`<bv-chart>`)**: Chart.js graphs and responsive interactive data tables rendered directly below each code cell.\n- **Raw Python Execution**: Optional low-level bridge (`BlaisePyKernel`) for custom Python scripts when needed.\n\n> 💡 **Tip:** Press `Shift + Enter` on any code cell below to compile and execute in real time!",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,
@@ -19,25 +19,43 @@
     {
       "id": "cell_math_native",
       "type": "code",
-      "source": "// 1. Statistical Processing and Native Linear Regression in Pascal\nvar\n  V: TVector;\n  Mean, StdDev: Double;\nbegin\n  Writeln('=== Native Numerical Processing in Free Pascal ===');\n  V := TVector.CreateRandom(50, 10.0, 100.0);\n  Mean := V.CalculaMedia;\n  StdDev := V.CalculaDesvioPadrao;\n  Writeln(Format('Generated Vector: N=%d observations | Mean=%.2f | StdDev=%.2f', [V.Count, Mean, StdDev]));\n\n  // Render interactive Chart.js (<bv-chart>) directly below code\n  ShowChart(\n    'Simulated Sample Distribution (Native Pascal)',\n    'bar',\n    '{\"labels\":[\"Cluster 1\",\"Cluster 2\",\"Cluster 3\",\"Cluster 4\",\"Cluster 5\"],\"datasets\":[{\"label\":\"Observed Frequency\",\"data\":[15.4, 28.2, 45.1, 62.0, 78.5],\"backgroundColor\":\"#10b981\"}]}'\n  );\nend;",
+      "source": "// 1. Statistical Processing and Native Linear Algebra in Pascal\nvar\n  V: TVector;\n  Mean, StdDev: Double;\nbegin\n  Writeln('=== Native Numerical Processing in Free Pascal ===');\n  V := TVector.CreateRandom(50, 10.0, 100.0);\n  Mean := V.CalculaMedia;\n  StdDev := V.CalculaDesvioPadrao;\n  Writeln(Format('Generated Vector: N=%d observations | Mean=%.2f | StdDev=%.2f', [V.Count, Mean, StdDev]));\n\n  // Render interactive Chart.js (<bv-chart>) directly below code\n  ShowChart(\n    'Simulated Sample Distribution (Native Pascal)',\n    'bar',\n    '{\"labels\":[\"Cluster 1\",\"Cluster 2\",\"Cluster 3\",\"Cluster 4\",\"Cluster 5\"],\"datasets\":[{\"label\":\"Observed Frequency\",\"data\":[15.4, 28.2, 45.1, 62.0, 78.5],\"backgroundColor\":\"#10b981\"}]}'\n  );\nend;",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,
       "outputs": []
     },
     {
-      "id": "cell_md_python",
+      "id": "cell_md_datascience_api",
       "type": "markdown",
-      "source": "## 🐍 Python4Delphi / Python4Lazarus Scientific Bridge\n\nIn this cell, Object Pascal calls the CPython 3.13 API via **`BlaisePyKernel`**:\n1. Generates a **Pandas** DataFrame with AI training metrics (Iterations, Loss, and Accuracy).\n2. Displays a responsive interactive table via `ShowPyDataFrame`.\n3. Plots model convergence curve with **`<bv-chart>`** directly underneath the code cell!",
+      "source": "## 📊 Strongly-Typed Pascal Data Science API\n\nWith `BlaiseDataScience.pas`, you interact with **Pandas** and **Scikit-Learn** using native Pascal classes:\n- `TPyDataFrame`: Load CSVs, append columns, compute summaries, and render responsive tables.\n- `TPySeries`: Statistical properties (`Mean`, `StdDev`, `Min`, `Max`, `Median`).\n- `TPyRandomForestRegressor`: Train ensemble trees, compute $R^2$ scores, and predict outcomes.\n- `PlotLine`, `PlotBar`, `PlotScatter`: Produce reactive Chart.js canvas elements with a single Pascal call.",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,
       "outputs": []
     },
     {
-      "id": "cell_python_bridge",
+      "id": "cell_pascal_datascience",
       "type": "code",
-      "source": "// 2. Machine Learning with Pandas & Scikit-Learn via BlaisePyKernel\nvar\n  PyCode: string;\nbegin\n  Writeln('[+] Invoking CPython 3.13 API via BlaisePyKernel...');\n\n  PyCode :=\n    'import pandas as pd, numpy as np'#10 +\n    'np.random.seed(42)'#10 +\n    'df = pd.DataFrame({'#10 +\n    '  \"Iteration\": [1, 2, 3, 4, 5, 6],'#10 +\n    '  \"Train_Loss\": [0.85, 0.62, 0.41, 0.28, 0.15, 0.08],'#10 +\n    '  \"Accuracy\": [0.65, 0.74, 0.83, 0.89, 0.95, 0.98]'#10 +\n    '})'#10 +\n    'print(\"[Python] DataFrame processed with\", len(df), \"iterations\")';\n\n  PyRun(PyCode);\n\n  // Display DataFrame as an interactive table below the cell\n  ShowPyDataFrame('df', 'AI Training History (Pandas)', 10);\n\n  // Display convergence curve with Chart.js (<bv-chart>) below the cell\n  ShowChart(\n    'Model Convergence (Accuracy vs Iteration)',\n    'line',\n    '{\"labels\":[\"Iter 1\",\"Iter 2\",\"Iter 3\",\"Iter 4\",\"Iter 5\",\"Iter 6\"],\"datasets\":[{\"label\":\"Accuracy\",\"data\":[0.65,0.74,0.83,0.89,0.95,0.98],\"borderColor\":\"#2563eb\",\"backgroundColor\":\"rgba(37,99,235,0.15)\",\"tension\":0.3,\"fill\":true}]}'\n  );\nend;",
+      "source": "// 2. Pandas & Random Forest Regressor in Pure Object Pascal\nvar\n  DF: TPyDataFrame;\n  RF: TPyRandomForestRegressor;\n  ScoreSeries: TPySeries;\nbegin\n  Writeln('=== Pandas & Scikit-Learn via Typed Object Pascal API ===');\n\n  // Build a DataFrame entirely in Pascal\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('StudyHours', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);\n  DF.AddColumn('MockExams',  [1, 2, 2, 3, 3, 4, 4, 5, 5, 6]);\n  DF.AddColumn('ExamScore',  [45.0, 52.0, 60.0, 68.0, 75.0, 82.0, 88.0, 91.0, 96.0, 99.0]);\n\n  ScoreSeries := DF.Column('ExamScore');\n  Writeln(Format('Dataset: %d rows x %d cols', [DF.RowCount, DF.ColumnCount]));\n  Writeln(Format('ExamScore: Mean=%.2f, StdDev=%.2f, Min=%.1f, Max=%.1f', \n    [ScoreSeries.Mean, ScoreSeries.StdDev, ScoreSeries.Min, ScoreSeries.Max]));\n\n  // Display responsive interactive data table\n  DF.ShowTable('Student Exam Performance', 10);\n\n  // Train Scikit-Learn Random Forest Regressor\n  RF := TPyRandomForestRegressor.Create(25, -1, 42);\n  RF.Fit(DF.Columns(['StudyHours', 'MockExams']), DF.Column('ExamScore'));\n  Writeln(Format('Random Forest Regressor R^2 Score: %.4f', [RF.Score(DF.Columns(['StudyHours', 'MockExams']), DF.Column('ExamScore'))]));\n\n  // Plot hardware-accelerated interactive chart\n  DF.PlotLine('Study Hours vs Exam Score', 'StudyHours', 'ExamScore');\nend;",
+      "execution_count": 0,
+      "status": "idle",
+      "execution_time_ms": 0,
+      "outputs": []
+    },
+    {
+      "id": "cell_md_lr",
+      "type": "markdown",
+      "source": "## 📈 Linear Regression & Trend Modeling\n\nFit linear models with `TPyLinearRegression`, inspect slope and intercept, and visualize results directly under the cell:",
+      "execution_count": 0,
+      "status": "idle",
+      "execution_time_ms": 0,
+      "outputs": []
+    },
+    {
+      "id": "cell_linear_regression",
+      "type": "code",
+      "source": "// 3. Scikit-Learn Linear Regression in Object Pascal\nvar\n  DF: TPyDataFrame;\n  LR: TPyLinearRegression;\nbegin\n  Writeln('=== Scikit-Learn Linear Regression in Pascal ===');\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Experience', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);\n  DF.AddColumn('SalaryK',    [42.0, 48.0, 55.0, 63.0, 72.0, 81.0, 92.0, 105.0]);\n\n  LR := TPyLinearRegression.Create;\n  LR.Fit(DF.Column('Experience'), DF.Column('SalaryK'));\n\n  Writeln('Model Summary: ', LR.Summary);\n  Writeln(Format('Slope: %.2f | Intercept: %.2f | R^2: %.4f', \n    [LR.Slope, LR.Intercept, LR.Score(DF.Column('Experience'), DF.Column('SalaryK'))]));\n\n  DF.PlotBar('Salary (k$) by Years of Experience', 'Experience', 'SalaryK');\nend;",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,

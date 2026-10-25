@@ -134,7 +134,7 @@ begin
       FinalCode.Add('{$modeswitch advancedrecords}');
       FinalCode.Add('uses');
       FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput, BlaiseMathKernel,');
-      FinalCode.Add('  PythonEngine, BlaisePyKernel;');
+      FinalCode.Add('  PythonEngine, BlaisePyKernel, BlaiseDataScience;');
       FinalCode.Add('');
       FinalCode.Add(CleanSource);
     end;

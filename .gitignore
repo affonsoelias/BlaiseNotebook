@@ -37,3 +37,6 @@ backup/
 Thumbs.db
 .vscode/
 .idea/
+
+# Scratch scripts
+scratch/

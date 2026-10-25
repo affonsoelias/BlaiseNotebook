@@ -16,7 +16,7 @@ unit BlaisePyKernel;
 interface
 
 uses
-  SysUtils, Classes,
+  SysUtils, Classes, Math,
   PythonEngine, BlaiseOutput;
 
 type
@@ -63,6 +63,7 @@ var
   i: Integer;
   CandidatePath: string;
 begin
+  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   if FInitialized and Assigned(FEngine) and FEngine.Initialized then
     Exit;
 
@@ -302,6 +303,7 @@ begin
 end;
 
 initialization
+  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
 
 finalization
   TBlaisePy.Finalize;

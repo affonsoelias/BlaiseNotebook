@@ -4,12 +4,173 @@ This document provides a comprehensive API reference for the native Pascal units
 
 ---
 
-## 1. `BlaiseMathKernel` Unit
+## 1. `BlaiseDataScience` Unit
+
+Strongly-typed Object Pascal API for Python scientific computing (**Pandas**, **NumPy**, **Scikit-Learn**). Automatically included in cell execution scope.
+
+### `TPySeries` Class
+Represents a 1D vector or Pandas Series.
+```pascal
+type
+  TPySeries = class
+    // Constructors
+    constructor Create(const AVarName: string; const AName: string = '');
+    constructor Create(const AValues: array of Double; const AName: string = '');
+    constructor Create(const AValues: array of string; const AName: string = '');
+    constructor Create(const AValues: array of Integer; const AName: string = '');
+    constructor Create(const AVec: TVector; const AName: string = '');
+
+    // Conversion & Summary
+    function ToArray: TDoubleArray;
+    function ToVector: TVector;
+    function Describe: string;
+    procedure Print;
+
+    // Visualizations
+    procedure Plot(const ATitle: string = ''; const AChartType: string = 'line');
+    procedure PlotAgainst(const AXSeries: TPySeries; const ATitle: string = ''; const AChartType: string = 'line');
+
+    // Arithmetic
+    function Multiply(const AFactor: Double): TPySeries;
+    function Add(const AValue: Double): TPySeries;
+    function Add(const AOther: TPySeries): TPySeries;
+    function Subtract(const AOther: TPySeries): TPySeries;
+
+    // Slicing
+    function Head(ACount: Integer = 5): TPySeries;
+    function Tail(ACount: Integer = 5): TPySeries;
+
+    // Statistical Properties
+    property Name: string;
+    property Count: Integer;
+    property Mean: Double;
+    property StdDev: Double;
+    property Min: Double;
+    property Max: Double;
+    property Sum: Double;
+    property Median: Double;
+    property Items[Index: Integer]: Double; default;
+  end;
+```
+
+### `TPyDataFrame` Class
+Represents a 2D tabular dataset (Pandas DataFrame).
+```pascal
+type
+  TPyDataFrame = class
+    constructor Create;
+    constructor Create(const AVarName: string);
+    class function FromCSV(const AFilePath: string): TPyDataFrame;
+    class function FromJSON(const AJsonStr: string): TPyDataFrame;
+
+    // Fluent Column Construction
+    function AddColumn(const AColName: string; const AValues: array of Double): TPyDataFrame;
+    function AddColumn(const AColName: string; const AValues: array of string): TPyDataFrame;
+    function AddColumn(const AColName: string; const AValues: array of Integer): TPyDataFrame;
+    function AddColumn(const AColName: string; const ASeries: TPySeries): TPyDataFrame;
+    function AddColumn(const AColName: string; const AVec: TVector): TPyDataFrame;
+
+    // Slicing & Extraction
+    function Column(const AColName: string): TPySeries;
+    function Columns(const AColNames: array of string): TPyDataFrame;
+    function Drop(const AColName: string): TPyDataFrame;
+    function Head(ACount: Integer = 5): TPyDataFrame;
+    function Tail(ACount: Integer = 5): TPyDataFrame;
+
+    // Metadata
+    function RowCount: Integer;
+    function ColumnCount: Integer;
+    function ColumnNames: TStrings;
+    function Describe: string;
+    procedure Print;
+
+    // Visualizations
+    procedure ShowTable(const ATitle: string = 'DataFrame'; AMaxRows: Integer = 50);
+    procedure PlotLine(const ATitle, AXCol, AYCol: string);
+    procedure PlotLine(const ATitle, AXCol: string; const AYCols: array of string);
+    procedure PlotBar(const ATitle, AXCol, AYCol: string);
+    procedure PlotBar(const ATitle, AXCol: string; const AYCols: array of string);
+    procedure PlotScatter(const ATitle, AXCol, AYCol: string);
+    procedure PlotArea(const ATitle, AXCol, AYCol: string);
+
+    // Export
+    procedure ToCSV(const AFilePath: string);
+  end;
+```
+
+### Machine Learning Classes
+
+#### `TPyLinearRegression`
+Ordinary Least Squares linear regression model.
+```pascal
+type
+  TPyLinearRegression = class
+    constructor Create;
+    procedure Fit(const X: TPyDataFrame; const Y: TPySeries);
+    procedure Fit(const X: TPySeries; const Y: TPySeries);
+    function Predict(const X: TPyDataFrame): TPySeries;
+    function Predict(const X: TPySeries): TPySeries;
+    function Score(const X: TPyDataFrame; const Y: TPySeries): Double;
+    function Score(const X: TPySeries; const Y: TPySeries): Double;
+    function Slope: Double;
+    function Coefficients: TDoubleArray;
+    function Intercept: Double;
+    function Summary: string;
+  end;
+```
+
+#### `TPyRandomForestRegressor`
+Ensemble Random Forest regressor with tree count and depth controls.
+```pascal
+type
+  TPyRandomForestRegressor = class
+    constructor Create(nEstimators: Integer = 100; maxDepth: Integer = -1; randomState: Integer = 42);
+    procedure Fit(const X: TPyDataFrame; const Y: TPySeries);
+    function Predict(const X: TPyDataFrame): TPySeries;
+    function Score(const X: TPyDataFrame; const Y: TPySeries): Double;
+    function FeatureImportances: TDoubleArray;
+    procedure PlotFeatureImportances(const AFeatures: array of string; const ATitle: string = 'Feature Importances');
+  end;
+```
+
+#### `TPyRandomForestClassifier`
+Ensemble Random Forest classifier for discrete target labels.
+```pascal
+type
+  TPyRandomForestClassifier = class
+    constructor Create(nEstimators: Integer = 100; maxDepth: Integer = -1; randomState: Integer = 42);
+    procedure Fit(const X: TPyDataFrame; const Y: TPySeries);
+    function Predict(const X: TPyDataFrame): TPySeries;
+    function Score(const X: TPyDataFrame; const Y: TPySeries): Double;
+  end;
+```
+
+#### `TPyKMeans`
+Unsupervised K-Means clustering model.
+```pascal
+type
+  TPyKMeans = class
+    constructor Create(nClusters: Integer = 3; randomState: Integer = 42);
+    procedure Fit(const X: TPyDataFrame);
+    function Predict(const X: TPyDataFrame): TPySeries;
+    function Labels: TPySeries;
+    function Inertia: Double;
+  end;
+```
+
+#### Utility: `PyTrainTestSplit`
+```pascal
+procedure PyTrainTestSplit(const X: TPyDataFrame; const Y: TPySeries; TestSize: Double;
+  out XTrain, XTest: TPyDataFrame; out YTrain, YTest: TPySeries; RandomState: Integer = 42);
+```
+
+---
+
+## 2. `BlaiseMathKernel` Unit
 
 High-performance numerical analysis routines written in pure Object Pascal.
 
 ### `TVector` Record
-
 ```pascal
 type
   TVector = record
@@ -24,27 +185,12 @@ type
     function Soma: Double;
     function Min: Double;
     function Max: Double;
-    function Normalizar: TVector;
-    function DotProduct(const Other: TVector): Double;
-  end;
-```
-
-### `TLinearRegression` Record
-
-```pascal
-type
-  TLinearRegression = record
-    Slope: Double;        // Regression slope (m)
-    Intercept: Double;    // Y-intercept (b)
-    RSquared: Double;     // Coefficient of determination (R²)
-    class function Fit(const X, Y: TVector): TLinearRegression; static;
-    function Predict(XVal: Double): Double;
   end;
 ```
 
 ---
 
-## 2. `BlaiseOutput` Unit
+## 3. `BlaiseOutput` Unit
 
 Frontend communication layer for streaming structured payloads.
 
@@ -59,86 +205,41 @@ procedure ShowChart(
   const AOptionsJson: string = '{}'
 );
 ```
-- **`ATitle`:** Header title displayed on the chart card.
-- **`AChartType`:** One of `'line'`, `'bar'`, `'scatter'`, `'radar'`, `'pie'`, `'doughnut'`.
-- **`ADataJson`:** Valid Chart.js data configuration string with `labels` and `datasets`.
-- **`AOptionsJson`:** Optional Chart.js options JSON string.
 
 #### `ShowTable`
 ```pascal
 procedure ShowTable(
   const ATitle: string; 
-  const AColumnsJson: string; 
+  const AColumns: array of string; 
   const ARowsJson: string
 );
 ```
-- **`ATitle`:** Table card title.
-- **`AColumnsJson`:** JSON array of column header strings (e.g. `["Col A", "Col B"]`).
-- **`ARowsJson`:** JSON 2D array of rows (e.g. `[["1", "Val"], ["2", "Val"]]`).
 
 ---
 
-## 3. `BlaisePyKernel` Unit
+## 4. `BlaisePyKernel` Unit
 
-Direct CPython API integration via Python4Delphi / Python4Lazarus.
+Direct low-level CPython execution via Python4Delphi / Python4Lazarus.
 
 ### Procedures & Functions
-
-#### `PyInit`
-```pascal
-function PyInit(const ADllPath: string = ''): Boolean;
-```
-Initializes the embedded CPython engine. Automatically detects local installations of `python313.dll`, `python312.dll`, or `python311.dll`.
-
-#### `PyRun`
-```pascal
-function PyRun(const ACode: string): Boolean;
-```
-Executes a Python code block in the global Python execution namespace. Standard output is routed to the notebook output area.
-
-#### `PyEval`
-```pascal
-function PyEval(const AExpr: string): string;
-```
-Evaluates a Python expression string and returns the string representation (`repr()`) of the resulting Python object.
-
-#### `ShowPyDataFrame`
-```pascal
-procedure ShowPyDataFrame(
-  const AVarName: string; 
-  const ATitle: string = 'DataFrame'; 
-  AMaxRows: Integer = 20
-);
-```
-Extracts a Pandas `DataFrame` variable by identifier and emits an interactive notebook table.
-
-#### `ShowPySeriesChart`
-```pascal
-procedure ShowPySeriesChart(
-  const AVarName: string; 
-  const ATitle: string; 
-  const AChartType: string = 'line'
-);
-```
-Plots a Pandas `Series` or 1D NumPy array directly into a Chart.js card.
+- `PyRun(const ACode: string)`: Executes a Python snippet.
+- `PyEval(const AExpr: string): string`: Evaluates a Python expression to string.
+- `ShowPyDataFrame(const AVarName: string; const ATitle: string = 'Pandas DataFrame'; AMaxRows: Integer = 50)`
+- `ShowPySeriesChart(const AVarName, ATitle, AChartType: string)`
+- `ShowPyDataFrameChart(const AVarName, AXCol, AYCol, ATitle, AChartType: string)`
 
 ---
 
-## 4. WebSocket Message Protocol (`/ws`)
+## 5. WebSocket Protocol Specification
 
-### Actions (Client -> Server)
+The BlaiseNotebook execution kernel operates over JSON-RPC WebSockets on `/ws`:
 
-| Action | Parameters | Description |
-| :--- | :--- | :--- |
-| `execute_cell` | `cell_id: string`<br>`execution_count: integer`<br>`source: string` | Requests compilation and execution of code cell. |
-| `interrupt_cell` | `cell_id: string` | Aborts execution of specified cell. |
-| `interrupt_all` | *(none)* | Aborts active execution and empties server queue. |
+### Requests (Frontend -> Kernel)
+- `execute_cell`: `{ "action": "execute_cell", "cell_id": "...", "execution_count": 1, "source": "..." }`
+- `interrupt_cell`: `{ "action": "interrupt_cell", "cell_id": "..." }`
+- `interrupt_all`: `{ "action": "interrupt_all" }`
 
-### Events (Server -> Client)
-
-| Event | Parameters | Description |
-| :--- | :--- | :--- |
-| `stream` | `cell_id: string`<br>`stream_type: "stdout" \| "stderr"`<br>`text: string` | Real-time console logs and error output. |
-| `display_data` | `cell_id: string`<br>`payload: object` | Structured JSON payloads (Chart.js configs or tables). |
-| `execute_reply`| `cell_id: string`<br>`status: "success" \| "error"`<br>`execution_count: integer`<br>`execution_time_ms: integer` | Completion notification with execution metrics. |
-| `interrupt_reply`| `status: "interrupted"` | Confirmation of successful interruption. |
+### Responses (Kernel -> Frontend)
+- `stream`: `{ "event": "stream", "cell_id": "...", "stream_type": "stdout"|"stderr", "text": "..." }`
+- `display_data`: `{ "event": "display_data", "cell_id": "...", "payload": { "type": "chart"|"table", ... } }`
+- `execute_reply`: `{ "event": "execute_reply", "cell_id": "...", "status": "success"|"error", "execution_count": 1, "execution_time_ms": 120 }`
