@@ -10,7 +10,7 @@ unit uCodeRunner;
 interface
 
 uses
-  SysUtils, Classes, Process, DateUtils, fphttpclient,
+  SysUtils, Classes, Process, DateUtils, fphttpclient, sha1,
   mormot.core.base, mormot.core.json, mormot.core.os;
 
 type
@@ -37,6 +37,7 @@ type
     function FindDaemonScript: string;
     procedure EnsureSessionDaemon;
     procedure StopSessionDaemon;
+    function ComputeSourceHash(const ASource: string): string;
     procedure DiscoverPackageDirs(ADirs: TStrings);
     function ExtractUserUses(var ASource: string; out AUserUnits: string): Boolean;
     function FindPythonExe: string;
@@ -287,6 +288,11 @@ begin
   begin
     FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Memoria do workspace limpa e sessao reiniciada com sucesso.'#10);
   end;
+end;
+
+function TCodeRunner.ComputeSourceHash(const ASource: string): string;
+begin
+  Result := SHA1Print(SHA1String(Trim(ASource)));
 end;
 
 procedure TCodeRunner.DiscoverPackageDirs(ADirs: TStrings);
@@ -886,9 +892,13 @@ end;
 procedure TCodeRunner.ExecuteCell(const ACellId: string; AExecCount: Integer; const ASource: string);
 var
   PrgPath, ExePath, Errors: string;
+  HashPath, CurrentHash, CachedHash: string;
   StartTick: Int64;
   ElapsedMs: Integer;
   PipArgs: string;
+  SafeId: string;
+  CacheHit: Boolean;
+  SL: TStringList;
 begin
   EnsureSessionDaemon;
   StartTick := GetTickCount64();
@@ -900,6 +910,43 @@ begin
     Exit;
   end;
 
+  SafeId := ACellId;
+  SafeId := StringReplace(SafeId, '-', '_', [rfReplaceAll]);
+  SafeId := StringReplace(SafeId, ' ', '_', [rfReplaceAll]);
+
+  ExePath := FWorkspaceDir + DirectorySeparator + 'cell_' + SafeId + {$ifdef WINDOWS}'.exe'{$else}''{$endif};
+  HashPath := FWorkspaceDir + DirectorySeparator + 'cell_' + SafeId + '.hash';
+  CurrentHash := ComputeSourceHash(ASource);
+
+  // Check compilation cache
+  CacheHit := False;
+  if FileExists(ExePath) and FileExists(HashPath) then
+  begin
+    SL := TStringList.Create;
+    try
+      try
+        SL.LoadFromFile(HashPath);
+        CachedHash := Trim(SL.Text);
+        if (CachedHash <> '') and (CachedHash = CurrentHash) then
+          CacheHit := True;
+      except
+        CacheHit := False;
+      end;
+    finally
+      SL.Free;
+    end;
+  end;
+
+  if CacheHit then
+  begin
+    if Assigned(FOnStream) then
+      FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Codigo inalterado. Executando binario em cache (0ms compilacao)...'#10);
+
+    ExecuteBinary(ACellId, ExePath, AExecCount, StartTick);
+    Exit;
+  end;
+
+  // Cache miss: Prepare source and compile
   if not PrepareSourceFile(ACellId, ASource, PrgPath) then
   begin
     if Assigned(FOnReply) then
@@ -913,12 +960,26 @@ begin
 
   if not CompileSource(PrgPath, ExePath, Errors) then
   begin
+    if FileExists(HashPath) then
+      DeleteFile(HashPath);
     ElapsedMs := GetTickCount64() - StartTick;
     if Assigned(FOnStream) then
       FOnStream(RawUtf8(ACellId), 'stderr', RawUtf8(Errors));
     if Assigned(FOnReply) then
       FOnReply(RawUtf8(ACellId), 'error', AExecCount, ElapsedMs);
     Exit;
+  end;
+
+  // Save successful hash to cache file
+  SL := TStringList.Create;
+  try
+    try
+      SL.Text := CurrentHash;
+      SL.SaveToFile(HashPath);
+    except
+    end;
+  finally
+    SL.Free;
   end;
 
   // Execute the compiled program
