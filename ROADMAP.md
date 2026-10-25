@@ -90,7 +90,7 @@ flowchart LR
 
 ---
 
-### Milestone 4: Experiência de Uso e Produtividade (Frontend & UX)
+### Milestone 4: Experiência de Uso e Produtividade (Frontend & UX) ✅ CONCLUÍDO
 > **Goal:** Provide a rich, professional, and accessible notebook editing experience.
 
 #### 4.1 Autocompletion & Destaque de Sintaxe Inteligente
@@ -108,7 +108,7 @@ flowchart LR
 
 ---
 
-### Milestone 5: Modo Dashboard / Apresentação (Estilo Streamlit / Voila)
+### Milestone 5: Modo Dashboard / Apresentação (Estilo Streamlit / Voila) ✅ CONCLUÍDO
 > **Goal:** Transform analytical notebooks into executive presentations and interactive dashboards with a single click.
 
 #### 5.1 Modo "Apenas Saídas" (Dashboard View)
