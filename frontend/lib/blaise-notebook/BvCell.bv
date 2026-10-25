@@ -176,7 +176,11 @@
     begin
       asm
         if (this.cell) {
-          this.cell.source = newVal;
+          const rawCell = this.cell.__bv_raw__ || this.cell;
+          rawCell.source = newVal;
+        }
+        if (this.$emit) {
+          this.$emit('source-change', this.cell, newVal);
         }
       end;
     end;

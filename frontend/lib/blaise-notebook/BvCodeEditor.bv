@@ -105,7 +105,8 @@
     procedure updateHighlight;
     begin
       asm
-        const val = this.value || '';
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        const val = ta ? ta.value : (this.value || '');
         const hl = this.$refs ? this.$refs.highlightLayer : null;
         if (!hl) return;
 
@@ -180,17 +181,13 @@
     procedure updateLines;
     begin
       asm
-        const val = this.value || '';
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        const val = ta ? ta.value : (this.value || '');
         const count = val.split('\n').length;
         this.lineCount = count > 0 ? count : 1;
 
-        // Auto-adjust height and synchronize DOM textarea value
-        const ta = this.$refs ? this.$refs.codeTextarea : null;
         const hl = this.$refs ? this.$refs.highlightLayer : null;
         if (ta) {
-          if (ta.value !== val) {
-            ta.value = val;
-          }
           ta.style.height = 'auto';
           const newH = Math.max(80, ta.scrollHeight);
           ta.style.height = newH + 'px';
@@ -414,7 +411,6 @@
         const target = e && e.target ? e.target : null;
         if (target) {
           newVal = target.value;
-          this.value = newVal;
           this.updateLines();
           if (this.$emit) {
             this.$emit('input', newVal);
@@ -552,11 +548,23 @@
   watch:
     procedure value(newVal: string);
     begin
+      asm
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        if (ta && ta.value !== newVal) {
+          ta.value = newVal || '';
+        }
+      end;
       this.updateLines();
     end;
 
   mounted:
     begin
+      asm
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        if (ta) {
+          ta.value = this.value || '';
+        }
+      end;
       this.updateLines();
     end;
 </script>

@@ -6,21 +6,21 @@
         <span class="md-text">Documentation / Markdown</span>
       </div>
       <div class="bv-md-actions">
-        <button b-if="!isEditing" class="bv-md-btn" @click="startEdit">✏️ Edit (Double-click)</button>
-        <button b-if="isEditing" class="bv-md-btn btn-save" @click="finishEdit">👁️ Done Editing (Ctrl+Enter)</button>
+        <button b-show="!isEditing" class="bv-md-btn" @click="startEdit">✏️ Edit (Double-click)</button>
+        <button b-show="isEditing" class="bv-md-btn btn-save" @click="finishEdit">👁️ Done Editing (Ctrl+Enter)</button>
       </div>
     </div>
 
     <!-- VIEW MODE -->
     <div
-      b-if="!isEditing"
+      b-show="!isEditing"
       b-ref="renderedDiv"
       class="bv-md-rendered"
       @dblclick="startEdit"
     ></div>
 
     <!-- EDIT MODE -->
-    <div b-if="isEditing" class="bv-md-editor-wrap">
+    <div b-show="isEditing" class="bv-md-editor-wrap">
       <textarea
         b-ref="mdTextarea"
         class="bv-md-textarea"
@@ -159,10 +159,10 @@
       asm
         const target = e && e.target ? e.target : null;
         if (target) {
-          this.value = target.value;
+          const newVal = target.value;
           target.style.height = 'auto';
           target.style.height = Math.max(100, target.scrollHeight) + 'px';
-          if (this.$emit) this.$emit('input', this.value);
+          if (this.$emit) this.$emit('input', newVal);
         }
       end;
     end;

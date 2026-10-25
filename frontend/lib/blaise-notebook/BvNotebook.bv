@@ -137,6 +137,7 @@
           @insert-markdown-below="insertMarkdownBelowIndex"
           @delete="deleteCellAt"
           @change-type="onCellTypeChanged"
+          @source-change="onCellSourceChanged"
         ></bv-cell>
       </div>
 
@@ -305,9 +306,62 @@
       end;
     end;
 
+    procedure onCellSourceChanged(cell: JSValue; const ANewVal: string);
+    begin
+      asm
+        const rawCell = (cell && cell.__bv_raw__) ? cell.__bv_raw__ : cell;
+        if (rawCell) {
+          rawCell.source = ANewVal;
+        }
+
+        // Immediately enable Undo button in toolbar on any edit!
+        this.canUndo = true;
+
+        if (this._contentEditTimer) clearTimeout(this._contentEditTimer);
+        const self = this;
+        if (!this._editSnapshotPending) {
+          try {
+            this._beforeEditSnapshot = JSON.parse(JSON.stringify(this.cells || []));
+            this._editSnapshotPending = true;
+          } catch(e) {}
+        }
+        this._contentEditTimer = setTimeout(function() {
+          if (self._editSnapshotPending && self._beforeEditSnapshot) {
+            if (!self._undoStack) self._undoStack = [];
+            const histItem = new Object();
+            histItem.description = 'Edição de código/texto';
+            histItem.cells = self._beforeEditSnapshot;
+            self._undoStack.push(histItem);
+            if (self._undoStack.length > 50) self._undoStack.shift();
+            self._redoStack = [];
+            self.canUndo = true;
+            self.canRedo = false;
+            self._editSnapshotPending = false;
+            self._beforeEditSnapshot = null;
+            if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+          }
+        }, 400);
+
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
     procedure undoAction;
     begin
       asm
+        if (this._contentEditTimer) {
+          clearTimeout(this._contentEditTimer);
+          this._contentEditTimer = null;
+        }
+        if (this._editSnapshotPending && this._beforeEditSnapshot) {
+          if (!this._undoStack) this._undoStack = [];
+          const histItem = new Object();
+          histItem.description = 'Edição recente';
+          histItem.cells = this._beforeEditSnapshot;
+          this._undoStack.push(histItem);
+          this._editSnapshotPending = false;
+          this._beforeEditSnapshot = null;
+        }
         if (!this._undoStack || this._undoStack.length === 0) return;
         try {
           if (!this._redoStack) this._redoStack = [];
