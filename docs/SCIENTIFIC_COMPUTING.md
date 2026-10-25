@@ -2,7 +2,7 @@
 
 Have you ever wanted to work with **Pandas DataFrames**, plot **interactive charts**, and train **Machine Learning models** without having to memorize Python syntax?
 
-With **BlaiseNotebook**, you get the best of both worlds: you write **clean, strongly-typed Object Pascal code**, and the notebook automatically handles the Python data science engine under the hood!
+With **BlaiseNotebook**, you get the best of both worlds: you write **clean, strongly-typed Object Pascal code**, and the notebook automatically handles the Python data science engine under the hood via a high-performance **persistent Python daemon** (`localhost:9099`) and **Zero-Delay Compilation Cache**!
 
 ---
 
@@ -10,17 +10,19 @@ With **BlaiseNotebook**, you get the best of both worlds: you write **clean, str
 
 In your notebook cells, you have access to three main building blocks:
 
-1. **`TPyDataFrame`**: A 2D table (like an Excel spreadsheet or Pandas DataFrame) that holds rows and columns.
+1. **`TPyDataFrame`**: A 2D table (like an Excel spreadsheet or Pandas DataFrame) that holds rows and columns with interactive DataGrid Pro rendering, charting, and cross-cell persistence (`Attach`, `SaveAs`).
 2. **`TPySeries`**: A single column with built-in statistics (Mean, Standard Deviation, Median, Min, Max).
 3. **Machine Learning Models**:
    - `TPyLinearRegression`: For trend lines and forecasting.
    - `TPyRandomForestRegressor`: For powerful AI predictions with decision tree ensembles.
    - `TPyRandomForestClassifier`: For classifying data into categories.
+   - `TPyDecisionTreeClassifier`: Interpretable rule-based decision trees with feature importance.
+   - `TPyLogisticRegression`: Logistic regression classification.
    - `TPyKMeans`: For automatic clustering.
 
 ---
 
-## 1. Creating and Exploring Data
+## 1. Creating and Exploring Data with DataGrid Pro
 
 ### Creating a DataFrame in Pascal
 You can build a DataFrame row-by-row or column-by-column:
@@ -33,7 +35,7 @@ begin
   DF.AddColumn('StudyHours', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
   DF.AddColumn('ExamScore',  [50.0, 55.0, 65.0, 70.0, 80.0, 85.0, 92.0, 98.0]);
 
-  // Display the data as a clean, scrollable table below the cell:
+  // Display the data as an interactive DataGrid Pro table below the cell:
   DF.ShowTable('Student Exam Data', 10);
 end;
 ```
@@ -46,13 +48,67 @@ var
   DF: TPyDataFrame;
 begin
   DF := TPyDataFrame.FromCSV('workspace/data/sales.csv');
-  DF.ShowTable('Company Sales', 20);
+  DF.ShowTable('Company Sales', 25);
 end;
 ```
 
+### ⚡ Exploring Tables with DataGrid Pro
+When you call `ShowTable` or `DF.ShowTable`, BlaiseNotebook renders a rich client-side DataGrid:
+- **Instant Sorting**: Click column headers to sort numerically or alphabetically ascending (`▲`) or descending (`▼`).
+- **Real-Time Search**: Filter thousands of records instantly using the live search box.
+- **Pagination**: Navigate pages cleanly with dropdown controls (`10`, `25`, `50`, `100` rows per page).
+- **One-Click Export**: Click **📋 Copiar CSV** to copy to clipboard, or **💾 Download CSV** to save directly to disk.
+
 ---
 
-## 2. Instant Statistics
+## 2. Stateful Cross-Cell Continuity (Persistent Kernel)
+
+BlaiseNotebook maintains an active, persistent Python daemon session (`localhost:9099`). This means you don't need to re-read datasets or retrain models when you run subsequent cells!
+
+### Cell 1: Load and Persist
+```pascal
+var
+  RawDF: TPyDataFrame;
+begin
+  RawDF := TPyDataFrame.FromCSV('large_dataset.csv');
+  // Register in kernel daemon memory:
+  RawDF.SaveAs('my_dataset');
+  Writeln('Dataset loaded and cached in kernel memory!');
+end;
+```
+
+### Cell 2: Reuse Anywhere Without Reloading
+```pascal
+var
+  DF: TPyDataFrame;
+begin
+  DF := TPyDataFrame.Create;
+  // Attach to the live variable in memory:
+  DF.Attach('my_dataset');
+  
+  // Instant statistics and visualization without re-reading the file!
+  DF.PlotBar('Revenue by Region', 'Region', 'Revenue');
+end;
+```
+
+### Resetting Kernel Memory
+If you ever want to clear all active variables in the persistent daemon, click **🔄 Reiniciar Kernel** in the toolbar, or call `PyReset;` inside any cell.
+
+---
+
+## 3. In-Notebook Package Management (`%pip install`)
+
+Need an extra library for your analysis like `seaborn` or `xgboost`? You can install it directly inside any notebook cell using the `%pip` or `!pip` magic command:
+
+```python
+%pip install seaborn xgboost openpyxl
+```
+
+The output streams in real-time, and installed packages are immediately available to your persistent kernel without restarting the server!
+
+---
+
+## 4. Instant Statistics
 
 Want to find the average, highest, or lowest values? Access any column with `.Column('Name')`:
 
@@ -75,9 +131,9 @@ end;
 
 ---
 
-## 3. Beautiful Interactive Charts
+## 5. Beautiful Interactive Charts
 
-BlaiseNotebook automatically renders Chart.js canvas elements right under your cell:
+BlaiseNotebook automatically renders responsive Chart.js canvas elements right under your cell:
 
 ### Line Chart
 ```pascal
@@ -94,9 +150,25 @@ DF.PlotBar('Revenue by Product Category', 'Category', 'Revenue');
 DF.PlotScatter('Engine Size vs Fuel Efficiency', 'EngineSize', 'MPG');
 ```
 
+### Pie & Doughnut Charts
+```pascal
+DF.PlotPie('Budget Distribution by Team', 'Team', 'Budget');
+DF.PlotDoughnut('Team Hours (Doughnut)', 'Team', 'Hours');
+```
+
+### Distribution Histogram
+```pascal
+DF.PlotHistogram('Project Hours Distribution', 'Hours', 4);
+```
+
+### 5-Number Summary BoxPlot
+```pascal
+DF.PlotBoxPlot('Budget Dispersion (BoxPlot)', 'Team', 'Budget');
+```
+
 ---
 
-## 4. Training Machine Learning Models
+## 6. Training Machine Learning Models
 
 ### Random Forest Regressor
 Train an ensemble AI model to predict continuous numbers:
@@ -152,7 +224,7 @@ end;
 
 ---
 
-## 5. Splitting Data into Train & Test Sets
+## 7. Splitting Data into Train & Test Sets
 
 Want to properly evaluate your model without overfitting? Use `PyTrainTestSplit`:
 
@@ -174,34 +246,7 @@ end;
 
 ---
 
-## 6. Statistical & Distribution Visualizations
-
-Beyond standard line and bar charts, BlaiseNotebook supports specialized statistical representations:
-
-```pascal
-var
-  DF: TPyDataFrame;
-begin
-  DF := TPyDataFrame.Create;
-  DF.AddColumn('Team',   ['Design', 'Backend', 'Frontend', 'DevOps']);
-  DF.AddColumn('Budget', [40.0, 95.0, 85.0, 60.0]);
-  DF.AddColumn('Hours',  [140.0, 320.0, 290.0, 180.0]);
-
-  // Pie & Doughnut charts
-  DF.PlotPie('Budget Distribution by Team', 'Team', 'Budget');
-  DF.PlotDoughnut('Team Hours (Doughnut)', 'Team', 'Hours');
-
-  // Histogram with automatic binning
-  DF.PlotHistogram('Project Hours Distribution', 'Hours', 4);
-
-  // BoxPlot analysis
-  DF.PlotBoxPlot('Budget Dispersion (BoxPlot)', 'Team', 'Budget');
-end;
-```
-
----
-
-## 7. Fluent Pandas-style Data Manipulation
+## 8. Fluent Pandas-style Data Manipulation
 
 Manipulate and aggregate tabular data cleanly without writing SQL or Python boilerplate:
 
@@ -232,7 +277,7 @@ end;
 
 ---
 
-## 8. Classification Models & Rigorous Evaluation
+## 9. Classification Models & Rigorous Evaluation
 
 Train predictive classifiers and generate labeled confusion matrices:
 
@@ -271,12 +316,12 @@ end;
 
 ---
 
-## 💡 What if I want to run custom Python code?
+## 10. Executive Dashboard View (Modo Apresentação)
 
-If you ever need an unsupported Python package or custom script, you can still execute raw Python code at any time using `PyRun`:
+Need to present results to managers, executives, or clients without showing raw Pascal code?
 
-```pascal
-PyRun('import math; print("Square root of 144 is", math.sqrt(144))');
-```
-
-You get total flexibility: pure Pascal for everyday data science, plus raw Python whenever you need it!
+- Click **📊 Dashboard View** on the toolbar or press `Ctrl + Shift + D`.
+- BlaiseNotebook instantly hides code cells and code editors, transforming your notebook into a clean, executive presentation canvas.
+- All interactive Chart.js graphs and DataGrid Pro tables remain fully interactive.
+- Ready for high-quality PDF reports and physical printing (`Ctrl + P`).
+- Click **✏️ Modo Edição** or press `Ctrl + Shift + D` again to return to developer mode anytime.

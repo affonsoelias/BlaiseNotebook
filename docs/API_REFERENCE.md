@@ -1,6 +1,6 @@
 # 📖 BlaiseNotebook Quick Reference & Cheat Sheet
 
-This quick reference provides copy-pasteable snippets and descriptions of the most useful classes and functions available in **BlaiseNotebook**.
+This quick reference provides copy-pasteable snippets and descriptions of the most useful classes, functions, shortcuts, and features available in **BlaiseNotebook**.
 
 ---
 
@@ -8,9 +8,9 @@ This quick reference provides copy-pasteable snippets and descriptions of the mo
 
 | Class | What it represents | Common uses |
 | :--- | :--- | :--- |
-| **`TPyDataFrame`** | 2D Tabular Dataset (Pandas DataFrame) | Loading CSVs, filtering columns, showing tables, plotting charts. |
+| **`TPyDataFrame`** | 2D Tabular Dataset (Pandas DataFrame) | Loading CSVs, filtering columns, showing tables, plotting charts, attaching persistent daemon variables (`Attach`, `SaveAs`). |
 | **`TPySeries`** | 1D Column / Vector (Pandas Series) | Calculating averages, medians, standard deviations, min, max. |
-| **`TPyGroupBy`** | Fluent GroupBy Aggregator | Performing analytical aggregations (.Mean, .Sum, .Count, .Min, .Max). |
+| **`TPyGroupBy`** | Fluent GroupBy Aggregator | Performing analytical aggregations (`.Mean`, `.Sum`, `.Count`, `.Min`, `.Max`). |
 | **`TPyLogisticRegression`** | Logistic Regression Classification | Probability estimation and binary/multiclass categorization. |
 | **`TPyDecisionTreeClassifier`** | Decision Tree Classifier | Interpretable rule-based classification and feature importance. |
 | **`TPyRandomForestRegressor`** | Ensemble AI Decision Trees | Predicting continuous numerical values with high accuracy. |
@@ -43,12 +43,15 @@ begin
   // Check rows and columns
   Writeln('Rows: ', DF.RowCount, ' | Columns: ', DF.ColumnCount);
 
-  // Show as an interactive table in the notebook
+  // Show as an interactive DataGrid Pro table in the notebook
   DF.ShowTable('Inventory', 10);
 
   // Plot a chart with one call
   DF.PlotBar('Stock by Product', 'Product', 'Stock');
   DF.PlotLine('Price Trend', 'Product', 'Price');
+
+  // Persist DataFrame variable in kernel memory across cells
+  DF.SaveAs('inventory_df');
 
   // Export back to CSV
   DF.ToCSV('workspace/output.csv');
@@ -81,7 +84,56 @@ end;
 
 ---
 
-### 3. Machine Learning: Random Forest
+### 3. Cross-Cell State Persistence & Python Bridge
+
+BlaiseNotebook maintains an active, stateful Python daemon (`localhost:9099`). Variables and datasets created in one cell remain alive and available in subsequent cells!
+
+```pascal
+// --- Célula 1: Carrega e nomeia a variável persistente ---
+var
+  RawDF: TPyDataFrame;
+begin
+  RawDF := TPyDataFrame.FromCSV('sales.csv');
+  RawDF.SaveAs('persisted_sales'); // Fica registrado no daemon Python
+  Writeln('Dados salvos na memória persistente!');
+end;
+
+// --- Célula 2: Vincula e continua sem reabrir o arquivo ---
+var
+  SalesDF: TPyDataFrame;
+begin
+  SalesDF := TPyDataFrame.Create;
+  SalesDF.Attach('persisted_sales'); // Conecta diretamente à variável viva
+  SalesDF.PlotBar('Vendas por Região', 'Region', 'Revenue');
+end;
+
+// --- Executando Python puro e recuperando resultados ---
+PyRun('import math; custom_metric = math.sqrt(256) * 4');
+Writeln('Resultado avaliado: ', PyEval('str(custom_metric)'));
+
+// --- Limpeza da sessão persistente (Reset de memória) ---
+PyReset; // Limpa variáveis de usuário no daemon
+```
+
+---
+
+### 4. In-Notebook Package Management (`%pip` and `!pip`)
+
+You can install or update Python packages directly from any notebook cell without leaving BlaiseNotebook or using an external terminal:
+
+```python
+%pip install seaborn xgboost openpyxl
+```
+
+Or check package information:
+
+```python
+!pip show scikit-learn
+```
+
+---
+
+### 5. Machine Learning: Random Forest
 
 ```pascal
 var
@@ -106,7 +158,7 @@ end;
 
 ---
 
-### 4. Machine Learning: Linear Regression
+### 6. Machine Learning: Linear Regression
 
 ```pascal
 var
@@ -124,7 +176,7 @@ end;
 
 ---
 
-### 5. High-Performance Native Math (`TVector`)
+### 7. High-Performance Native Math (`TVector`)
 
 ```pascal
 var
@@ -142,7 +194,7 @@ end;
 
 ---
 
-### 6. Interactive Visualizations (`BlaiseOutput`)
+### 8. Interactive Visualizations (`BlaiseOutput`)
 
 ```pascal
 // Display an interactive Chart.js graph
@@ -152,7 +204,7 @@ ShowChart(
   '{"labels":["Jan","Feb","Mar","Apr"],"datasets":[{"label":"2026","data":[120, 190, 300, 500],"borderColor":"#3b82f6"}]}'
 );
 
-// Display a custom table
+// Display a custom table with DataGrid Pro
 ShowTable(
   'User Registrations',
   ['ID', 'Username', 'Role'],
@@ -162,19 +214,7 @@ ShowTable(
 
 ---
 
-### 7. Custom Python Execution (`BlaisePyKernel`)
-
-```pascal
-// Run raw Python when needed
-PyRun('import math; result = math.factorial(6)');
-
-// Retrieve value as string
-Writeln('6! is: ', PyEval('str(result)'));
-```
-
----
-
-### 8. Advanced Scientific Visualizations (`TPyDataFrame`)
+### 9. Advanced Scientific Visualizations (`TPyDataFrame`)
 
 ```pascal
 var
@@ -198,7 +238,7 @@ end;
 
 ---
 
-### 9. Fluent Pandas-style Data Manipulation
+### 10. Fluent Pandas-style Data Manipulation
 
 ```pascal
 var
@@ -225,7 +265,7 @@ end;
 
 ---
 
-### 10. Classification Models & Evaluation Metrics
+### 11. Classification Models & Evaluation Metrics
 
 ```pascal
 var
@@ -261,3 +301,30 @@ begin
   CM.ShowTable('Confusion Matrix', 10);
 end;
 ```
+
+---
+
+## ⚡ Interactive DataGrid Pro Features
+
+Every `ShowTable(...)` and `DF.ShowTable(...)` renders an interactive DataGrid Pro interface:
+
+- **Sortable Columns**: Click any column header to sort ascending (`▲`) or descending (`▼`). Numeric columns are sorted numerically, text alphabetically.
+- **Instant Search / Filter**: Type in the search input to filter rows in real time across all visible columns.
+- **Configurable Pagination**: Switch page sizes between `10`, `25`, `50`, and `100` rows per page with page navigation controls (`Anterior` / `Próxima`).
+- **RFC 4180 CSV Export**:
+  - Click **📋 Copiar CSV** to copy the current filtered table to your system clipboard.
+  - Click **💾 Download CSV** to trigger an automatic download of `tabela_<timestamp>.csv`.
+
+---
+
+## ⌨️ Shortcuts & UI Capabilities
+
+| Shortcut / Action | Feature | Description |
+| :--- | :--- | :--- |
+| `Ctrl + Space` | **IntelliSense Autocomplete** | Opens completion popup with Pascal keywords, data science classes, and standard methods. |
+| Type `.` (dot) | **Member Autocomplete** | Trigger completion list for methods on known objects (e.g. `DF.`, `S.`, `RF.`, `LR.`). |
+| `↑` / `↓` + `Enter` or `Tab` | **Select Suggestion** | Inserts selected method or snippet with automatic cursor positioning (`$0`). |
+| `Ctrl + Shift + D` | **Dashboard View** | Toggles clean executive presentation mode (hides code cells, expands visual outputs). |
+| `Shift + Enter` | **Run Cell & Next** | Compiles and executes current cell, advancing to the next cell. |
+| `Ctrl + Enter` | **Run Cell in Place** | Compiles and executes the current cell while keeping focus. |
+| `🔄 Reiniciar Kernel` | **Reset Kernel** | Restarts the persistent Python daemon, resets variable state, and clears compilation caches. |

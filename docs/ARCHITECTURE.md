@@ -8,7 +8,7 @@ This document details the architectural design, component interactions, and exec
 
 BlaiseNotebook operates as a distributed computational environment comprising two primary tiers:
 1. **Reactive Frontend Client:** A Single-Page Application (SPA) written in BlaiseVue and transpiled via `pas2js` into optimized JavaScript.
-2. **Native Execution Backend:** A high-throughput, asynchronous native executable built with **Synopse mORMot 2** and **Free Pascal (FPC)**.
+2. **Native Execution Backend:** A high-throughput, asynchronous native executable built with **Synopse mORMot 2**, **Free Pascal (FPC)**, and a **Persistent Python Daemon** (`CPython 3.13`).
 
 ```mermaid
 sequenceDiagram
@@ -17,30 +17,33 @@ sequenceDiagram
     participant UI as BvNotebook (Frontend)
     participant WS as mORMot 2 WebSocket Server
     participant Runner as uCodeRunner Sandbox
+    participant Cache as SHA-1 Compilation Cache
     participant FPC as Free Pascal Compiler (fpc.exe)
-    participant Bin as Executable Binary (.exe)
+    participant Bin as Cell Binary (cell_<id>.exe)
+    participant Daemon as Python Session Daemon (:9099)
 
     User->>UI: Press Shift + Enter / Click Run All
     UI->>UI: Set isRunning = true, status = 'running'
     UI->>WS: Send JSON: { action: "execute_cell", source: "..." }
     WS->>Runner: ExecuteCell(cellId, source)
-    Runner->>Runner: Wrap in Pascal template with uses clauses
-    Runner->>FPC: Compile generated source code
-    alt Compilation Error
-        FPC-->>Runner: Compilation output (stderr)
-        Runner-->>WS: OnStream(cellId, 'stderr', errorText)
-        WS-->>UI: Event: 'stream' (stderr)
-        Runner-->>WS: OnReply(cellId, 'error', count, timeMs)
-        WS-->>UI: Event: 'execute_reply' (error)
-    else Compilation Success
-        Runner->>Bin: Execute compiled binary
-        Bin-->>Runner: Stream stdout & @@BLAISE_PAYLOAD@@ delimiters
-        Runner-->>WS: OnStream / OnDisplay(cellId, payload)
-        WS-->>UI: Events: 'stream' and 'display_data' (Chart.js / Tables)
-        Bin-->>Runner: Exit code 0
-        Runner-->>WS: OnReply(cellId, 'success', count, timeMs)
-        WS-->>UI: Event: 'execute_reply' (success)
+    Runner->>Cache: Compute SHA-1(source)
+    alt Cache Hit (Hash matches & binary exists)
+        Cache-->>Runner: Reuse existing binary (0ms compile)
+    else Cache Miss (Source modified or first run)
+        Runner->>Runner: Generate Pascal source with dynamic packages
+        Runner->>FPC: Compile cell_<id>.pas
+        FPC-->>Runner: Compilation output (stderr/success)
     end
+
+    Runner->>Bin: Execute compiled binary
+    Bin->>Daemon: HTTP POST /exec or /eval (Stateful variables)
+    Daemon-->>Bin: Result JSON
+    Bin-->>Runner: Stream stdout & @@BLAISE_PAYLOAD@@ delimiters
+    Runner-->>WS: Stream events (stdout, tables, charts)
+    WS-->>UI: Events: 'stream' and 'display_data' (DataGrid Pro / Chart.js)
+    Bin-->>Runner: Exit code 0
+    Runner-->>WS: OnReply(cellId, 'success', count, timeMs)
+    WS-->>UI: Event: 'execute_reply' (success)
     UI->>UI: Render outputs, update timer, process next queued cell
 ```
 
@@ -54,11 +57,11 @@ The frontend follows BlaiseVue's Single File Component (`.bv`) architecture:
 frontend/src/
 ├── app.bv                     # Root Shell, Navbar, Theme Switcher & Drawer
 ├── components/
-│   ├── BvNotebook.bv          # Central Workspace, Execution Queue & WebSocket Client
+│   ├── BvNotebook.bv          # Central Workspace, Execution Queue & Dashboard View Orchestrator
 │   ├── BvCell.bv              # Individual Cell Card (Code / Markdown polymorphism)
-│   ├── BvCodeEditor.bv        # Pascal Code Editor with Gutter & Indentation
+│   ├── BvCodeEditor.bv        # Dual-Layer Syntax Highlighter & Intelligent Autocomplete
 │   ├── BvMarkdown.bv          # Markdown Documenter with Math & Live Inline Editor
-│   └── BvOutput.bv            # Multi-format Output (stdout, stderr, table, <bv-chart>)
+│   └── BvOutput.bv            # Multi-Output Stacking, DataGrid Pro & Reactive <bv-chart>
 └── views/
     └── NotebookView.bv        # View Component hosting the Notebook canvas
 ```
@@ -68,32 +71,34 @@ frontend/src/
 - Dispatches window-level custom events (`blaise:new-project`, `blaise:save-project`, `blaise:run-all`, `blaise:interrupt-all`) to communicate with the active notebook instance.
 
 ### 2. `BvNotebook.bv`
-- **Reactive State:** Manages `cells: JSValue`, `isRunning: boolean`, `kernelStatus: string` (`'connected'`, `'busy'`, `'disconnected'`), and `executionCounter: integer`.
+- **Reactive State:** Manages `cells: JSValue`, `isRunning: boolean`, `isDashboardMode: boolean`, `kernelStatus: string` (`'connected'`, `'busy'`, `'disconnected'`), and `executionCounter: integer`.
+- **Dashboard Presentation Mode:** Toggling `isDashboardMode` applies the `.is-dashboard-mode` class, expanding the canvas, hiding technical code editors and gutters, and presenting clean Markdown reports with prominent DataGrid Pro tables and charts.
 - **Sequential Execution Queue (`_runQueue`):** When "Run All" is clicked, cells are queued and executed one after another. `runNextQueuedCell()` is triggered upon receiving `execute_reply` for the prior cell.
 - **WebSocket Protocol Client:** Connects to `ws://localhost:8090/ws`, handles reconnects, and streams cell events into component state.
-- **Simulator Mode:** If the native backend is offline, an internal simulator evaluates statistical patterns and renders mock Chart.js graphs and descriptive tables seamlessly.
 
 ### 3. `BvCell.bv`
 - Encapsulates execution state: `idle`, `running`, `success`, `error`, `aborted`.
+- Emits execution classes: `cell-is-code`, `cell-is-md`, `cell-has-outputs`, `cell-no-outputs`.
 - Provides execution indicator gutter badges (`In [ 1 ]: ✓`, `⏳`, `In [ ! ]: ✗`, `In [ ⏹ ]:`).
-- Displays execution duration badge (`⚡ 45 ms`).
-- Supports moving cells up/down, duplicating, deleting, and changing cell type between Code and Markdown.
+- Displays execution duration badge (`⚡ 32 ms`).
 
 ### 4. `BvCodeEditor.bv`
-- Monospace editor with line gutter numbers.
-- Intercepts `Tab` to insert 2 spaces instead of losing focus.
-- Listens for `Shift + Enter` (execute) and `Ctrl + Enter` (execute in-place).
+- **Dual-Layer Real-Time Highlighting:** Background `<pre class="bv-highlight-layer">` synchronized with an editable transparent `<textarea class="bv-code-textarea">`.
+- **Full Pascal Tokenizer:** Highlights comments (`//`, `{}`, `(**)`), strings (`'...'`), numbers, Pascal keywords (`begin`, `end`, `procedure`, `function`), scientific types (`TPyDataFrame`, `TPySeries`, `TVector`), and operators (`:=`, `<=`, `>=`).
+- **Contextual Autocomplete Popup:** Opens on `.` (filtering fluent methods) or `Ctrl + Space` (full catalog). Supports arrow key navigation, `Enter`/`Tab` completion, and cursor positioning (`$0`).
 
 ### 5. `BvMarkdown.bv`
-- Fast client-side Markdown parser supporting `#`, `##`, `###`, blockquotes (`>`), bullet lists (`-`), bold/italic (`**`, `*`), code blocks (```` ````), and KaTeX-style math delimiters (`$$...$$`, `$...$`).
-- Double-click toggles inline editor mode; `Ctrl + Enter` commits and renders HTML.
+- Client-side Markdown parser supporting `#`, `##`, `###`, blockquotes (`>`), bullet lists (`-`), bold/italic (`**`, `*`), code blocks (```` ````), and KaTeX-style math delimiters (`$$...$$`, `$...$`).
+- Double-click toggles inline editor mode; `Ctrl + Enter` commits and renders HTML. In Dashboard View, displays seamlessly as executive report sections without borders.
 
 ### 6. `BvOutput.bv`
-- Renders four distinct output formats:
-  - **`stdout`:** Terminal console styled with macOS-like indicator dots and monospace typography.
-  - **`stderr`:** Highlighted crimson container for FPC syntax errors and runtime exceptions.
-  - **`table`:** Responsive, scrollable data table supporting NumPy arrays and Pandas DataFrames.
-  - **`chart`:** Interactive hardware-accelerated canvas chart via `<bv-chart>` powered by Chart.js (Line, Bar, Scatter, Radar, Pie, Doughnut).
+- **Multi-Output Multiplexing & Stacking:** Sequentially stacks multiple outputs (stdout, tables, and multiple Chart.js cards) from a single cell run without overlapping.
+- **Interactive DataGrid Pro (`out.type === 'table'`):**
+  - Numeric and alphabetical column sorting (`▲`, `▼`, `⇅`).
+  - Fast in-memory multi-column live search (`🔍 Buscar...`).
+  - Pagination controls (10, 25, 50, 100 rows per page with `⏮`, `◀`, `▶`, `⏭`).
+  - One-click RFC 4180 CSV export ("📋 Copiar CSV" to clipboard and "💾 Download CSV").
+- **Reactive Visualization (`out.type === 'chart'`):** Interactive hardware-accelerated canvas charts via `<bv-chart>` powered by Chart.js (Line, Bar, Scatter, Pie).
 
 ---
 
@@ -106,32 +111,20 @@ The server tier is located in `frontend/server/` and compiled natively into `fro
 - Serves static compiled files from `frontend/dist/` with automated single-page application fallback.
 - Registers the `/ws` protocol handler (`TNotebookWebSocketProtocol`).
 
-### 2. WebSocket Protocol Handler (`NotebookKernel.pas`)
-- Implements `TWebSocketProcess` callbacks (`OnIncoming`, `OnConnected`, `OnDisconnected`).
-- Serializes and deserializes JSON messages with fast, allocation-free `TDocVariantData`.
+### 2. Stateful Python Session Daemon (`kernel/blaise_kernel_daemon.py`)
+- Persistent Python 3.13 process running on `http://127.0.0.1:9099`.
+- Maintains the global namespace and live memory for Pandas DataFrames, Series, and Scikit-Learn models across sequential cell runs.
+- Automatically started on server launch and reset upon a `restart_kernel` WebSocket request.
 
-### 3. Dynamic Sandboxing Harness (`uCodeRunner.pas`)
-When a cell is executed:
-1. **Source Generation:** Wraps the cell code into a self-contained Pascal program:
-   ```pascal
-   program CellExecution;
-   {$mode objfpc}{$H+}
-   uses SysUtils, Math, Classes, BlaiseOutput, BlaiseMathKernel, BlaisePyKernel;
-   
-   // Cell source code is inserted here
-   ```
-2. **Compilation via FPC:**
-   - Invokes `fpc.exe` in a separate process (`TProcess`).
-   - Includes search paths for `scientific/` units (`BlaiseOutput.pas`, `BlaiseMathKernel.pas`, `BlaisePyKernel.pas`) and `Python4Lazarus`.
-   - Captures compilation diagnostics in real time.
-3. **Execution & Stream Demultiplexing:**
-   - Runs the produced binary in the sandbox.
-   - Monitors `stdout` line by line.
-   - Detects special magic delimiters (`@@BLAISE_PAYLOAD@@:`):
-     - Plain lines are forwarded as `stream` events (`stdout`).
-     - Delimited lines are parsed as JSON objects and forwarded as `display_data` events.
-4. **Interruption:**
-   - Calling `FRunner.Interrupt` terminates active subprocesses using OS-level process termination (`TerminateProcess` on Windows / `kill -9` on POSIX).
+### 3. Zero-Delay Compilation Cache (`uCodeRunner.pas`)
+- Uses native Free Pascal SHA-1 cryptographic hashing to fingerprint cell source code.
+- If the source hash matches and the compiled `cell_<id>.exe` binary exists, compilation is skipped entirely (0ms overhead), reducing execution latency from ~400ms to ~30ms (12x speedup).
+- Invalidation triggers automatically upon any source code change or kernel restart.
+
+### 4. Dynamic Package Discovery (`packages/`)
+- Scans `packages/core/` and `packages/external/` for Pascal units and Python requirements.
+- Automatically injects `-Fu` unit search paths into the compiler command line.
+- Automatically handles `%pip install` magic commands inside code cells.
 
 ---
 
@@ -147,7 +140,14 @@ All communication over `ws://localhost:8090/ws` uses JSON envelopes:
   "action": "execute_cell",
   "cell_id": "cell_abc123",
   "execution_count": 1,
-  "source": "begin Writeln('Hello'); end."
+  "source": "uses BlaiseDataScience;\nvar DF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create('vendas');\n  DF.ShowTable('Vendas', 10);\nend."
+}
+```
+
+#### `restart_kernel`
+```json
+{
+  "action": "restart_kernel"
 }
 ```
 
@@ -174,7 +174,7 @@ All communication over `ws://localhost:8090/ws` uses JSON envelopes:
   "event": "stream",
   "cell_id": "cell_abc123",
   "stream_type": "stdout",
-  "text": "Computed result: 42\n"
+  "text": "Compiled in 0 ms (Cache hit). Running...\n"
 }
 ```
 
@@ -184,10 +184,10 @@ All communication over `ws://localhost:8090/ws` uses JSON envelopes:
   "event": "display_data",
   "cell_id": "cell_abc123",
   "payload": {
-    "type": "chart",
-    "title": "Model Loss Curve",
-    "chartType": "line",
-    "data": { "labels": ["1", "2"], "datasets": [...] }
+    "type": "table",
+    "title": "Vendas",
+    "columns": ["Produto", "Preco"],
+    "rows": [["Teclado", 250.0], ["Mouse", 85.0]]
   }
 }
 ```
@@ -199,14 +199,14 @@ All communication over `ws://localhost:8090/ws` uses JSON envelopes:
   "cell_id": "cell_abc123",
   "status": "success",
   "execution_count": 1,
-  "execution_time_ms": 32
+  "execution_time_ms": 31
 }
 ```
 
-#### `interrupt_reply`
+#### `restart_reply`
 ```json
 {
-  "event": "interrupt_reply",
-  "status": "interrupted"
+  "event": "restart_reply",
+  "status": "restarted"
 }
 ```

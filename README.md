@@ -6,15 +6,28 @@ By unifying the reactive Single File Component architecture of **BlaiseVue**, ha
 
 ---
 
+## ✨ Key Features & Capabilities
+
+- 🔄 **Persistent Stateful Kernel (Shared Daemon)**: Variables and DataFrames created in Cell 1 (e.g. `DF := TPyDataFrame.Create('sales');`) remain live in memory and instantly accessible in subsequent cells without re-running. The session can be reset anytime with **`🔄 Restart Kernel`**.
+- ⚡ **Zero-Delay Compilation Cache**: Fast SHA-1 cryptographic signature caching in `uCodeRunner.pas`. Cells with unchanged source skip FPC compilation entirely (0ms compile overhead), dropping execution latency to ~30ms (a 12x speedup).
+- 💡 **Smart Autocompletion & Real-Time Syntax Highlighting**: Dual-layer synchronized editor with syntax coloring for Pascal keywords, comments, strings, and scientific types. Press `Ctrl + Space` or type `.` after a variable to open interactive autocomplete suggestions.
+- 📋 **Interactive DataGrid Pro**: Render tabular datasets with interactive column sorting (numerical and alphabetical), instant in-memory multi-column search, flexible pagination (10, 25, 50, 100 rows), and one-click CSV export ("📋 Copiar CSV" and "💾 Download CSV").
+- 📊 **One-Click Dashboard View (Streamlit / Voila Style)**: Toggle between code development and an executive presentation layout with a single click on **`📊 Dashboard View`**. Technical code editors, gutters, and helper cells are cleanly hidden, highlighting only executive Markdown prose, interactive charts, and DataGrid Pro tables.
+- 📦 **Modular Extensibility & In-Cell `%pip install`**: Extensible package system (`packages/core/` and `packages/external/`) with dynamic discovery and instant pip package installation directly inside code cells.
+- 📈 **Hardware-Accelerated Reactive Plots**: Generate Line, Bar, Scatter, and Pie charts directly from Pascal methods (`DF.PlotLine`, `DF.PlotBar`, `DF.PlotScatter`, `DF.PlotPie`) with sequential multi-output stacking.
+
+---
+
 ## 📖 Official Documentation
 
 Comprehensive technical guides and references are available in the [`docs/`](docs/README.md) directory:
 
 - 🚀 **[Getting Started & Installation](docs/GETTING_STARTED.md):** Prerequisites, build steps, and server launch.
-- 🏛️ **[System Architecture & Internals](docs/ARCHITECTURE.md):** Frontend components, WebSocket lifecycle, and sandboxing.
+- 🏛️ **[System Architecture & Internals](docs/ARCHITECTURE.md):** Frontend components, WebSocket lifecycle, persistent daemon, and sandboxing.
 - 🔬 **[Scientific Computing & Machine Learning](docs/SCIENTIFIC_COMPUTING.md):** `TVector`, linear regression, Python4Delphi bridge, and Chart.js plotting.
+- 📦 **[Modular Packages & Extensibility](docs/PACKAGES.md):** Architecture of `packages/core/`, `packages/external/`, dynamic `uses`, and `%pip`.
 - 📄 **[Notebook File Format Specification (.bynb)](docs/NOTEBOOK_FORMAT.md):** JSON schema, cell state, and output formats.
-- 📚 **[Pascal Units & Kernel API Reference](docs/API_REFERENCE.md):** Method signatures and WebSocket event payloads.
+- 📚 **[Pascal Units & Kernel API Reference](docs/API_REFERENCE.md):** Method signatures, fluent API, and WebSocket event payloads.
 
 ---
 
@@ -24,6 +37,7 @@ Comprehensive technical guides and references are available in the [`docs/`](doc
 ┌────────────────────────────────────────────────────────────────────────┐
 │                   BlaiseVue Frontend (Web SPA / WebUI)                  │
 │   <bv-notebook>  •  <bv-cell>  •  <bv-code-editor>  •  <bv-output>     │
+│   Syntax Highlighter & Autocomplete  •  DataGrid Pro  •  Dashboard View │
 │   In-Cell Reactive Chart.js (<bv-chart>)  •  Interactive Markdown      │
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │ Bidirectional WebSocket ($ws)
@@ -31,14 +45,15 @@ Comprehensive technical guides and references are available in the [`docs/`](doc
 ┌────────────────────────────────────────────────────────────────────────┐
 │               Synopse mORMot 2 Kernel (Native Pascal Server)           │
 │   Async HTTP / WebSocket Server  •  Cell Execution Orchestrator        │
-│   Dynamic FPC Compilation Sandbox  •  Real-time Output Streaming       │
+│   SHA-1 Compilation Cache  •  Persistent Session Daemon Controller    │
 └───────────────────┬────────────────────────────────┬───────────────────┘
                     │                                │
                     ▼                                ▼
 ┌──────────────────────────────────────┐  ┌──────────────────────────────┐
-│       Native Pascal Engine           │  │    Python4Delphi Bridge      │
-│   Math, Vectors, Linear Regression,  │  │  pandas, numpy, scikit-learn │
-│   Matrix Operations, NumPascal       │  │  Reactive Chart.js outputs   │
+│       Native Pascal Engine           │  │  Persistent Python Daemon    │
+│   Math, Vectors, Linear Regression,  │  │  (localhost:9099)            │
+│   Matrix Operations, NumPascal       │  │  pandas, numpy, scikit-learn │
+│   Dynamic Package Auto-Discovery     │  │  Stateful Variable Store     │
 └──────────────────────────────────────┘  └──────────────────────────────┘
 ```
 
@@ -46,7 +61,7 @@ Comprehensive technical guides and references are available in the [`docs/`](doc
 
 ## 🗺️ Product Roadmap
 
-For the strategic evolutionary roadmap and planned milestones, see [ROADMAP.md](ROADMAP.md).
+For the completed milestones and evolution history, see [ROADMAP.md](ROADMAP.md).
 
 ---
 
@@ -59,10 +74,10 @@ A complete scientific demo project is provided in the repository:
 ### What it demonstrates:
 1. **Cell 1 (Markdown)**: Introduction to the interactive Pascal computing ecosystem.
 2. **Cell 2 (Native Pascal Math)**: Generates random vectors, calculates mean and standard deviation, and immediately plots a Bar Chart with `<bv-chart>` under the code.
-3. **Cell 3 (Markdown)**: Explains the Python4Delphi bridge.
-4. **Cell 4 (Python4Delphi & Scikit-learn)**: Uses Pandas and CPython 3.13 to simulate machine learning iterations, outputs an interactive table (`ShowPyDataFrame`), and plots an accuracy convergence curve with `<bv-chart>` directly under the code cell!
+3. **Cell 3 (Markdown)**: Explains the persistent Python bridge and fluent DataFrames.
+4. **Cell 4 (Data Science & Scikit-Learn)**: Uses Pandas and Scikit-Learn to simulate predictive modeling, displays an interactive DataGrid Pro table (`DF.ShowTable`), and renders accuracy convergence plots with `<bv-chart>`.
 
-You can load this file anytime using the **📂 Open** button on the toolbar or simply launch the notebook (which preloads it automatically).
+Load this file anytime using the **📂 Open** button on the toolbar or simply launch the notebook (which preloads it automatically).
 
 ---
 
@@ -100,4 +115,4 @@ bv mormot build
 bv mormot run
 ```
 
-Access the full-stack application at **`http://localhost:8090/`** (serves SPA frontend and active WebSocket execution kernel on `/ws`).
+Then open your browser at **`http://localhost:8090/`**.
