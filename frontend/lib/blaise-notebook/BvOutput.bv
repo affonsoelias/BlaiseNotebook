@@ -71,7 +71,7 @@
               :type="out.chartType || 'line'"
               :data="out.data"
               :options="out.options"
-              height="350px"
+              height="340px"
             ></bv-chart>
           </div>
         </div>
@@ -356,8 +356,8 @@
     background: #161b22;
     border: 1px solid #30363d;
     border-radius: 8px;
-    overflow: hidden;
-    padding-bottom: 8px;
+    overflow: visible;
+    padding-bottom: 12px;
   }
 
   .chart-card-header {
@@ -396,14 +396,12 @@
   }
 
   .chart-canvas-container {
-    padding: 12px;
+    padding: 12px 14px 24px 14px;
     position: relative;
-    height: 350px;
-    min-height: 350px;
-    max-height: 350px;
+    box-sizing: border-box;
     width: 100%;
+    min-height: 380px;
     background: #0d1117;
-    contain: layout paint size;
-    overflow: hidden;
+    overflow: visible;
   }
 </style>

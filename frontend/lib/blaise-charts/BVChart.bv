@@ -102,20 +102,57 @@
            try {
              const chartData = cloneChartData(rawData, this.type);
              const rawOpts = extractData(this.options);
-             const chartOptions = rawOpts ? Object.assign({ responsive: true, maintainAspectRatio: false, resizeDelay: 50 }, (bv && bv.unproxy) ? bv.unproxy(rawOpts) : rawOpts) : {
-               responsive: true,
-               maintainAspectRatio: false,
-               resizeDelay: 50
-             };
-             if (chartOptions.resizeDelay === undefined) chartOptions.resizeDelay = 50;
-             
-             let finalOpts = chartOptions;
-             const isRadial = (this.type === 'pie' || this.type === 'doughnut' || this.type === 'polarArea');
-             if (isRadial && chartOptions.scales) {
-               finalOpts = Object.assign({}, chartOptions);
-               delete finalOpts.scales;
-             }
+            function applyChartTheme(opts, isRadialChart) {
+              const res = opts ? Object.assign({}, opts) : {};
+              if (res.responsive === undefined) res.responsive = true;
+              if (res.maintainAspectRatio === undefined) res.maintainAspectRatio = false;
+              if (res.resizeDelay === undefined) res.resizeDelay = 50;
 
+              if (!isRadialChart) {
+                if (!res.scales) res.scales = {};
+                if (!res.scales.x) res.scales.x = {};
+                if (!res.scales.y) res.scales.y = {};
+
+                if (!res.scales.x.ticks) res.scales.x.ticks = {};
+                if (res.scales.x.ticks.color === undefined) res.scales.x.ticks.color = '#8b949e';
+                if (res.scales.x.ticks.padding === undefined) res.scales.x.ticks.padding = 6;
+                if (!res.scales.x.grid) res.scales.x.grid = {};
+                if (res.scales.x.grid.color === undefined) res.scales.x.grid.color = 'rgba(255, 255, 255, 0.08)';
+
+                if (!res.scales.y.ticks) res.scales.y.ticks = {};
+                if (res.scales.y.ticks.color === undefined) res.scales.y.ticks.color = '#8b949e';
+                if (res.scales.y.ticks.padding === undefined) res.scales.y.ticks.padding = 6;
+                if (!res.scales.y.grid) res.scales.y.grid = {};
+                if (res.scales.y.grid.color === undefined) res.scales.y.grid.color = 'rgba(255, 255, 255, 0.08)';
+              } else if (res.scales) {
+                delete res.scales;
+              }
+
+              if (!res.layout) {
+                res.layout = { padding: { top: 8, right: 14, bottom: 20, left: 8 } };
+              } else if (typeof res.layout.padding === 'number') {
+                const p = res.layout.padding;
+                res.layout.padding = { top: p, right: p, bottom: p + 20, left: p };
+              } else if (typeof res.layout.padding === 'object') {
+                if (res.layout.padding.bottom === undefined) {
+                  res.layout.padding.bottom = 20;
+                } else {
+                  res.layout.padding.bottom = Math.max(res.layout.padding.bottom, 20);
+                }
+              }
+
+              if (!res.plugins) res.plugins = {};
+              if (!res.plugins.legend) res.plugins.legend = {};
+              if (!res.plugins.legend.labels) res.plugins.legend.labels = {};
+              if (res.plugins.legend.labels.color === undefined) {
+                res.plugins.legend.labels.color = '#c9d1d9';
+              }
+              return res;
+            }
+
+            const isRadial = (this.type === 'pie' || this.type === 'doughnut' || this.type === 'polarArea');
+            const rawParsed = rawOpts ? ((bv && bv.unproxy) ? bv.unproxy(rawOpts) : rawOpts) : {};
+            let finalOpts = applyChartTheme(rawParsed, isRadial);
              if (!finalOpts.onClick) {
                finalOpts.onClick = (event, elements) => {
                  if (elements && elements.length > 0) {
@@ -238,8 +275,9 @@
          if (this._chart && this._chart.canvas && newVal) {
            try {
              const rawNewOpts = (window.__BV_CORE__ && window.__BV_CORE__.unproxy) ? window.__BV_CORE__.unproxy(newVal) : newVal;
-             if (rawNewOpts.resizeDelay === undefined) rawNewOpts.resizeDelay = 50;
-             this._chart.options = rawNewOpts;
+             const isRadial = (this.type === 'pie' || this.type === 'doughnut' || this.type === 'polarArea');
+             const themedOpts = (typeof applyChartTheme === 'function') ? applyChartTheme(rawNewOpts, isRadial) : rawNewOpts;
+             this._chart.options = themedOpts;
              this._chart.update();
            } catch (e) {
              this.initChart();
@@ -265,7 +303,7 @@
     box-sizing: border-box;
     margin-bottom: 0;
     background: transparent;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .bui-chart-wrapper canvas {

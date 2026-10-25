@@ -81,7 +81,7 @@ For full legal terms, refer to the [LICENSE](LICENSE) file.
 
 ---
 
-## 🚀 Quick Start (Development)
+## 🚀 Quick Start
 
 ### Prerequisites
 - [Free Pascal Compiler](https://www.freepascal.org/) (FPC 3.2.2+)
@@ -89,18 +89,7 @@ For full legal terms, refer to the [LICENSE](LICENSE) file.
 - [Python](https://www.python.org/) 3.10+ (with `numpy`, `pandas`, `scikit-learn` installed)
 - [BlaiseCLI](https://github.com/affonsoelias/BlaiseVue) (`bv` command on PATH)
 
-### 1. Running the Frontend (Vite / Dev Server)
-
-```bash
-cd frontend
-bv run dev
-# Or start with Hot Module Replacement (HMR):
-bv serve
-```
-
-Open your browser at **`http://localhost:8080/`**.
-
-### 2. Building & Running the mORMot 2 Native Kernel Server
+### Running the Application
 
 ```bash
 cd frontend
