@@ -94,11 +94,11 @@ flowchart LR
 > **Goal:** Provide a rich, professional, and accessible notebook editing experience.
 
 #### 4.1 Autocompletion & Destaque de Sintaxe Inteligente
-- [ ] **Sugestões Contextuais no Editor**:
+- [x] **Sugestões Contextuais no Editor**:
   - Palavras-chave Object Pascal: `begin`, `end`, `var`, `procedure`, `function`, `Format`, `Writeln`.
   - Métodos fluentes de Data Science: `.AddColumn`, `.Column`, `.ShowTable`, `.PlotLine`, `.PlotBar`, `.ToCSV`, `.FromCSV`.
   - Atalho de gatilho `Ctrl + Space` ou digitação do caractere ponto (`.`).
-- [ ] **Colorização Aprimorada**: Destacar strings, comentários, palavras-chave e tipos científicos (`TPyDataFrame`, `TPySeries`, `TVector`).
+- [x] **Colorização Aprimorada**: Destacar strings, comentários, palavras-chave e tipos científicos (`TPyDataFrame`, `TPySeries`, `TVector`).
 
 #### 4.2 Tabelas de Dados Interativas (DataGrid Pro)
 - [ ] **Ordenação de Colunas**: Clique no cabeçalho da coluna para ordenar ascendente/descendente no frontend.

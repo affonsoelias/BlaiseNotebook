@@ -87,7 +87,7 @@ For full legal terms, refer to the [LICENSE](LICENSE) file.
 - [Free Pascal Compiler](https://www.freepascal.org/) (FPC 3.2.2+)
 - [Lazarus IDE](https://www.lazarus-ide.org/) (with `Python4Lazarus` and `BlaiseVue` installed)
 - [Python](https://www.python.org/) 3.10+ (with `numpy`, `pandas`, `scikit-learn` installed)
-- [BlaiseCLI](https://github.com/affonsoelias/BlaiseVue) (`bv` command on PATH)
+- [BlaiseVue](https://github.com/affonsoelias/BlaiseVue) (`bv` command on PATH)
 
 ### Running the Application
 

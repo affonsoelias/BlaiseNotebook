@@ -7,6 +7,7 @@
         <span class="lang-name">Object Pascal</span>
       </div>
       <div class="bv-editor-shortcuts">
+        <span class="shortcut-pill"><code>Ctrl + Space</code> Autocomplete</span>
         <span class="shortcut-pill"><code>Shift + Enter</code> Run</span>
         <span class="shortcut-pill"><code>Tab</code> Indent</span>
       </div>
@@ -14,10 +15,14 @@
 
     <!-- MAIN EDITOR AREA WITH LINE GUTTER -->
     <div class="bv-editor-wrapper">
-      <div class="bv-editor-gutter">
+      <div class="bv-editor-gutter" b-ref="gutter">
         <div b-for="line in lineNumbers" class="gutter-num">{{ line }}</div>
       </div>
       <div class="bv-editor-textarea-wrap">
+        <!-- SYNTAX HIGHLIGHT LAYER (RENDERED BEHIND TEXTAREA) -->
+        <pre b-ref="highlightLayer" class="bv-highlight-layer" aria-hidden="true"></pre>
+
+        <!-- EDITABLE TRANSPARENT TEXTAREA (RECEIVES CARET & TYPING) -->
         <textarea
           b-ref="codeTextarea"
           class="bv-code-textarea"
@@ -27,7 +32,28 @@
           autocomplete="off"
           @input="handleInput"
           @keydown="handleKeyDown"
+          @scroll="handleScroll"
+          @click="handleClick"
+          @blur="handleBlur"
         ></textarea>
+
+        <!-- AUTOCOMPLETE POPUP OVERLAY -->
+        <div
+          b-if="showSuggestions"
+          class="bv-autocomplete-popup"
+          :style="popupStyle"
+        >
+          <div
+            b-for="item in suggestions"
+            class="bv-suggestion-item"
+            :class="item.selected ? 'is-selected' : ''"
+            @mousedown="onSuggestionMouseDown(item, $event)"
+          >
+            <span class="sug-badge" :class="'badge-' + item.kind">{{ item.badge }}</span>
+            <span class="sug-label">{{ item.label }}</span>
+            <span class="sug-detail">{{ item.detail }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -35,7 +61,7 @@
 
 <script>
   {
-    BvCodeEditor.bv - Reactive Code Editor with Object Pascal Highlights & Gutter
+    BvCodeEditor.bv - Reactive Code Editor with Object Pascal Highlights & Intelligent Autocomplete
     Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
   }
 
@@ -46,6 +72,11 @@
 
   data:
     lineCount: integer = 1;
+    showSuggestions: boolean = false;
+    suggestions: JSValue = [];
+    selectedSuggestionIndex: integer = 0;
+    popupTop: integer = 24;
+    popupLeft: integer = 12;
 
   computed:
     function lineNumbers: JSValue;
@@ -61,7 +92,91 @@
       Result := arr;
     end;
 
+    function popupStyle: string;
+    begin
+      asm
+        const t = this.popupTop || 0;
+        const l = this.popupLeft || 0;
+        return 'top: ' + t + 'px; left: ' + l + 'px;';
+      end;
+    end;
+
   methods:
+    procedure updateHighlight;
+    begin
+      asm
+        const val = this.value || '';
+        const hl = this.$refs ? this.$refs.highlightLayer : null;
+        if (!hl) return;
+
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+        }
+
+        const kwProc = 'proc' + 'edure';
+        const kwFunc = 'func' + 'tion';
+
+        const PASCAL_KEYWORDS = new Set([
+          'program', 'unit', 'interface', 'implementation', 'uses', 'var', 'const', 'type',
+          'begin', 'end', kwProc, kwFunc, 'if', 'then', 'else', 'for', 'to', 'downto',
+          'do', 'while', 'repeat', 'until', 'case', 'of', 'try', 'except', 'finally', 'class',
+          'record', 'array', 'property', 'published', 'public', 'private', 'protected',
+          'constructor', 'destructor', 'override', 'overload', 'inherited', 'with', 'as', 'is',
+          'nil', 'not', 'and', 'or', 'xor', 'div', 'mod', 'shl', 'shr', 'in',
+          'initialization', 'finalization', 'exit', 'break', 'continue'
+        ]);
+
+        const PASCAL_TYPES = new Set([
+          'tpydataframe', 'tpyseries', 'tvector', 'tmatrix', 'tseries',
+          'integer', 'int64', 'double', 'extended', 'single', 'boolean', 'string',
+          'char', 'byte', 'word', 'cardinal', 'pointer', 'tstringlist', 'tstrings',
+          'tdatetime', 'jsvalue', 'tjsarray', 'tjsobject'
+        ]);
+
+        const PASCAL_BUILTINS = new Set([
+          'writeln', 'write', 'readln', 'format', 'length', 'setlength',
+          'high', 'low', 'inc', 'dec', 'assigned', 'pyrun', 'pyeval', 'pyreset',
+          'addcolumn', 'column', 'showtable', 'plotline', 'plotbar', 'plotscatter',
+          'plotpie', 'tocsv', 'fromcsv', 'shape', 'head', 'tail', 'describe',
+          'filter', 'sortby', 'groupby', 'attach', 'saveas', 'create'
+        ]);
+
+        const tokenRegex = new RegExp('(\\/\\/[^\\n]*|\\{[^}]*\\}|\\(\\*[\\s\\S]*?\\*\\)|\x27(\x27\x27|[^\x27\\n])*\x27|\\$[0-9A-Fa-f]+\\b|\\b\\d+(?:\\.\\d+)?\\b|[A-Za-z_][A-Za-z0-9_]*|:=|<=|>=|<>|\\.\\.|[^\x27\\sA-Za-z0-9_]|\\s+)', 'g');
+        let out = '';
+        let m;
+        while ((m = tokenRegex.exec(val)) !== null) {
+          const t = m[0];
+          if (t.startsWith('//') || t.startsWith(String.fromCharCode(123)) || t.startsWith('(*')) {
+            out += '<span class="tok-comment">' + escapeHtml(t) + '</span>';
+          } else if (t.startsWith("'")) {
+            out += '<span class="tok-string">' + escapeHtml(t) + '</span>';
+          } else if (/^(\$[0-9A-Fa-f]+|\b\d+(?:\.\d+)?\b)$/.test(t)) {
+            out += '<span class="tok-num">' + escapeHtml(t) + '</span>';
+          } else if (/^[A-Za-z_]/.test(t)) {
+            const lower = t.toLowerCase();
+            if (PASCAL_KEYWORDS.has(lower)) {
+              out += '<span class="tok-kw">' + escapeHtml(t) + '</span>';
+            } else if (PASCAL_TYPES.has(lower)) {
+              out += '<span class="tok-type">' + escapeHtml(t) + '</span>';
+            } else if (PASCAL_BUILTINS.has(lower)) {
+              out += '<span class="tok-func">' + escapeHtml(t) + '</span>';
+            } else {
+              out += escapeHtml(t);
+            }
+          } else if (t === ':=' || t === '<=' || t === '>=' || t === '<>') {
+            out += '<span class="tok-op">' + escapeHtml(t) + '</span>';
+          } else {
+            out += escapeHtml(t);
+          }
+        }
+
+        hl.innerHTML = out + (val.endsWith('\n') ? ' ' : '');
+      end;
+    end;
+
     procedure updateLines;
     begin
       asm
@@ -71,6 +186,7 @@
 
         // Auto-adjust height and synchronize DOM textarea value
         const ta = this.$refs ? this.$refs.codeTextarea : null;
+        const hl = this.$refs ? this.$refs.highlightLayer : null;
         if (ta) {
           if (ta.value !== val) {
             ta.value = val;
@@ -78,7 +194,215 @@
           ta.style.height = 'auto';
           const newH = Math.max(80, ta.scrollHeight);
           ta.style.height = newH + 'px';
+          if (hl) {
+            hl.style.height = newH + 'px';
+          }
         }
+        this.updateHighlight();
+      end;
+    end;
+
+    procedure checkAutocomplete(triggerMode: string);
+    begin
+      asm
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        if (!ta) return;
+        const val = ta.value || '';
+        const pos = ta.selectionStart || 0;
+        const textBefore = val.substring(0, pos);
+
+        const dotMatch = textBefore.match(/\.([A-Za-z0-9_]*)$/);
+        const wordMatch = textBefore.match(/([A-Za-z0-9_]+)$/);
+
+        let query = '';
+        let isDotMode = false;
+
+        if (dotMatch !== null) {
+          isDotMode = true;
+          query = dotMatch[1].toLowerCase();
+        } else if (triggerMode === 'explicit') {
+          query = wordMatch ? wordMatch[1].toLowerCase() : '';
+        } else if (wordMatch && wordMatch[1].length >= 2) {
+          query = wordMatch[1].toLowerCase();
+        } else {
+          this.showSuggestions = false;
+          return;
+        }
+
+        if (!window.__BLAISE_AUTOCOMPLETE_CATALOG__) {
+          const makeItem = (label, kind, badge, detail, insertText) => {
+            const it = new Object();
+            it['label'] = label;
+            it['kind'] = kind;
+            it['badge'] = badge;
+            it['detail'] = detail;
+            it['insertText'] = insertText;
+            it['selected'] = false;
+            return it;
+          };
+
+          const kwProc = 'proc' + 'edure';
+          const kwFunc = 'func' + 'tion';
+
+          const cat = [];
+          // Fluent Data Science Methods
+          cat.push(makeItem('AddColumn', 'method', 'M', '(Name, Values) Add series to DataFrame', "AddColumn('$0', [])"));
+          cat.push(makeItem('Column', 'method', 'M', '(Name) Retrieve Series from DataFrame', "Column('$0')"));
+          cat.push(makeItem('ShowTable', 'method', 'M', '(Title, MaxRows) Display interactive table', "ShowTable('$0', 10);"));
+          cat.push(makeItem('PlotLine', 'method', 'M', '(XCol, YCol, Title) Render line chart', "PlotLine('$0', '', '');"));
+          cat.push(makeItem('PlotBar', 'method', 'M', '(XCol, YCol, Title) Render bar chart', "PlotBar('$0', '', '');"));
+          cat.push(makeItem('PlotScatter', 'method', 'M', '(XCol, YCol, Title) Render scatter plot', "PlotScatter('$0', '', '');"));
+          cat.push(makeItem('PlotPie', 'method', 'M', '(Col, Title) Render pie chart', "PlotPie('$0', '');"));
+          cat.push(makeItem('ToCSV', 'method', 'M', '(FilePath) Export DataFrame to CSV file', "ToCSV('$0');"));
+          cat.push(makeItem('FromCSV', 'method', 'M', '(FilePath) Load DataFrame from CSV file', "FromCSV('$0');"));
+          cat.push(makeItem('Head', 'method', 'M', '(N) Preview first N rows', 'Head(5)'));
+          cat.push(makeItem('Tail', 'method', 'M', '(N) Preview last N rows', 'Tail(5)'));
+          cat.push(makeItem('Describe', 'method', 'M', '() Summary statistics of DataFrame', 'Describe()'));
+          cat.push(makeItem('Shape', 'method', 'M', '() Return (Rows, Columns) dimensions', 'Shape()'));
+          cat.push(makeItem('Filter', 'method', 'M', '(Query) Filter rows by expression', "Filter('$0')"));
+          cat.push(makeItem('SortBy', 'method', 'M', '(Col, Ascending) Sort DataFrame', "SortBy('$0', True)"));
+          cat.push(makeItem('GroupBy', 'method', 'M', '(Col) Group DataFrame by column', "GroupBy('$0')"));
+          cat.push(makeItem('Attach', 'method', 'M', '(VarName) Attach to persistent daemon variable', "Attach('$0')"));
+          cat.push(makeItem('SaveAs', 'method', 'M', '(VarName) Persist DataFrame in daemon workspace', "SaveAs('$0')"));
+          cat.push(makeItem('Create', 'method', 'M', '(VarName) Instantiate DataFrame/Series', "Create('$0')"));
+
+          // Keywords & Language Blocks
+          cat.push(makeItem('begin', 'keyword', 'K', 'keyword - Start code block', 'begin\n  $0\nend;'));
+          cat.push(makeItem('end', 'keyword', 'K', 'keyword - End code block', 'end;'));
+          cat.push(makeItem('var', 'keyword', 'K', 'keyword - Variable declaration section', 'var\n  $0'));
+          cat.push(makeItem('const', 'keyword', 'K', 'keyword - Constant declaration section', 'const\n  $0'));
+          cat.push(makeItem('type', 'keyword', 'K', 'keyword - Type definition section', 'type\n  $0'));
+          cat.push(makeItem(kwProc, 'keyword', 'K', 'keyword - Declare a ' + kwProc, kwProc + ' $0;\nbegin\nend;'));
+          cat.push(makeItem(kwFunc, 'keyword', 'K', 'keyword - Declare a ' + kwFunc, kwFunc + ' $0: Integer;\nbegin\nend;'));
+          cat.push(makeItem('uses', 'keyword', 'K', 'keyword - Unit import list', 'uses BlaiseDataScience;'));
+          cat.push(makeItem('program', 'keyword', 'K', 'keyword - Program header', 'program $0;'));
+          cat.push(makeItem('if', 'keyword', 'K', 'keyword - Conditional statement', 'if $0 then\nbegin\nend;'));
+          cat.push(makeItem('then', 'keyword', 'K', 'keyword - Then branch', 'then'));
+          cat.push(makeItem('else', 'keyword', 'K', 'keyword - Else branch', 'else\nbegin\nend;'));
+          cat.push(makeItem('for', 'keyword', 'K', 'keyword - For loop', 'for $0 := 1 to 10 do\nbegin\nend;'));
+          cat.push(makeItem('while', 'keyword', 'K', 'keyword - While loop', 'while $0 do\nbegin\nend;'));
+          cat.push(makeItem('repeat', 'keyword', 'K', 'keyword - Repeat-until loop', 'repeat\n  $0\nuntil False;'));
+          cat.push(makeItem('try', 'keyword', 'K', 'keyword - Exception block', 'try\n  $0\nfinally\nend;'));
+          cat.push(makeItem('class', 'keyword', 'K', 'keyword - Class definition', 'class\n  $0\nend;'));
+          cat.push(makeItem('record', 'keyword', 'K', 'keyword - Record definition', 'record\n  $0\nend;'));
+
+          // Built-in & Kernel Routines
+          cat.push(makeItem('Format', 'func', 'F', '(Fmt, Args) Format string with arguments', "Format('%s', [$0])"));
+          cat.push(makeItem('Writeln', 'func', 'F', '(Args) Output line to console', 'Writeln($0);'));
+          cat.push(makeItem('Write', 'func', 'F', '(Args) Output text to console', 'Write($0);'));
+          cat.push(makeItem('PyRun', 'func', 'F', '(PyCode) Execute Python in persistent kernel', "PyRun('$0');"));
+          cat.push(makeItem('PyEval', 'func', 'F', '(PyExpr) Evaluate Python expression', "PyEval('$0')"));
+          cat.push(makeItem('PyReset', 'func', 'F', '() Reset persistent Python kernel', 'PyReset;'));
+          cat.push(makeItem('Length', 'func', 'F', '(S) Return length of string or array', 'Length($0)'));
+          cat.push(makeItem('Assigned', 'func', 'F', '(P) Test if pointer is not nil', 'Assigned($0)'));
+
+          // Scientific & Standard Types
+          cat.push(makeItem('TPyDataFrame', 'type', 'T', 'type - Python/Pandas DataFrame bridge', 'TPyDataFrame'));
+          cat.push(makeItem('TPySeries', 'type', 'T', 'type - Python/Pandas Series bridge', 'TPySeries'));
+          cat.push(makeItem('TVector', 'type', 'T', 'type - 1D Mathematical vector array', 'TVector'));
+          cat.push(makeItem('TMatrix', 'type', 'T', 'type - 2D Mathematical matrix', 'TMatrix'));
+          cat.push(makeItem('Integer', 'type', 'T', 'type - Signed 32-bit integer', 'Integer'));
+          cat.push(makeItem('Int64', 'type', 'T', 'type - Signed 64-bit integer', 'Int64'));
+          cat.push(makeItem('Double', 'type', 'T', 'type - Double precision IEEE float', 'Double'));
+          cat.push(makeItem('String', 'type', 'T', 'type - Standard string', 'String'));
+          cat.push(makeItem('Boolean', 'type', 'T', 'type - Boolean (True / False)', 'Boolean'));
+
+          window.__BLAISE_AUTOCOMPLETE_CATALOG__ = cat;
+        }
+
+        const catalog = window.__BLAISE_AUTOCOMPLETE_CATALOG__;
+        let matches = [];
+
+        if (isDotMode) {
+          matches = catalog.filter((item) => {
+            return item.kind === 'method' && item.label.toLowerCase().startsWith(query);
+          });
+        } else {
+          matches = catalog.filter((item) => {
+            return item.label.toLowerCase().includes(query);
+          });
+        }
+
+        if (!matches || matches.length === 0) {
+          this.showSuggestions = false;
+          return;
+        }
+
+        for (let i = 0; i < matches.length; i++) {
+          matches[i].selected = (i === 0);
+        }
+
+        this.suggestions = matches;
+        this.selectedSuggestionIndex = 0;
+
+        const lines = textBefore.split('\n');
+        const lineIndex = lines.length - 1;
+        const colIndex = lines[lineIndex].length;
+
+        const lineHeight = 20;
+        const charWidth = 7.8;
+        const topPos = (lineIndex + 1) * lineHeight + 8 - ta.scrollTop;
+        const leftPos = Math.max(12, Math.min(colIndex * charWidth + 12 - ta.scrollLeft, 380));
+
+        this.popupTop = topPos;
+        this.popupLeft = leftPos;
+        this.showSuggestions = true;
+      end;
+    end;
+
+    procedure applySuggestion(item: JSValue);
+    begin
+      asm
+        if (!item) return;
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        if (!ta) return;
+
+        const val = ta.value || '';
+        const pos = ta.selectionStart || 0;
+        const textBefore = val.substring(0, pos);
+        const textAfter = val.substring(pos);
+
+        let replaceStart = pos;
+        const dotMatch = textBefore.match(/\.([A-Za-z0-9_]*)$/);
+        const wordMatch = textBefore.match(/([A-Za-z0-9_]+)$/);
+
+        if (dotMatch !== null) {
+          replaceStart = pos - dotMatch[1].length;
+        } else if (wordMatch !== null) {
+          replaceStart = pos - wordMatch[1].length;
+        }
+
+        const insertRaw = item.insertText || item.label;
+        const placeholderIdx = insertRaw.indexOf('$0');
+        const insertClean = insertRaw.replace('$0', '');
+
+        const newVal = val.substring(0, replaceStart) + insertClean + textAfter;
+        ta.value = newVal;
+        this.value = newVal;
+
+        let newCursorPos = replaceStart + insertClean.length;
+        if (placeholderIdx !== -1) {
+          newCursorPos = replaceStart + placeholderIdx;
+        }
+
+        ta.selectionStart = ta.selectionEnd = newCursorPos;
+        ta.focus();
+
+        this.showSuggestions = false;
+        this.updateLines();
+        if (this.$emit) {
+          this.$emit('input', newVal);
+        }
+      end;
+    end;
+
+    procedure onSuggestionMouseDown(item: JSValue; e: JSValue);
+    begin
+      asm
+        if (e && e.preventDefault) {
+          e.preventDefault();
+        }
+        this.applySuggestion(item);
       end;
     end;
 
@@ -95,6 +419,7 @@
           if (this.$emit) {
             this.$emit('input', newVal);
           }
+          this.checkAutocomplete('auto');
         }
       end;
     end;
@@ -105,9 +430,54 @@
         const event = e;
         if (!event) return;
 
+        // If suggestions are currently visible:
+        if (this.showSuggestions && this.suggestions && this.suggestions.length > 0) {
+          if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            const len = this.suggestions.length;
+            const nextIdx = (this.selectedSuggestionIndex + 1) % len;
+            this.selectedSuggestionIndex = nextIdx;
+            for (let i = 0; i < len; i++) {
+              this.suggestions[i].selected = (i === nextIdx);
+            }
+            return;
+          }
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            const len = this.suggestions.length;
+            const prevIdx = (this.selectedSuggestionIndex - 1 + len) % len;
+            this.selectedSuggestionIndex = prevIdx;
+            for (let i = 0; i < len; i++) {
+              this.suggestions[i].selected = (i === prevIdx);
+            }
+            return;
+          }
+          if (event.key === 'Enter' || event.key === 'Tab') {
+            event.preventDefault();
+            const item = this.suggestions[this.selectedSuggestionIndex];
+            if (item) {
+              this.applySuggestion(item);
+            }
+            return;
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            this.showSuggestions = false;
+            return;
+          }
+        }
+
+        // Ctrl + Space: Trigger Autocomplete explicitly
+        if (event.code === 'Space' && (event.ctrlKey || event.metaKey)) {
+          event.preventDefault();
+          this.checkAutocomplete('explicit');
+          return;
+        }
+
         // Shift + Enter: Execute code cell
         if (event.key === 'Enter' && event.shiftKey) {
           event.preventDefault();
+          this.showSuggestions = false;
           if (this.$emit) {
             this.$emit('run');
           }
@@ -117,6 +487,7 @@
         // Ctrl + Enter: Execute code cell in-place
         if (event.key === 'Enter' && event.ctrlKey) {
           event.preventDefault();
+          this.showSuggestions = false;
           if (this.$emit) {
             this.$emit('run');
           }
@@ -143,6 +514,41 @@
       end;
     end;
 
+    procedure handleScroll(e: JSValue);
+    begin
+      asm
+        const ta = e && e.target ? e.target : null;
+        if (ta) {
+          const hl = this.$refs ? this.$refs.highlightLayer : null;
+          if (hl) {
+            hl.scrollTop = ta.scrollTop;
+            hl.scrollLeft = ta.scrollLeft;
+          }
+          const gt = this.$refs ? this.$refs.gutter : null;
+          if (gt) {
+            gt.scrollTop = ta.scrollTop;
+          }
+        }
+      end;
+    end;
+
+    procedure handleClick(e: JSValue);
+    begin
+      asm
+        this.showSuggestions = false;
+      end;
+    end;
+
+    procedure handleBlur;
+    begin
+      asm
+        const self = this;
+        setTimeout(function() {
+          self.showSuggestions = false;
+        }, 150);
+      end;
+    end;
+
   watch:
     procedure value(newVal: string);
     begin
@@ -162,6 +568,7 @@
     border-radius: 6px;
     overflow: hidden;
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    position: relative;
   }
 
   .bv-editor-topbar {
@@ -216,6 +623,7 @@
     display: flex;
     min-height: 80px;
     background: #1e1e1e;
+    position: relative;
   }
 
   .bv-editor-gutter {
@@ -225,6 +633,7 @@
     padding: 8px 0;
     user-select: none;
     text-align: right;
+    overflow: hidden;
   }
 
   .gutter-num {
@@ -238,29 +647,160 @@
   .bv-editor-textarea-wrap {
     flex: 1;
     position: relative;
+    overflow: hidden;
   }
 
+  /* SYNTAX HIGHLIGHT LAYER (BEHIND TEXTAREA) */
+  .bv-highlight-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 8px 12px;
+    box-sizing: border-box;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 20px;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    color: #d4d4d4;
+    background: transparent;
+    border: none;
+    tab-size: 2;
+  }
+
+  /* TRANSPARENT EDITABLE TEXTAREA */
   .bv-code-textarea {
+    position: relative;
+    z-index: 2;
     width: 100%;
     min-height: 80px;
+    margin: 0;
     padding: 8px 12px;
+    box-sizing: border-box;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 20px;
+    white-space: pre;
+    overflow-wrap: normal;
+    overflow-x: auto;
     background: transparent;
     border: none;
     outline: none;
     resize: none;
-    font-family: inherit;
-    font-size: 13px;
-    line-height: 20px;
-    color: #d4d4d4;
+    color: transparent;
     caret-color: #58a6ff;
-    white-space: pre;
-    overflow-wrap: normal;
-    overflow-x: auto;
-    box-sizing: border-box;
+    tab-size: 2;
+  }
+
+  .bv-code-textarea::selection {
+    background: rgba(56, 139, 253, 0.35);
+    color: transparent;
   }
 
   .bv-code-textarea::placeholder {
     color: #6a737d;
     font-style: italic;
+  }
+
+  /* SYNTAX HIGHLIGHT TOKEN COLORS */
+  .tok-comment {
+    color: #6a9955;
+    font-style: italic;
+  }
+
+  .tok-string {
+    color: #ce9178;
+  }
+
+  .tok-num {
+    color: #b5cea8;
+  }
+
+  .tok-kw {
+    color: #c586c0;
+    font-weight: 600;
+  }
+
+  .tok-type {
+    color: #4ec9b0;
+    font-weight: 500;
+  }
+
+  .tok-func {
+    color: #dcdcaa;
+  }
+
+  .tok-op {
+    color: #569cd6;
+    font-weight: bold;
+  }
+
+  /* AUTOCOMPLETE POPUP OVERLAY */
+  .bv-autocomplete-popup {
+    position: absolute;
+    z-index: 100;
+    width: 380px;
+    max-height: 230px;
+    overflow-y: auto;
+    background: #252526;
+    border: 1px solid #454545;
+    border-radius: 5px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    font-size: 12px;
+  }
+
+  .bv-suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.08s;
+    user-select: none;
+  }
+
+  .bv-suggestion-item:hover,
+  .bv-suggestion-item.is-selected {
+    background: #094771;
+    border-left-color: #007acc;
+  }
+
+  .sug-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 3px;
+    font-size: 9.5px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .badge-method { background: #b180d7; color: #1e1e1e; }
+  .badge-keyword { background: #569cd6; color: #1e1e1e; }
+  .badge-type { background: #4ec9b0; color: #1e1e1e; }
+  .badge-func { background: #dcdcaa; color: #1e1e1e; }
+
+  .sug-label {
+    font-weight: 600;
+    color: #e0e0e0;
+  }
+
+  .sug-detail {
+    color: #858585;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-left: auto;
   }
 </style>
