@@ -1244,4 +1244,140 @@
     font-size: 11.5px;
     color: #64748b;
   }
+
+  /* DARK THEME STYLING (DARKLY / DARK MODE) */
+  html[data-bs-theme="dark"] .bv-notebook-workspace,
+  html.theme-dark .bv-notebook-workspace,
+  body.theme-dark .bv-notebook-workspace {
+    background: #090d16 !important;
+    color: #e2e8f0 !important;
+  }
+
+  html[data-bs-theme="dark"] .notebook-header,
+  html.theme-dark .notebook-header {
+    background: #0f172a !important;
+    border-bottom: 1px solid #1e293b !important;
+  }
+
+  html[data-bs-theme="dark"] .notebook-title,
+  html.theme-dark .notebook-title {
+    color: #f8fafc !important;
+  }
+
+  html[data-bs-theme="dark"] .notebook-subtitle,
+  html.theme-dark .notebook-subtitle {
+    color: #94a3b8 !important;
+  }
+
+  html[data-bs-theme="dark"] .notebook-file-tag,
+  html.theme-dark .notebook-file-tag {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  html[data-bs-theme="dark"] .file-name-input,
+  html.theme-dark .file-name-input {
+    color: #f1f5f9 !important;
+  }
+
+  html[data-bs-theme="dark"] .ext-badge,
+  html.theme-dark .ext-badge {
+    background: #334155 !important;
+    color: #94a3b8 !important;
+  }
+
+  html[data-bs-theme="dark"] .status-disconnected,
+  html.theme-dark .status-disconnected {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+  }
+
+  html[data-bs-theme="dark"] .status-connected,
+  html.theme-dark .status-connected {
+    background: rgba(16, 185, 129, 0.15) !important;
+    border-color: rgba(16, 185, 129, 0.4) !important;
+    color: #34d399 !important;
+  }
+
+  html[data-bs-theme="dark"] .status-busy,
+  html.theme-dark .status-busy {
+    background: rgba(245, 158, 11, 0.15) !important;
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    color: #fbbf24 !important;
+  }
+
+  html[data-bs-theme="dark"] .notebook-toolbar,
+  html.theme-dark .notebook-toolbar {
+    background: #0f172a !important;
+    border-bottom: 1px solid #1e293b !important;
+  }
+
+  html[data-bs-theme="dark"] .tb-btn,
+  html.theme-dark .tb-btn {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+  }
+
+  html[data-bs-theme="dark"] .tb-btn:hover:not(:disabled),
+  html.theme-dark .tb-btn:hover:not(:disabled) {
+    background: #334155 !important;
+    color: #ffffff !important;
+    border-color: #475569 !important;
+  }
+
+  html[data-bs-theme="dark"] .tb-btn-primary,
+  html.theme-dark .tb-btn-primary {
+    background: #10b981 !important;
+    border-color: #059669 !important;
+    color: #ffffff !important;
+  }
+  html[data-bs-theme="dark"] .tb-btn-primary:hover:not(:disabled),
+  html.theme-dark .tb-btn-primary:hover:not(:disabled) {
+    background: #059669 !important;
+  }
+  html[data-bs-theme="dark"] .tb-btn-primary:disabled,
+  html.theme-dark .tb-btn-primary:disabled {
+    background: #334155 !important;
+    border-color: #1e293b !important;
+    color: #64748b !important;
+  }
+
+  html[data-bs-theme="dark"] .divider-line,
+  html.theme-dark .divider-line {
+    background: #334155 !important;
+  }
+
+  html[data-bs-theme="dark"] .btn-divider-add,
+  html.theme-dark .btn-divider-add {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+  html[data-bs-theme="dark"] .btn-divider-add:hover,
+  html.theme-dark .btn-divider-add:hover {
+    background: #334155 !important;
+    color: #f1f5f9 !important;
+  }
+
+  html[data-bs-theme="dark"] .btn-large-add,
+  html.theme-dark .btn-large-add {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+  html[data-bs-theme="dark"] .btn-large-add:hover,
+  html.theme-dark .btn-large-add:hover {
+    border-color: #10b981 !important;
+    color: #34d399 !important;
+    background: rgba(16, 185, 129, 0.1) !important;
+  }
+
+  html[data-bs-theme="dark"] .notebook-footer,
+  html.theme-dark .notebook-footer {
+    background: #0f172a !important;
+    border-top: 1px solid #1e293b !important;
+    color: #94a3b8 !important;
+  }
 </style>

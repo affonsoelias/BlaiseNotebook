@@ -78,9 +78,9 @@
       </div>
 
       <div class="theme-switcher">
-        <button class="theme-toggle-btn" @click="$theme.toggle()" :title="$theme.isDark ? 'Light Mode' : 'Dark Mode'">
-          <span b-if="$theme.isDark">☀️</span>
-          <span b-if="!$theme.isDark">🌙</span>
+        <button class="theme-toggle-btn" type="button" @click="toggleTheme" :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+          <span b-if="isDark">☀️</span>
+          <span b-if="!isDark">🌙</span>
         </button>
       </div>
 
@@ -94,7 +94,7 @@
 
     <!-- PERSISTENT FOOTER -->
     <div class="footer-status desktop-only-footer">
-       📐 <strong>BlaiseNotebook v1.0</strong> | Object Pascal + Synopse mORMot 2 + Python4Delphi | License: <strong>Modified LGPL v2.1 (with Static Linking Exception)</strong> | Theme: <strong>{{ $theme.current.toUpperCase() }}</strong>
+       📐 <strong>BlaiseNotebook v1.0</strong> | Object Pascal + Synopse mORMot 2 + Python4Delphi | License: <strong>Modified LGPL v2.1 (with Static Linking Exception)</strong> | Theme: <strong>{{ currentThemeName }}</strong>
     </div>
   </div>
 </template>
@@ -107,6 +107,7 @@
 
   data:
     mensagem: string = 'Data Science & AI in Object Pascal';
+    isDark: boolean = false;
 
   provide:
     begin
@@ -119,11 +120,34 @@
         end;
     end;
 
+  computed:
+    function currentThemeName: string;
+    begin
+      if this['isDark'] then
+        Result := 'DARK (DARKLY)'
+      else
+        Result := 'LIGHT (FLATLY)';
+    end;
+
   created:
     begin
       TJSObject(this['$store'])['appVersion'] := '1.0.0-SCIENTIFIC';
       TJSObject(this['$store'])['user'] := 'Pascal Scientist 🔬';
-      ThemeSet('flatly');
+      asm
+        let saved = null;
+        try {
+          if (window.localStorage) {
+            saved = window.localStorage.getItem('bv_theme');
+          }
+        } catch(e) {}
+        const themeToSet = saved || 'flatly';
+        if (window.$theme && typeof window.$theme.setTheme === 'function') {
+          window.$theme.setTheme(themeToSet);
+          this.isDark = (window.$theme.isDark === true);
+        } else {
+          this.isDark = (themeToSet === 'darkly');
+        }
+      end;
     end;
 
   methods:
@@ -135,6 +159,47 @@
     procedure closeDrawer;
     begin
       TriggerRef(this, 'appDrawer', 'close');
+    end;
+
+    procedure toggleTheme;
+    begin
+      asm
+        const nextDark = !this.isDark;
+        this.isDark = nextDark;
+
+        if (window.$theme && typeof window.$theme.setTheme === 'function') {
+          window.$theme.setTheme(nextDark ? 'darkly' : 'flatly');
+        } else {
+          // Manual fallback if $theme not loaded
+          const thName = nextDark ? 'darkly' : 'flatly';
+          let link = document.getElementById('bv-theme');
+          if (link) link.href = 'lib/themes/' + thName + '.min.css';
+          try {
+            if (window.localStorage) window.localStorage.setItem('bv_theme', thName);
+          } catch(e) {}
+        }
+
+        // Apply HTML classes and data attributes for instant CSS reactivity
+        if (document.documentElement) {
+          document.documentElement.setAttribute('data-bs-theme', nextDark ? 'dark' : 'light');
+          if (nextDark) {
+            document.documentElement.classList.add('theme-dark');
+            document.documentElement.classList.remove('theme-light');
+            if (document.body) {
+              document.body.classList.add('theme-dark');
+              document.body.classList.remove('theme-light');
+            }
+          } else {
+            document.documentElement.classList.add('theme-light');
+            document.documentElement.classList.remove('theme-dark');
+            if (document.body) {
+              document.body.classList.add('theme-light');
+              document.body.classList.remove('theme-dark');
+            }
+          }
+        }
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
     end;
 
     { Dispatches project menu events to BvNotebook }
@@ -218,21 +283,62 @@
       this.closeDrawer();
     end;
 
-  { Router Configuration: Maps URI hashes to Component Tags }
-  router:
-    routes:
-      '/': 'notebook-view-page';
-      '/notebook': 'notebook-view-page';
+  mounted:
+    begin
+      asm
+        const self = this;
+        setTimeout(function() {
+          if (window.$theme) {
+            self.isDark = (window.$theme.isDark === true);
+          } else {
+            const attr = document.documentElement ? document.documentElement.getAttribute('data-bs-theme') : null;
+            self.isDark = (attr === 'dark');
+          }
+          if (self.isDark) {
+            document.documentElement.setAttribute('data-bs-theme', 'dark');
+            document.documentElement.classList.add('theme-dark');
+            if (document.body) document.body.classList.add('theme-dark');
+          }
+          if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+        }, 30);
+      end;
+    end;
 </script>
 
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #1e293b; }
-  .navbar { background: #0f172a; padding: 10px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid #1e293b; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    transition: background-color 0.2s, color 0.2s;
+  }
+  .navbar {
+    background: #0f172a;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid #1e293b;
+  }
   .brand { color: #10b981; font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
   .theme-switcher { display: flex; align-items: center; margin-left: auto; }
-  .theme-toggle-btn { background: rgba(255,255,255,0.08); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; font-size: 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-  .theme-toggle-btn:hover { background: rgba(255,255,255,0.2); border-color: #10b981; }
+  .theme-toggle-btn {
+    background: rgba(255,255,255,0.08);
+    color: #ecf0f1;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 6px 12px;
+    font-size: 15px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .theme-toggle-btn:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: #10b981;
+    transform: scale(1.05);
+  }
   .drawer-btn { background: rgba(255,255,255,0.12); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; padding: 5px 10px; font-size: 16px; cursor: pointer; transition: background 0.2s; }
   .drawer-btn:hover { background: rgba(255,255,255,0.25); }
 
@@ -329,30 +435,49 @@
     .desktop-only-footer { display: none; }
     .notebook-main-canvas-wrapper { padding-bottom: 75px; }
   }
-  .footer-status { position: fixed; bottom: 0; left: 0; width: 100%; background: #0f172a; color: #94a3b8; font-size: 11px; padding: 4px 12px; text-align: right; border-top: 1px solid #1e293b; z-index: 100; }
+  .footer-status {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: #0f172a;
+    color: #94a3b8;
+    font-size: 11px;
+    padding: 4px 12px;
+    text-align: right;
+    border-top: 1px solid #1e293b;
+    z-index: 100;
+  }
   .footer-status strong { color: #10b981; }
 
   /* Dark Mode Integration */
-  html[data-bs-theme="dark"] body, body.theme-dark {
-    background: #0b0f19;
-    color: #e2e8f0;
+  html[data-bs-theme="dark"] body,
+  html.theme-dark body,
+  body.theme-dark {
+    background: #090d16 !important;
+    color: #e2e8f0 !important;
   }
-  html[data-bs-theme="dark"] .drawer-item-btn {
+  html[data-bs-theme="dark"] .drawer-item-btn,
+  html.theme-dark .drawer-item-btn {
     color: #cbd5e1;
   }
-  html[data-bs-theme="dark"] .drawer-item-btn:hover {
+  html[data-bs-theme="dark"] .drawer-item-btn:hover,
+  html.theme-dark .drawer-item-btn:hover {
     background: #1e293b;
     color: #ffffff;
   }
-  html[data-bs-theme="dark"] .drawer-divider {
+  html[data-bs-theme="dark"] .drawer-divider,
+  html.theme-dark .drawer-divider {
     background: #334155;
   }
-  html[data-bs-theme="dark"] .drawer-info-box {
+  html[data-bs-theme="dark"] .drawer-info-box,
+  html.theme-dark .drawer-info-box {
     background: #0f172a;
     border-color: #334155;
     color: #94a3b8;
   }
-  html[data-bs-theme="dark"] .drawer-info-box code {
+  html[data-bs-theme="dark"] .drawer-info-box code,
+  html.theme-dark .drawer-info-box code {
     background: #1e293b;
     color: #e2e8f0;
   }
