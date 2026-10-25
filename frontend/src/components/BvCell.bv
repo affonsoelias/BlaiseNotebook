@@ -35,9 +35,9 @@
       <!-- HEADER / ACTION BAR FOR THIS CELL -->
       <div class="cell-header-bar">
         <div class="cell-type-selector">
-          <select class="type-dropdown" :value="cell ? cell.type : 'code'" @change="onTypeSelectChange" title="Cell type: Pascal / Markdown">
-            <option value="code">⚡ Pascal Code</option>
-            <option value="markdown">📝 Markdown</option>
+          <select class="type-dropdown" b-ref="typeSelect" @change="onTypeSelectChange" title="Cell type: Pascal / Markdown">
+            <option value="code" :selected="cell && cell.type === 'code'">⚡ Pascal Code</option>
+            <option value="markdown" :selected="cell && cell.type === 'markdown'">📝 Markdown</option>
           </select>
           <span class="cell-index-badge">#{{ index + 1 }}</span>
         </div>
@@ -73,7 +73,10 @@
 
           <button class="btn-tool" title="Move Up" :disabled="index === 0" @click="moveUp">▲</button>
           <button class="btn-tool" title="Move Down" :disabled="index >= total - 1" @click="moveDown">▼</button>
-          <button class="btn-tool" title="Insert cell below" @click="insertBelow">➕</button>
+          <div class="cell-quick-add-group" title="Insert new cell below">
+            <button class="btn-tool-add" title="Insert Pascal Code cell below" @click="insertCodeBelow">+ Code</button>
+            <button class="btn-tool-add" title="Insert Markdown cell below" @click="insertMarkdownBelow">+ Md</button>
+          </div>
           <button class="btn-tool btn-danger-tool" title="Delete cell" @click="deleteThis">🗑️</button>
         </div>
       </div>
@@ -204,6 +207,30 @@
       end;
     end;
 
+    procedure insertCodeBelow;
+    begin
+      asm
+        if (this.$emit) this.$emit('insert-code-below', this.index);
+      end;
+    end;
+
+    procedure insertMarkdownBelow;
+    begin
+      asm
+        if (this.$emit) this.$emit('insert-markdown-below', this.index);
+      end;
+    end;
+
+    procedure syncTypeDropdown;
+    begin
+      asm
+        const el = this.$refs ? this.$refs.typeSelect : null;
+        if (el && this.cell && this.cell.type) {
+          el.value = this.cell.type;
+        }
+      end;
+    end;
+
     procedure deleteThis;
     begin
       asm
@@ -220,6 +247,17 @@
           this.cell.execution_time_ms = 0;
         }
       end;
+    end;
+
+  mounted:
+    begin
+      this.syncTypeDropdown();
+    end;
+
+  watch:
+    procedure cell(newVal: JSValue);
+    begin
+      this.syncTypeDropdown();
     end;
 </script>
 
@@ -497,4 +535,48 @@
   html.theme-dark .cell-prompt {
     color: #9ca3af !important;
   }
+
+  .cell-quick-add-group {
+    display: inline-flex;
+    align-items: center;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    padding: 1px;
+    gap: 1px;
+    margin: 0 2px;
+  }
+  .btn-tool-add {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+  }
+  .btn-tool-add:hover {
+    background: #ffffff;
+    color: #059669;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  }
+  html[data-bs-theme="dark"] .cell-quick-add-group,
+  html.theme-dark .cell-quick-add-group {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  html[data-bs-theme="dark"] .btn-tool-add,
+  html.theme-dark .btn-tool-add {
+    color: #94a3b8;
+  }
+  html[data-bs-theme="dark"] .btn-tool-add:hover,
+  html.theme-dark .btn-tool-add:hover {
+    background: #334155;
+    color: #34d399;
+  }
+
 </style>

@@ -84,6 +84,8 @@
           @move-up="moveCellUp"
           @move-down="moveCellDown"
           @insert-below="insertBelowIndex"
+          @insert-code-below="insertCodeBelowIndex"
+          @insert-markdown-below="insertMarkdownBelowIndex"
           @delete="deleteCellAt"
           @change-type="onCellTypeChanged"
         ></bv-cell>
@@ -222,8 +224,30 @@
     procedure insertBelowIndex(idx: integer);
     begin
       asm
-        const c = (this.createCell || window.bvCreateCell)('code', '// Next step\n');
+        const makeCell = this.createCell || window.bvCreateCell;
+        const c = makeCell('code', '// Next step\n');
         this.cells.splice(idx + 1, 0, c);
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure insertCodeBelowIndex(idx: integer);
+    begin
+      asm
+        const makeCell = this.createCell || window.bvCreateCell;
+        const c = makeCell('code', '// New Object Pascal code block\n');
+        this.cells.splice(idx + 1, 0, c);
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure insertMarkdownBelowIndex(idx: integer);
+    begin
+      asm
+        const makeCell = this.createCell || window.bvCreateCell;
+        const c = makeCell('markdown', '### New Documentation Section\nDescribe your findings here.');
+        this.cells.splice(idx + 1, 0, c);
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
       end;
     end;
 
@@ -803,7 +827,9 @@
               if (data.metadata && data.metadata.name) {
                 self.notebookName = data.metadata.name;
               }
+              if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
             }
+            if (target) target.value = '';
           } catch(err) {
             alert('Error loading notebook: ' + err.message);
           }
