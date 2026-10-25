@@ -16,7 +16,7 @@
 
     <!-- OUTPUT ITEMS LIST (MULTI-TYPE) -->
     <div class="bv-output-items">
-      <div b-for="out in outputs" class="bv-output-item">
+      <div b-for="out in outputs" :key="$index" class="bv-output-item">
 
         <!-- 1. STDOUT (TERMINAL LOGS / TEXT) -->
         <div b-if="out.type === 'stdout'" class="bv-out-stdout">
@@ -318,7 +318,9 @@
 
   .table-scroll {
     overflow-x: auto;
+    overflow-y: auto;
     max-height: 280px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .bv-data-table {
@@ -397,7 +399,11 @@
     padding: 12px;
     position: relative;
     height: 350px;
+    min-height: 350px;
+    max-height: 350px;
     width: 100%;
     background: #0d1117;
+    contain: layout paint size;
+    overflow: hidden;
   }
 </style>

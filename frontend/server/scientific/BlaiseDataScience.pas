@@ -536,7 +536,14 @@ begin
   EnsurePyDataScience;
   NewVar := NewPyVar('df');
   SafePath := StringReplace(AFilePath, '\', '/', [rfReplaceAll]);
-  TBlaisePy.Exec(Format('%s = pd.read_csv("%s")', [NewVar, SafePath]));
+  TBlaisePy.Exec(
+    Format(
+      'import os'#10 +
+      '__csv_path = "%s"'#10 +
+      'if not os.path.exists(__csv_path) and os.path.exists(os.path.basename(__csv_path)):'#10 +
+      '    __csv_path = os.path.basename(__csv_path)'#10 +
+      '%s = pd.read_csv(__csv_path)',
+      [SafePath, NewVar]));
   Result := TPyDataFrame.Create(NewVar);
 end;
 
@@ -773,8 +780,29 @@ begin
 end;
 
 procedure TPyDataFrame.PlotBar(const ATitle, AXCol, AYCol: string);
+var
+  PyHelper, ChartJson: string;
 begin
-  TBlaisePy.ShowDataFrameChart(FVarName, AXCol, AYCol, ATitle, 'bar');
+  PyHelper :=
+    Format(
+      '__x_labels__ = [str(x) for x in %s["%s"]]'#10 +
+      '__y_values__ = [float(x) for x in %s["%s"]]'#10 +
+      '__colors__ = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"]'#10 +
+      '__bar_colors__ = [__colors__[i %% len(__colors__)] for i in range(len(__x_labels__))]'#10 +
+      '__chart_payload__ = json.dumps({'#10 +
+      '  "labels": __x_labels__,'#10 +
+      '  "datasets": [{'#10 +
+      '    "label": "%s",'#10 +
+      '    "data": __y_values__,'#10 +
+      '    "backgroundColor": __bar_colors__,'#10 +
+      '    "borderRadius": 6'#10 +
+      '  }]'#10 +
+      '})',
+      [FVarName, EscapeStr(AXCol), FVarName, EscapeStr(AYCol), EscapeStr(ATitle)]);
+  TBlaisePy.Exec(PyHelper);
+  ChartJson := TBlaisePy.EvalStr('__chart_payload__');
+  if ChartJson <> '' then
+    TBlaiseOutput.ShowChart(ATitle, 'bar', ChartJson);
 end;
 
 procedure TPyDataFrame.PlotBar(const ATitle, AXCol: string; const AYCols: array of string);
@@ -865,7 +893,15 @@ var
   SafePath: string;
 begin
   SafePath := StringReplace(AFilePath, '\', '/', [rfReplaceAll]);
-  TBlaisePy.Exec(Format('%s.to_csv("%s", index=False)', [FVarName, SafePath]));
+  TBlaisePy.Exec(
+    Format(
+      'import os'#10 +
+      '__csv_path = "%s"'#10 +
+      '__csv_dir = os.path.dirname(__csv_path)'#10 +
+      'if __csv_dir and not os.path.exists(__csv_dir):'#10 +
+      '    os.makedirs(__csv_dir, exist_ok=True)'#10 +
+      '%s.to_csv(__csv_path, index=False)',
+      [SafePath, FVarName]));
 end;
 
 { TPyLinearRegression }

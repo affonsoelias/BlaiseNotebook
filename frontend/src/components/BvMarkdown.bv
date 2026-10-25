@@ -117,12 +117,14 @@
     begin
       asm
         const self = this;
-        setTimeout(function() {
+        const doRender = function() {
           const el = self.$refs ? self.$refs.renderedDiv : null;
           if (el) {
             el.innerHTML = self.renderedHtml;
           }
-        }, 10);
+        };
+        doRender();
+        setTimeout(doRender, 20);
       end;
     end;
 

@@ -63,7 +63,7 @@
 
     <!-- REACTIVE CANVAS OF CELLS -->
     <main class="notebook-cells-canvas">
-      <div b-for="cell in cells" class="cell-wrapper-outer">
+      <div b-for="cell in cells" :key="cell.id" class="cell-wrapper-outer">
         <!-- QUICK INSERT DIVIDER BETWEEN CELLS -->
         <div class="cell-inserter-divider">
           <div class="divider-line"></div>
@@ -843,6 +843,18 @@
 
           ws.onclose = function() {
             self.kernelStatus = 'disconnected';
+            self.isRunning = false;
+            self._runQueue = [];
+            for (let i = 0; i < (self.cells || []).length; i++) {
+              if (self.cells[i] && self.cells[i].status === 'running') {
+                self.cells[i].status = 'error';
+                self.cells[i].outputs = self.cells[i].outputs || [];
+                self.cells[i].outputs.push({
+                  type: 'stderr',
+                  text: '⚠️ Disconnected from Kernel.'
+                });
+              }
+            }
             console.log('[BlaiseNotebook] Disconnected from Kernel. Standalone mode active.');
             if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
           };
@@ -870,24 +882,33 @@
 
         if (msg.event === 'stream') {
           cell.outputs = cell.outputs || [];
-          cell.outputs.push({
-            type: msg.stream_type || 'stdout',
-            text: msg.text || ''
-          });
-          self.cells = self.cells.slice();
-          if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+          const sType = msg.stream_type || 'stdout';
+          const lastOut = (cell.outputs.length > 0) ? cell.outputs[cell.outputs.length - 1] : null;
+          if (lastOut && lastOut.type === sType) {
+            lastOut.text = (lastOut.text || '') + (msg.text || '');
+          } else {
+            cell.outputs.push({
+              type: sType,
+              text: msg.text || ''
+            });
+          }
+          if (!self._streamThrottle) {
+            self._streamThrottle = true;
+            requestAnimationFrame(() => {
+              self._streamThrottle = false;
+              if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+            });
+          }
         }
         else if (msg.event === 'display_data') {
           cell.outputs = cell.outputs || [];
           cell.outputs.push(msg.payload);
-          self.cells = self.cells.slice();
           if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
         }
         else if (msg.event === 'execute_reply') {
           cell.status = msg.status || 'success';
           cell.execution_count = msg.execution_count || cell.execution_count;
           cell.execution_time_ms = msg.execution_time_ms || 0;
-          self.cells = self.cells.slice();
 
           if (self._runQueue && self._runQueue.length > 0) {
             self.runNextQueuedCell();

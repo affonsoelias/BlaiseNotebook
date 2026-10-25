@@ -32,7 +32,7 @@
     {
       "id": "cell_5_code_bar_chart",
       "type": "code",
-      "source": "// 4. Instant Bar Chart and CSV Export\nvar\n  DF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Category', ['Laptops', 'Monitors', 'Keyboards', 'Headsets', 'Mice']);\n  DF.AddColumn('UnitsSold', [340, 520, 890, 610, 1150]);\n\n  // Plot as a bar chart:\n  DF.PlotBar('Electronics Units Sold by Category', 'Category', 'UnitsSold');\n\n  // Export to CSV file:\n  DF.ToCSV('workspace/electronics_sales.csv');\n  Writeln('Dataset exported successfully to workspace/electronics_sales.csv!');\nend;"
+      "source": "// 4. Instant Bar Chart and CSV Export\nvar\n  DF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Category', ['Laptops', 'Monitors', 'Keyboards', 'Headsets', 'Mice']);\n  DF.AddColumn('UnitsSold', [340, 520, 890, 610, 1150]);\n\n  // Plot as a bar chart:\n  DF.PlotBar('Electronics Units Sold by Category', 'Category', 'UnitsSold');\n\n  // Export to CSV file:\n  DF.ToCSV('electronics_sales.csv');\n  Writeln('Dataset exported successfully to electronics_sales.csv!');\nend;"
     },
     {
       "id": "cell_6_md_next",

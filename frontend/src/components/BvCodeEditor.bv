@@ -143,6 +143,12 @@
       end;
     end;
 
+  watch:
+    procedure value(newVal: string);
+    begin
+      this.updateLines();
+    end;
+
   mounted:
     begin
       this.updateLines();
