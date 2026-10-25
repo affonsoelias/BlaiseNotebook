@@ -20,7 +20,9 @@ Level 2: Native Computing & Visualizations
 Level 3: Modern Data Science & AI in Pascal
   ├── Example 5: Tabular Data & Pandas in Pure Pascal (05_pandas_dataframes_in_pascal.bynb)
   ├── Example 6: Machine Learning with Scikit-Learn (06_machine_learning_in_pascal.bynb)
-  └── Example 7: Advanced Workflows, Python Interop & Projects (07_advanced_workflows_and_python_interop.bynb)
+  ├── Example 7: Advanced Workflows, Python Interop & Projects (07_advanced_workflows_and_python_interop.bynb)
+  ├── Example 8: Advanced Scientific Charts & Fluent Analytics (08_advanced_charts_and_fluent_analytics.bynb)
+  └── Example 9: Classification Models & Model Evaluation Metrics (09_classification_and_model_evaluation.bynb)
 ```
 
 ---
@@ -66,6 +68,17 @@ Level 3: Modern Data Science & AI in Pascal
 - **Estimated time:** 20 minutes.
 
 ---
+
+#### [Example 8: Advanced Scientific Charts & Fluent Analytics](08_advanced_charts_and_fluent_analytics.bynb)
+- **Topics covered:** Pie and Doughnut Charts (`.PlotPie`, `.PlotDoughnut`); statistical distribution histograms (`.PlotHistogram`) with automatic bin estimation; 5-number summary BoxPlots (`.PlotBoxPlot`); fluent expression filtering (`.Filter('Rating >= 4.2')`); sorting (`.SortBy`); GroupBy aggregations (`.GroupBy('Region').Mean`, `.Sum`).
+- **Estimated time:** 15 minutes.
+
+#### [Example 9: Classification Models & Model Evaluation Metrics](09_classification_and_model_evaluation.bynb)
+- **Topics covered:** Logistic Regression classification (`TPyLogisticRegression`); predicting class probabilities (`.PredictProba`); Decision Tree Classifier (`TPyDecisionTreeClassifier`); computing feature importances (`.PlotFeatureImportances`); measuring accuracy with `PyAccuracyScore`; generating confusion matrix tables with `PyConfusionMatrix`.
+- **Estimated time:** 20 minutes.
+
+---
+
 
 ## 🚀 How to Open an Example Notebook
 

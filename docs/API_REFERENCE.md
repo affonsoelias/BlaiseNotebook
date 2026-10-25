@@ -10,6 +10,9 @@ This quick reference provides copy-pasteable snippets and descriptions of the mo
 | :--- | :--- | :--- |
 | **`TPyDataFrame`** | 2D Tabular Dataset (Pandas DataFrame) | Loading CSVs, filtering columns, showing tables, plotting charts. |
 | **`TPySeries`** | 1D Column / Vector (Pandas Series) | Calculating averages, medians, standard deviations, min, max. |
+| **`TPyGroupBy`** | Fluent GroupBy Aggregator | Performing analytical aggregations (.Mean, .Sum, .Count, .Min, .Max). |
+| **`TPyLogisticRegression`** | Logistic Regression Classification | Probability estimation and binary/multiclass categorization. |
+| **`TPyDecisionTreeClassifier`** | Decision Tree Classifier | Interpretable rule-based classification and feature importance. |
 | **`TPyRandomForestRegressor`** | Ensemble AI Decision Trees | Predicting continuous numerical values with high accuracy. |
 | **`TPyRandomForestClassifier`** | Ensemble AI Classification | Categorizing data into classes/labels. |
 | **`TPyLinearRegression`** | Linear Model ($y = m \cdot x + b$) | Finding trend lines, slopes, intercepts, and $R^2$ scores. |
@@ -167,4 +170,94 @@ PyRun('import math; result = math.factorial(6)');
 
 // Retrieve value as string
 Writeln('6! is: ', PyEval('str(result)'));
+```
+
+---
+
+### 8. Advanced Scientific Visualizations (`TPyDataFrame`)
+
+```pascal
+var
+  DF: TPyDataFrame;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('Category', ['Tech', 'Health', 'Finance', 'Energy']);
+  DF.AddColumn('RevenueM', [45.2, 32.1, 58.7, 24.9]);
+
+  // Pie & Doughnut charts
+  DF.PlotPie('Revenue Share by Sector', 'Category', 'RevenueM');
+  DF.PlotDoughnut('Sector Distribution', 'Category', 'RevenueM');
+
+  // Distribution Histogram with automatic bins
+  DF.PlotHistogram('Revenue Frequency Distribution', 'RevenueM', 4);
+
+  // 5-Number Summary BoxPlot (Min, Q1, Median, Q3, Max)
+  DF.PlotBoxPlot('Revenue Dispersion by Category', 'Category', 'RevenueM');
+end;
+```
+
+---
+
+### 9. Fluent Pandas-style Data Manipulation
+
+```pascal
+var
+  DF, FilteredDF, SortedDF, AggDF: TPyDataFrame;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('City',    ['NY', 'SF', 'NY', 'SF', 'Chicago', 'Chicago']);
+  DF.AddColumn('SalesK',  [120.5, 95.0, 110.2, 145.8, 80.0, 92.4]);
+  DF.AddColumn('Rating',  [4.8, 4.2, 4.9, 4.7, 3.8, 4.1]);
+
+  // Fluent filtering with query expressions
+  FilteredDF := DF.Filter('Rating >= 4.2 and SalesK > 100.0');
+  FilteredDF.ShowTable('Top Performing Branches', 10);
+
+  // Sorting ascending or descending
+  SortedDF := DF.SortBy('SalesK', False); // False = Descending
+  SortedDF.ShowTable('Sorted by Sales (Highest First)', 10);
+
+  // GroupBy aggregations
+  AggDF := DF.GroupBy('City').Mean;
+  AggDF.ShowTable('City Average Metrics', 10);
+end;
+```
+
+---
+
+### 10. Classification Models & Evaluation Metrics
+
+```pascal
+var
+  DF, XTrain, XTest, CM: TPyDataFrame;
+  YTrain, YTest, YPred: TPySeries;
+  TreeClf: TPyDecisionTreeClassifier;
+  Accuracy: Double;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('Age',      [22.0, 45.0, 52.0, 28.0, 35.0, 60.0]);
+  DF.AddColumn('IncomeK',  [30.0, 85.0, 92.0, 45.0, 65.0, 110.0]);
+  DF.AddColumn('Approved', [0, 1, 1, 0, 1, 1]); // Target (1 = Yes, 0 = No)
+
+  // Split Train / Test
+  PyTrainTestSplit(DF.Columns(['Age', 'IncomeK']), DF.Column('Approved'), 0.33,
+                   XTrain, XTest, YTrain, YTest, 42);
+
+  // Fit Decision Tree
+  TreeClf := TPyDecisionTreeClassifier.Create(3, 42);
+  TreeClf.Fit(XTrain, YTrain);
+
+  YPred := TreeClf.Predict(XTest);
+
+  // Model evaluation metrics
+  Accuracy := PyAccuracyScore(YTest, YPred);
+  Writeln(Format('Accuracy: %.2f%%', [Accuracy * 100.0]));
+
+  // Plot feature importances
+  TreeClf.PlotFeatureImportances(['Age', 'IncomeK'], 'Feature Breakdown');
+
+  // Labeled Confusion Matrix Table
+  CM := PyConfusionMatrix(YTest, YPred);
+  CM.ShowTable('Confusion Matrix', 10);
+end;
 ```

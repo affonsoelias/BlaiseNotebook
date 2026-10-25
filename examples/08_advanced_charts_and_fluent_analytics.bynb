@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "name": "08_advanced_charts_and_fluent_analytics",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 8,
+    "title": "Advanced Scientific Charts & Fluent Data Analytics",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_intro",
+      "type": "markdown",
+      "source": "# 🥧 Example 8: Advanced Scientific Charts & Fluent Analytics\n\nWelcome to advanced data analytics in **BlaiseNotebook**! In this lesson, you will discover the modern statistical charts and fluent Pandas-style data transformations available in Object Pascal.\n\n### 🎯 In this lesson, you will learn:\n1. How to render **Pie and Doughnut Charts** (`.PlotPie`, `.PlotDoughnut`) with modern palettes and hover effects.\n2. How to compute and plot **Frequency Histograms** (`.PlotHistogram`) with automatic bin estimation.\n3. How to generate statistical **BoxPlots** (`.PlotBoxPlot`) displaying Min, Q1, Median, Q3, and Max.\n4. How to perform fluent query filtering (`.Filter`) and column sorting (`.SortBy`).\n5. How to group records and compute immediate aggregations (`.GroupBy('Category').Mean`, `.Sum`, `.Count`).\n\n---"
+    },
+    {
+      "id": "cell_2_code_pie_donut",
+      "type": "code",
+      "source": "// 1. Pie and Doughnut Charts: Portfolio Market Share\nvar\n  DF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('AssetClass', ['Equities', 'Fixed Income', 'Real Estate', 'Commodities', 'Cash']);\n  DF.AddColumn('AllocationK', [450.0, 280.0, 150.0, 70.0, 50.0]);\n\n  // Interactive Pie Chart:\n  DF.PlotPie('Investment Portfolio Asset Allocation', 'AssetClass', 'AllocationK');\n\n  // Interactive Doughnut Chart:\n  DF.PlotDoughnut('Asset Class Breakdown (Doughnut View)', 'AssetClass', 'AllocationK');\nend;"
+    },
+    {
+      "id": "cell_3_code_hist_boxplot",
+      "type": "code",
+      "source": "// 2. Statistical Frequency Histogram and Category BoxPlots\nvar\n  DF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Department', ['Engineering', 'Engineering', 'Engineering', 'Engineering',\n                              'Marketing', 'Marketing', 'Marketing', 'Marketing',\n                              'Finance', 'Finance', 'Finance', 'Finance']);\n  DF.AddColumn('SalaryK',    [85.0, 92.5, 110.0, 125.0, \n                              55.0, 62.0, 70.0, 78.0, \n                              72.0, 80.0, 95.0, 105.0]);\n\n  // Distribution Histogram with 4 automatic frequency bins:\n  DF.PlotHistogram('Company-wide Salary Distribution', 'SalaryK', 4);\n\n  // 5-Number Summary BoxPlot across departments:\n  DF.PlotBoxPlot('Salary Dispersion by Department (BoxPlot)', 'Department', 'SalaryK');\nend;"
+    },
+    {
+      "id": "cell_4_code_fluent_queries",
+      "type": "code",
+      "source": "// 3. Fluent Pandas-style Queries & Sorting in Object Pascal\nvar\n  DF, HighEarnerDF, SortedDF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Engineer', ['Alice', 'Bob', 'Carlos', 'Diana', 'Eve', 'Frank']);\n  DF.AddColumn('Level',    ['Senior', 'Junior', 'Staff', 'Mid', 'Principal', 'Junior']);\n  DF.AddColumn('Rating',   [4.8, 3.9, 4.9, 4.2, 5.0, 3.8]);\n  DF.AddColumn('BonusK',   [25.0, 8.5, 35.0, 14.0, 48.0, 7.5]);\n\n  // Fluent filtering via query expression:\n  HighEarnerDF := DF.Filter('Rating >= 4.2 and BonusK > 10.0');\n  HighEarnerDF.ShowTable('High-Performance Engineers (Rating >= 4.2)', 10);\n\n  // Fluent sorting by bonus descending:\n  SortedDF := DF.SortBy('BonusK', False);\n  SortedDF.ShowTable('Sorted by Annual Bonus (Descending)', 10);\nend;"
+    },
+    {
+      "id": "cell_5_code_group_by",
+      "type": "code",
+      "source": "// 4. GroupBy Aggregations in Pure Pascal\nvar\n  DF, GroupedMeans, GroupedTotals: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Region',   ['Americas', 'Americas', 'Europe', 'Europe', 'APAC', 'APAC']);\n  DF.AddColumn('Product',  ['SaaS', 'OnPrem', 'SaaS', 'OnPrem', 'SaaS', 'OnPrem']);\n  DF.AddColumn('RevenueM', [12.5, 8.2, 10.1, 5.4, 7.8, 4.3]);\n  DF.AddColumn('Clients',  [140, 45, 115, 30, 85, 22]);\n\n  // Compute mean metric per region:\n  GroupedMeans := DF.GroupBy('Region').Mean;\n  GroupedMeans.ShowTable('Regional Average Revenue and Clients', 10);\n\n  // Compute sum totals per region:\n  GroupedTotals := DF.GroupBy('Region').Sum;\n  GroupedTotals.ShowTable('Regional Total Aggregates', 10);\nend;"
+    },
+    {
+      "id": "cell_6_md_summary",
+      "type": "markdown",
+      "source": "### 🚀 Summary\nYou have mastered the new advanced visualization and data manipulation capabilities of BlaiseNotebook! Next, explore **Example 9**: **Classification Models & Model Evaluation Metrics**!"
+    }
+  ]
+}

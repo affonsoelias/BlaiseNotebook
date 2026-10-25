@@ -174,6 +174,103 @@ end;
 
 ---
 
+## 6. Statistical & Distribution Visualizations
+
+Beyond standard line and bar charts, BlaiseNotebook supports specialized statistical representations:
+
+```pascal
+var
+  DF: TPyDataFrame;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('Team',   ['Design', 'Backend', 'Frontend', 'DevOps']);
+  DF.AddColumn('Budget', [40.0, 95.0, 85.0, 60.0]);
+  DF.AddColumn('Hours',  [140.0, 320.0, 290.0, 180.0]);
+
+  // Pie & Doughnut charts
+  DF.PlotPie('Budget Distribution by Team', 'Team', 'Budget');
+  DF.PlotDoughnut('Team Hours (Doughnut)', 'Team', 'Hours');
+
+  // Histogram with automatic binning
+  DF.PlotHistogram('Project Hours Distribution', 'Hours', 4);
+
+  // BoxPlot analysis
+  DF.PlotBoxPlot('Budget Dispersion (BoxPlot)', 'Team', 'Budget');
+end;
+```
+
+---
+
+## 7. Fluent Pandas-style Data Manipulation
+
+Manipulate and aggregate tabular data cleanly without writing SQL or Python boilerplate:
+
+```pascal
+var
+  DF, CleanDF, FilteredDF, SortedDF, GroupedDF: TPyDataFrame;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('Category', ['Hardware', 'Software', 'Hardware', 'Software', 'Services']);
+  DF.AddColumn('SalesK',   [120.0, 85.0, 140.0, 90.0, 45.0]);
+  DF.AddColumn('Margin',   [0.25, 0.45, 0.28, 0.50, 0.35]);
+
+  // Drop missing rows
+  CleanDF := DF.DropNA;
+
+  // Filter with expressive query strings
+  FilteredDF := CleanDF.Filter('SalesK > 80.0 and Margin >= 0.30');
+  FilteredDF.ShowTable('High Margin Products', 10);
+
+  // Fluent sorting
+  SortedDF := FilteredDF.SortBy('SalesK', False); // Descending
+
+  // Analytical GroupBy
+  GroupedDF := DF.GroupBy('Category').Mean;
+  GroupedDF.ShowTable('Average Sales & Margin per Category', 10);
+end;
+```
+
+---
+
+## 8. Classification Models & Rigorous Evaluation
+
+Train predictive classifiers and generate labeled confusion matrices:
+
+```pascal
+var
+  DF, XTrain, XTest, CM: TPyDataFrame;
+  YTrain, YTest, YPred: TPySeries;
+  TreeClf: TPyDecisionTreeClassifier;
+  Accuracy: Double;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('UsageHours', [10.0, 25.0, 4.0, 35.0, 2.0, 50.0]);
+  DF.AddColumn('Features',   [3, 8, 1, 12, 1, 15]);
+  DF.AddColumn('Subscribed', [0, 1, 0, 1, 0, 1]); // 1 = Yes, 0 = No
+
+  PyTrainTestSplit(DF.Columns(['UsageHours', 'Features']), DF.Column('Subscribed'), 0.33,
+                   XTrain, XTest, YTrain, YTest, 42);
+
+  // Train Decision Tree Classifier
+  TreeClf := TPyDecisionTreeClassifier.Create(3, 42);
+  TreeClf.Fit(XTrain, YTrain);
+  YPred := TreeClf.Predict(XTest);
+
+  // Evaluate accuracy score
+  Accuracy := PyAccuracyScore(YTest, YPred);
+  Writeln(Format('Decision Tree Accuracy: %.2f%%', [Accuracy * 100.0]));
+
+  // Plot feature importance
+  TreeClf.PlotFeatureImportances(['UsageHours', 'Features'], 'Subscription Drivers');
+
+  // Generate and display confusion matrix table
+  CM := PyConfusionMatrix(YTest, YPred);
+  CM.ShowTable('Model Confusion Matrix', 10);
+end;
+```
+
+---
+
 ## 💡 What if I want to run custom Python code?
 
 If you ever need an unsupported Python package or custom script, you can still execute raw Python code at any time using `PyRun`:

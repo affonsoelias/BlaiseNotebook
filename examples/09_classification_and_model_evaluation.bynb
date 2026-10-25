@@ -1,0 +1,33 @@
+{
+  "metadata": {
+    "name": "09_classification_and_model_evaluation",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 9,
+    "title": "Classification Models & Model Evaluation Metrics",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_intro",
+      "type": "markdown",
+      "source": "# 🎯 Example 9: Classification Models & Evaluation Metrics\n\nSupervised classification and rigorous model evaluation are fundamental to predictive science. In this lesson, you will train **Logistic Regression** and **Decision Tree** models and evaluate them using accuracy scores and confusion matrices.\n\n### 🎯 In this lesson, you will learn:\n1. How to train a **Logistic Regression** classifier (`TPyLogisticRegression`).\n2. How to train an interpretable **Decision Tree Classifier** (`TPyDecisionTreeClassifier`).\n3. How to extract and plot **Feature Importances** (`.PlotFeatureImportances`).\n4. How to measure classification accuracy with `PyAccuracyScore(YTrue, YPred)`.\n5. How to generate a labeled **Confusion Matrix** (`PyConfusionMatrix(YTrue, YPred)`) rendered directly as a DataFrame table.\n\n---"
+    },
+    {
+      "id": "cell_2_code_logistic_regression",
+      "type": "code",
+      "source": "// 1. Logistic Regression: Customer Churn Classification\nvar\n  DF, XTrain, XTest, Probabilities: TPyDataFrame;\n  YTrain, YTest, YPred: TPySeries;\n  LogReg: TPyLogisticRegression;\n  Accuracy: Double;\nbegin\n  Writeln('=== Customer Churn Prediction (Logistic Regression) ===');\n\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('TenureMonths',   [2.0, 4.0, 6.0, 12.0, 24.0, 36.0, 48.0, 60.0, 8.0, 18.0]);\n  DF.AddColumn('MonthlyCharges', [85.0, 75.0, 90.0, 65.0, 45.0, 40.0, 35.0, 30.0, 80.0, 50.0]);\n  DF.AddColumn('SupportTickets', [5, 4, 6, 2, 1, 0, 1, 0, 4, 2]);\n  DF.AddColumn('Churned',        [1, 1, 1, 0, 0, 0, 0, 0, 1, 0]); // 1 = Churned, 0 = Retained\n\n  // Display full dataset:\n  DF.ShowTable('Customer Telemetry & Churn Label', 10);\n\n  // Split into 70% Train, 30% Test:\n  PyTrainTestSplit(DF.Columns(['TenureMonths', 'MonthlyCharges', 'SupportTickets']), \n                   DF.Column('Churned'), 0.30, XTrain, XTest, YTrain, YTest, 42);\n\n  // Train Logistic Regression Model:\n  LogReg := TPyLogisticRegression.Create(200, 42);\n  LogReg.Fit(XTrain, YTrain);\n\n  YPred := LogReg.Predict(XTest);\n  Accuracy := PyAccuracyScore(YTest, YPred);\n  Writeln(Format('Logistic Regression Test Accuracy: %.2f%%', [Accuracy * 100.0]));\n\n  // Inspect predicted probability distribution:\n  Probabilities := LogReg.PredictProba(XTest);\n  Probabilities.ShowTable('Predicted Class Probabilities (Test Set)', 10);\nend;"
+    },
+    {
+      "id": "cell_3_code_decision_tree",
+      "type": "code",
+      "source": "// 2. Decision Tree Classifier: Loan Approval Prediction\nvar\n  DF, XTrain, XTest, CM: TPyDataFrame;\n  YTrain, YTest, YPred: TPySeries;\n  TreeClf: TPyDecisionTreeClassifier;\n  Accuracy: Double;\nbegin\n  Writeln('=== Loan Default Classification (Decision Tree) ===');\n\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('CreditScore', [580.0, 620.0, 710.0, 750.0, 600.0, 680.0, 790.0, 820.0, 550.0, 640.0]);\n  DF.AddColumn('IncomeK',     [35.0, 42.0, 75.0, 95.0, 38.0, 65.0, 120.0, 140.0, 28.0, 52.0]);\n  DF.AddColumn('DebtRatio',   [0.45, 0.38, 0.25, 0.18, 0.50, 0.30, 0.12, 0.10, 0.55, 0.35]);\n  DF.AddColumn('Approved',    [0, 0, 1, 1, 0, 1, 1, 1, 0, 1]); // 1 = Approved, 0 = Denied\n\n  // Train / Test split:\n  PyTrainTestSplit(DF.Columns(['CreditScore', 'IncomeK', 'DebtRatio']), \n                   DF.Column('Approved'), 0.30, XTrain, XTest, YTrain, YTest, 42);\n\n  // Train Decision Tree Classifier:\n  TreeClf := TPyDecisionTreeClassifier.Create(3, 42);\n  TreeClf.Fit(XTrain, YTrain);\n\n  YPred := TreeClf.Predict(XTest);\n  Accuracy := PyAccuracyScore(YTest, YPred);\n  Writeln(Format('Decision Tree Model Accuracy: %.2f%%', [Accuracy * 100.0]));\n\n  // Plot Feature Importance breakdown:\n  TreeClf.PlotFeatureImportances(['CreditScore', 'IncomeK', 'DebtRatio'], 'Loan Approval Feature Importance');\n\n  // 3. Evaluation: Confusion Matrix:\n  CM := PyConfusionMatrix(YTest, YPred);\n  CM.ShowTable('Confusion Matrix (Actual vs Predicted)', 10);\nend;"
+    },
+    {
+      "id": "cell_4_md_congrats",
+      "type": "markdown",
+      "source": "### 🎓 Congratulations!\nYou have completed the advanced Data Science & Machine Learning module in **BlaiseNotebook**! You can now analyze real-world datasets, engineer features, fit predictive models, and validate models rigorously using pure Object Pascal."
+    }
+  ]
+}
