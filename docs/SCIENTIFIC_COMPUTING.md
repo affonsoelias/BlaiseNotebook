@@ -1,95 +1,135 @@
-# 🔬 Scientific Computing & Data Science in BlaiseNotebook
+# 📊 Data Science & Machine Learning with Pure Pascal
 
-BlaiseNotebook features a unified scientific computing architecture designed specifically for Object Pascal:
-1. **Strongly-Typed Pascal Data Science API (`BlaiseDataScience.pas`):** Object-oriented Pascal abstractions for **Pandas** and **Scikit-learn**, enabling DataFrames, machine learning models, and visualizations in 100% pure Pascal without raw Python strings.
-2. **Native Object Pascal Numerical Engine (`BlaiseMathKernel.pas`):** Compiled numerical algorithms, descriptive statistics, and linear regression executing with zero memory overhead.
-3. **Reactive In-Cell Visualizations (`BlaiseOutput.pas`):** Real-time interactive charting with Chart.js (`<bv-chart>`) and scrollable data tables rendered directly below the executed code.
-4. **Low-Level Python Runtime Bridge (`BlaisePyKernel.pas`):** Direct CPython 3.x API execution for advanced custom scripting when needed.
+Have you ever wanted to work with **Pandas DataFrames**, plot **interactive charts**, and train **Machine Learning models** without having to memorize Python syntax?
+
+With **BlaiseNotebook**, you get the best of both worlds: you write **clean, strongly-typed Object Pascal code**, and the notebook automatically handles the Python data science engine under the hood!
 
 ---
 
-## 1. Strongly-Typed Pascal Data Science API (`BlaiseDataScience`)
+## 💡 Quick Overview: The Easy Pascal Data Science API
 
-The `BlaiseDataScience` unit lets you build data pipelines and train machine learning models using familiar Pascal classes:
+In your notebook cells, you have access to three main building blocks:
 
-### Pandas DataFrames in Pure Pascal (`TPyDataFrame`)
+1. **`TPyDataFrame`**: A 2D table (like an Excel spreadsheet or Pandas DataFrame) that holds rows and columns.
+2. **`TPySeries`**: A single column with built-in statistics (Mean, Standard Deviation, Median, Min, Max).
+3. **Machine Learning Models**:
+   - `TPyLinearRegression`: For trend lines and forecasting.
+   - `TPyRandomForestRegressor`: For powerful AI predictions with decision tree ensembles.
+   - `TPyRandomForestClassifier`: For classifying data into categories.
+   - `TPyKMeans`: For automatic clustering.
 
-Create DataFrames in-memory or load from CSV files:
+---
+
+## 1. Creating and Exploring Data
+
+### Creating a DataFrame in Pascal
+You can build a DataFrame row-by-row or column-by-column:
 
 ```pascal
 var
   DF: TPyDataFrame;
-  HoursSeries: TPySeries;
 begin
-  // 1. Instantiate an in-memory DataFrame
   DF := TPyDataFrame.Create;
-  DF.AddColumn('StudyHours', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);
-  DF.AddColumn('MockTests',  [1, 2, 2, 3, 3, 4, 4, 5, 5, 6]);
-  DF.AddColumn('ExamScore',  [45.0, 52.0, 60.0, 68.0, 75.0, 82.0, 88.0, 91.0, 96.0, 99.0]);
+  DF.AddColumn('StudyHours', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+  DF.AddColumn('ExamScore',  [50.0, 55.0, 65.0, 70.0, 80.0, 85.0, 92.0, 98.0]);
 
-  // Slicing and Series operations
-  HoursSeries := DF.Column('StudyHours');
-  Writeln(Format('Observations: %d, Columns: %d', [DF.RowCount, DF.ColumnCount]));
-  Writeln(Format('Mean Study Hours: %.2f (StdDev: %.2f)', [HoursSeries.Mean, HoursSeries.StdDev]));
-
-  // Display responsive interactive table directly below the cell
-  DF.ShowTable('Student Exam Performance', 10);
-
-  // Render hardware-accelerated Chart.js line graph
-  DF.PlotLine('Study Hours vs Exam Score', 'StudyHours', 'ExamScore');
+  // Display the data as a clean, scrollable table below the cell:
+  DF.ShowTable('Student Exam Data', 10);
 end;
 ```
 
-#### Loading Data from CSV:
+### Loading Data from a CSV File
+Have a `.csv` file on your computer? Loading it takes one line:
+
 ```pascal
 var
   DF: TPyDataFrame;
 begin
   DF := TPyDataFrame.FromCSV('workspace/data/sales.csv');
-  DF.ShowTable('Sales Dataset', 25);
-  DF.PlotBar('Revenue by Region', 'Region', 'Revenue');
+  DF.ShowTable('Company Sales', 20);
 end;
 ```
 
 ---
 
-### Machine Learning: Random Forest Regressor (`TPyRandomForestRegressor`)
+## 2. Instant Statistics
 
-Train ensemble decision trees and predict outcomes with full hyperparameter controls:
+Want to find the average, highest, or lowest values? Access any column with `.Column('Name')`:
+
+```pascal
+var
+  DF: TPyDataFrame;
+  Scores: TPySeries;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('Scores', [75.0, 82.5, 91.0, 68.0, 95.0, 88.0]);
+
+  Scores := DF.Column('Scores');
+  Writeln('Total Students: ', Scores.Count);
+  Writeln('Average Score:  ', Scores.Mean:0:2);
+  Writeln('Highest Score:  ', Scores.Max:0:2);
+  Writeln('Lowest Score:   ', Scores.Min:0:2);
+  Writeln('Spread (StdDev): ', Scores.StdDev:0:2);
+end;
+```
+
+---
+
+## 3. Beautiful Interactive Charts
+
+BlaiseNotebook automatically renders Chart.js canvas elements right under your cell:
+
+### Line Chart
+```pascal
+DF.PlotLine('Study Hours vs Exam Score', 'StudyHours', 'ExamScore');
+```
+
+### Bar Chart
+```pascal
+DF.PlotBar('Revenue by Product Category', 'Category', 'Revenue');
+```
+
+### Scatter Plot
+```pascal
+DF.PlotScatter('Engine Size vs Fuel Efficiency', 'EngineSize', 'MPG');
+```
+
+---
+
+## 4. Training Machine Learning Models
+
+### Random Forest Regressor
+Train an ensemble AI model to predict continuous numbers:
 
 ```pascal
 var
   DF: TPyDataFrame;
   RF: TPyRandomForestRegressor;
-  Score: Double;
-  Predictions: TPySeries;
+  Pred: TPySeries;
 begin
   DF := TPyDataFrame.Create;
   DF.AddColumn('Hours', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
   DF.AddColumn('Tests', [1, 2, 2, 3, 3, 4, 4, 5]);
   DF.AddColumn('Score', [50.0, 55.0, 65.0, 70.0, 80.0, 85.0, 92.0, 98.0]);
 
-  // Create Random Forest: 30 trees, max depth unlimited (-1), random seed 42
-  RF := TPyRandomForestRegressor.Create(30, -1, 42);
+  // Create model with 25 trees
+  RF := TPyRandomForestRegressor.Create(25, -1, 42);
   RF.Fit(DF.Columns(['Hours', 'Tests']), DF.Column('Score'));
 
-  Score := RF.Score(DF.Columns(['Hours', 'Tests']), DF.Column('Score'));
-  Writeln(Format('Random Forest R² Score: %.4f', [Score]));
+  Writeln(Format('Model Accuracy (R² Score): %.4f', 
+    [RF.Score(DF.Columns(['Hours', 'Tests']), DF.Column('Score'))]));
 
-  // Predict values
-  Predictions := RF.Predict(DF.Columns(['Hours', 'Tests']));
-  Writeln('First Predicted Score: ', Predictions[0]:0:2);
+  // Predict values for the dataset
+  Pred := RF.Predict(DF.Columns(['Hours', 'Tests']));
+  Writeln('Predicted score for 1st student: ', Pred[0]:0:2);
 
-  // Visualize feature importances
-  RF.PlotFeatureImportances(['Hours', 'Tests'], 'Feature Importance Breakdown');
+  // Plot which features matter most:
+  RF.PlotFeatureImportances(['Hours', 'Tests'], 'Feature Importance');
 end;
 ```
 
----
-
-### Machine Learning: Linear Regression (`TPyLinearRegression`)
-
-Fit Ordinary Least Squares models with direct access to mathematical parameters:
+### Linear Regression
+Fit straight lines ($y = m \cdot x + b$) to model trends:
 
 ```pascal
 var
@@ -97,26 +137,24 @@ var
   LR: TPyLinearRegression;
 begin
   DF := TPyDataFrame.Create;
-  DF.AddColumn('Experience', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-  DF.AddColumn('SalaryK',    [42.0, 48.0, 55.0, 63.0, 72.0, 81.0, 92.0, 105.0]);
+  DF.AddColumn('YearsExperience', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+  DF.AddColumn('SalaryK',          [40.0, 48.0, 55.0, 64.0, 73.0, 82.0, 95.0]);
 
   LR := TPyLinearRegression.Create;
-  LR.Fit(DF.Column('Experience'), DF.Column('SalaryK'));
+  LR.Fit(DF.Column('YearsExperience'), DF.Column('SalaryK'));
 
-  Writeln('Model: ', LR.Summary);
-  Writeln(Format('Slope (Coefficient): %.4f', [LR.Slope]));
-  Writeln(Format('Y-Intercept: %.4f', [LR.Intercept]));
-  Writeln(Format('R² Score: %.4f', [LR.Score(DF.Column('Experience'), DF.Column('SalaryK'))]));
+  Writeln(Format('Salary = %.2f * Years + %.2f', [LR.Slope, LR.Intercept]));
+  Writeln(Format('Model Fit (R²): %.4f', [LR.Score(DF.Column('YearsExperience'), DF.Column('SalaryK'))]));
 
-  DF.PlotBar('Salary (k$) by Experience', 'Experience', 'SalaryK');
+  DF.PlotBar('Salary Growth by Experience', 'YearsExperience', 'SalaryK');
 end;
 ```
 
 ---
 
-### Dataset Splitting (`PyTrainTestSplit`)
+## 5. Splitting Data into Train & Test Sets
 
-Split data into training and test partitions with a single call:
+Want to properly evaluate your model without overfitting? Use `PyTrainTestSplit`:
 
 ```pascal
 var
@@ -125,82 +163,23 @@ var
   YTrain, YTest: TPySeries;
 begin
   DF := TPyDataFrame.FromCSV('dataset.csv');
+
+  // Split: 80% training data, 20% test data
   PyTrainTestSplit(DF.Columns(['Feature1', 'Feature2']), DF.Column('Target'), 0.20,
     XTrain, XTest, YTrain, YTest, 42);
 
-  Writeln(Format('Train Rows: %d | Test Rows: %d', [XTrain.RowCount, XTest.RowCount]));
+  Writeln(Format('Training rows: %d | Test rows: %d', [XTrain.RowCount, XTest.RowCount]));
 end;
 ```
 
 ---
 
-## 2. Native Pascal Engine (`BlaiseMathKernel`)
+## 💡 What if I want to run custom Python code?
 
-The `BlaiseMathKernel` unit provides native numerical algorithms compiled directly by Free Pascal.
-
-### The `TVector` Type
-
-`TVector` is a high-performance scientific record representing a 1D array of `Double` values:
+If you ever need an unsupported Python package or custom script, you can still execute raw Python code at any time using `PyRun`:
 
 ```pascal
-var
-  V: TVector;
-  Mean, StdDev, Median: Double;
-begin
-  V := TVector.CreateRandom(100, 10.0, 50.0);
-  Mean := V.CalculaMedia;
-  StdDev := V.CalculaDesvioPadrao;
-  Median := V.CalculaMediana;
-
-  Writeln(Format('Vector Count: %d | Mean: %.4f | StdDev: %.4f', [V.Count, Mean, StdDev]));
-end;
+PyRun('import math; print("Square root of 144 is", math.sqrt(144))');
 ```
 
----
-
-## 3. In-Cell Visualizations (`BlaiseOutput`)
-
-The `BlaiseOutput` unit interfaces the compiled Pascal binary with the BlaiseVue frontend via the `@@BLAISE_PAYLOAD@@:` protocol.
-
-### `ShowChart`
-Renders an interactive canvas chart using Chart.js directly beneath the active code cell:
-
-```pascal
-ShowChart(
-  'Monthly Revenue Comparison',
-  'bar',
-  '{"labels":["Jan","Feb","Mar","Apr","May","Jun"],' +
-  '"datasets":[' +
-  '  {"label":"2025","data":[65, 59, 80, 81, 56, 55],"backgroundColor":"#3b82f6"},' +
-  '  {"label":"2026","data":[78, 72, 94, 99, 74, 85],"backgroundColor":"#10b981"}' +
-  ']}'
-);
-```
-
-### `ShowTable`
-Outputs a responsive, scrollable data table:
-
-```pascal
-ShowTable(
-  'Employee Performance Dataset',
-  ['Name', 'Department', 'KPI_Score'],
-  '[{"Name":"Alice","Department":"Engineering","KPI_Score":94.2},' +
-  ' {"Name":"Bob","Department":"Research","KPI_Score":88.7}]'
-);
-```
-
----
-
-## 4. Low-Level Python Bridge (`BlaisePyKernel`)
-
-For situations where custom Python scripts or unsupported libraries are needed:
-
-```pascal
-var
-  ResultStr: string;
-begin
-  PyRun('import math; x = math.sqrt(144)');
-  ResultStr := PyEval('str(x)');
-  Writeln('Evaluated from Python: ', ResultStr);
-end;
-```
+You get total flexibility: pure Pascal for everyday data science, plus raw Python whenever you need it!

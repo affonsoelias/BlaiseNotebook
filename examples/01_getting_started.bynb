@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "name": "01_getting_started",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 1,
+    "title": "Getting Started & The Notebook Interface",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_welcome",
+      "type": "markdown",
+      "source": "# 🎓 Example 1: Getting Started & The Notebook Interface\n\nWelcome to your very first lesson in **BlaiseNotebook**! \n\nBlaiseNotebook is an interactive computing notebook for **Object Pascal**, similar to Jupyter Notebook or Google Colab, but powered by the fast compiled **Free Pascal** engine and **Synopse mORMot 2**.\n\n### 🎯 In this lesson, you will learn:\n1. How the notebook is organized into **Cells** (Code and Markdown).\n2. How to write and execute your first Pascal code block.\n3. How to understand execution badges `[ 1 ]`, timing, and output.\n4. How to use key toolbar controls (Run, Run All, Stop, Clear, Dark Theme).\n\n---"
+    },
+    {
+      "id": "cell_2_code_hello",
+      "type": "code",
+      "source": "// Let's write our very first Pascal statement!\n// In BlaiseNotebook, you can write statements directly without declaring a full 'program':\nWriteln('🎉 Hello, World from BlaiseNotebook!');\nWriteln('Today is a great day to learn Object Pascal data science.');"
+    },
+    {
+      "id": "cell_3_md_shortcuts",
+      "type": "markdown",
+      "source": "### ⌨️ How to Run Code Cells\n\nTo run the code cell above:\n- Click inside the cell to focus it.\n- Press **`Shift + Enter`** on your keyboard (runs the cell and moves to the next one).\n- Or press **`Ctrl + Enter`** (runs the cell and keeps the cursor inside).\n- Or simply click the green **▶ Run** button on the cell toolbar!\n\nNotice the badge on the left: `[ 1 ]` means it was the first cell executed in this session. The badge also tells you the exact execution time in milliseconds (e.g. `12ms`)!"
+    },
+    {
+      "id": "cell_4_code_math_basic",
+      "type": "code",
+      "source": "// You can perform standard Pascal math and formatting:\nvar\n  Radius, Area: Double;\nconst\n  PI = 3.1415926535;\nbegin\n  Radius := 5.0;\n  Area := PI * Sqr(Radius);\n\n  Writeln('Circle Calculations:');\n  Writeln('---------------------');\n  Writeln(Format('Radius: %.2f meters', [Radius]));\n  Writeln(Format('Area:   %.4f square meters', [Area]));\nend;"
+    },
+    {
+      "id": "cell_5_md_toolbar",
+      "type": "markdown",
+      "source": "### 🛠️ Tour of the Top Toolbar\n\nTake a look at the toolbar at the top of your screen:\n- **📁 Project**: Opens the sidebar where you can save (`.bynb`), load existing files, or start a new project.\n- **➕ Code**: Adds a new code cell right below your current position.\n- **➕ Markdown**: Adds a new text cell for documentation.\n- **▶ Run All**: Runs every cell in sequence from top to bottom.\n- **⏹ Stop**: Interrupts a long computation instantly.\n- **🗑 Clear**: Clears all outputs and resets execution numbers.\n- **🌓 Theme**: Toggles between Flatly (Light) and Darkly (Dark) themes.\n\nGreat job! You have completed Example 1. Move on to **Example 2** to master Rich Markdown & Math formulas!"
+    }
+  ]
+}

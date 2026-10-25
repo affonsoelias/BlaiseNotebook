@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "name": "05_pandas_dataframes_in_pascal",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 5,
+    "title": "Tabular Data & Pandas in Pure Pascal",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_df_intro",
+      "type": "markdown",
+      "source": "# 📊 Example 5: Tabular Data & Pandas in Pure Pascal\n\nWelcome to one of the most exciting features of BlaiseNotebook! You can work with **Pandas DataFrames** using native, strongly-typed Object Pascal classes without ever writing raw Python code.\n\n### 🎯 In this lesson, you will learn:\n1. How to create and populate a **`TPyDataFrame`** in Pascal.\n2. How to extract columns as **`TPySeries`** and inspect statistics.\n3. How to slice rows with `.Head(n)` and `.Tail(n)`.\n4. How to plot line charts, bar charts, and scatter plots in a single line of Pascal.\n5. How to export your DataFrame to a `.csv` file."
+    },
+    {
+      "id": "cell_2_code_create_df",
+      "type": "code",
+      "source": "// 1. Creating a DataFrame with Custom Columns in Pascal\nvar\n  DF: TPyDataFrame;\nbegin\n  Writeln('Creating in-memory DataFrame...');\n  \n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Month',       ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']);\n  DF.AddColumn('Visitors',    [1250, 1420, 1890, 2100, 2650, 3100]);\n  DF.AddColumn('Conversions', [65, 78, 112, 145, 198, 240]);\n  DF.AddColumn('RevenueK',    [12.4, 15.8, 22.1, 28.5, 39.2, 48.0]);\n\n  Writeln(Format('DataFrame Created: %d rows x %d columns', [DF.RowCount, DF.ColumnCount]));\n\n  // Show as an interactive table directly below the cell:\n  DF.ShowTable('Website Performance (H1 2026)', 10);\nend;"
+    },
+    {
+      "id": "cell_3_code_series_stats",
+      "type": "code",
+      "source": "// 2. Extracting Columns and Computing Statistics with TPySeries\nvar\n  DF: TPyDataFrame;\n  RevSeries: TPySeries;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Month',    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']);\n  DF.AddColumn('RevenueK', [12.4, 15.8, 22.1, 28.5, 39.2, 48.0]);\n\n  RevSeries := DF.Column('RevenueK');\n  Writeln('=== Revenue Column Statistics ===');\n  Writeln(Format('Observation Count: %d',    [RevSeries.Count]));\n  Writeln(Format('Average Revenue:   $%.2fk', [RevSeries.Mean]));\n  Writeln(Format('Standard Deviation: $%.2fk', [RevSeries.StdDev]));\n  Writeln(Format('Median Revenue:    $%.2fk', [RevSeries.Median]));\n  Writeln(Format('Minimum Revenue:   $%.2fk', [RevSeries.Min]));\n  Writeln(Format('Maximum Revenue:   $%.2fk', [RevSeries.Max]));\n  Writeln(Format('Total Six-Month:   $%.2fk', [RevSeries.Sum]));\nend;"
+    },
+    {
+      "id": "cell_4_code_plots_oneliner",
+      "type": "code",
+      "source": "// 3. Instant One-Line Plotting in Object Pascal\nvar\n  DF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Quarter', ['Q1-2025', 'Q2-2025', 'Q3-2025', 'Q4-2025', 'Q1-2026', 'Q2-2026']);\n  DF.AddColumn('ProfitK', [28.4, 34.1, 31.9, 45.0, 52.3, 61.8]);\n\n  // Plot as a line chart with one line of Pascal:\n  DF.PlotLine('Profit Growth Over Time', 'Quarter', 'ProfitK');\nend;"
+    },
+    {
+      "id": "cell_5_code_bar_chart",
+      "type": "code",
+      "source": "// 4. Instant Bar Chart and CSV Export\nvar\n  DF: TPyDataFrame;\nbegin\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Category', ['Laptops', 'Monitors', 'Keyboards', 'Headsets', 'Mice']);\n  DF.AddColumn('UnitsSold', [340, 520, 890, 610, 1150]);\n\n  // Plot as a bar chart:\n  DF.PlotBar('Electronics Units Sold by Category', 'Category', 'UnitsSold');\n\n  // Export to CSV file:\n  DF.ToCSV('workspace/electronics_sales.csv');\n  Writeln('Dataset exported successfully to workspace/electronics_sales.csv!');\nend;"
+    },
+    {
+      "id": "cell_6_md_next",
+      "type": "markdown",
+      "source": "You've just mastered Pandas data analysis in pure Pascal! Now let's take the next big step in **Example 6**: **Training Machine Learning models with Scikit-Learn**!"
+    }
+  ]
+}

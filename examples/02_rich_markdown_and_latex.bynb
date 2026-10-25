@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "name": "02_rich_markdown_and_latex",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 2,
+    "title": "Rich Markdown, Notes & Mathematical Formulas",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_md_intro",
+      "type": "markdown",
+      "source": "# 📝 Example 2: Rich Markdown, Notes & Mathematical Formulas\n\nA great scientific notebook communicates both **code** and **ideas**. In BlaiseNotebook, you can write rich documentation using standard Markdown, syntax-highlighted code blocks, and LaTeX math formulas!\n\n### 🎯 In this lesson, you will learn:\n1. How to format text with headings, bold, italics, and lists.\n2. How to create tables and blockquotes.\n3. How to write mathematical equations with **LaTeX** / **KaTeX**.\n4. How to switch between edit and preview mode."
+    },
+    {
+      "id": "cell_2_md_formatting",
+      "type": "markdown",
+      "source": "## 🖋️ Text Formatting Elements\n\nYou can format your notes with intuitive syntax:\n- **Bold text**: `**bold**`\n- *Italic text*: `*italic*`\n- ~~Strikethrough~~: `~~strikethrough~~`\n- `Inline code`: wrapped in backticks\n\n### Bullet Lists\n- Daily Sales\n- Customer Retention\n- Net Revenue\n\n### Numbered Steps\n1. Collect data from sensors\n2. Filter out noisy outliers\n3. Fit a predictive trend line\n\n> 💡 **Pro Tip:** Double-click on any Markdown cell to edit it. When you are done, press `Shift + Enter` or click the preview button to see the formatted result!"
+    },
+    {
+      "id": "cell_3_md_latex",
+      "type": "markdown",
+      "source": "## 🧮 Beautiful Mathematical Formulas (KaTeX)\n\nYou can write standard LaTeX math formulas inside dollar signs `$`:\n\n### Inline Formulas\nEinstein's mass-energy equivalence is $E = mc^2$, and the Pythagorean theorem is $a^2 + b^2 = c^2$.\n\n### Display Formulas (Centered)\nThe Standard Deviation $\\sigma$ of a population is calculated as:\n\n$$\\sigma = \\sqrt{ \\frac{1}{N} \\sum_{i=1}^{N} (x_i - \\mu)^2 }$$\n\nAnd the Ordinary Least Squares regression slope $m$ is given by:\n\n$$m = \\frac{\\sum (x - \\bar{x})(y - \\bar{y})}{\\sum (x - \\bar{x})^2}$$"
+    },
+    {
+      "id": "cell_4_code_sample",
+      "type": "code",
+      "source": "// Let's implement the standard deviation formula shown above in Pascal!\nvar\n  Data: array[0..4] of Double = (10.0, 12.0, 23.0, 23.0, 16.0);\n  Sum, Mean, SumSquares, StdDev: Double;\n  i: Integer;\nbegin\n  Sum := 0.0;\n  for i := 0 to High(Data) do\n    Sum := Sum + Data[i];\n  Mean := Sum / Length(Data);\n\n  SumSquares := 0.0;\n  for i := 0 to High(Data) do\n    SumSquares := SumSquares + Sqr(Data[i] - Mean);\n  StdDev := Sqrt(SumSquares / Length(Data));\n\n  Writeln(Format('Population Mean (mu):     %.2f', [Mean]));\n  Writeln(Format('Standard Deviation (sigma): %.2f', [StdDev]));\nend;"
+    },
+    {
+      "id": "cell_5_md_table",
+      "type": "markdown",
+      "source": "### 📋 Markdown Tables\n\nYou can easily present structured information in Markdown:\n\n| Algorithm | Category | Speed | Complexity |\n| :--- | :--- | :--- | :--- |\n| **Linear Regression** | Regression | Blazing fast | $O(N)$ |\n| **Random Forest** | Ensemble ML | Very fast | $O(M \\cdot N \\log N)$ |\n| **K-Means** | Clustering | Fast | $O(K \\cdot N)$ |\n\nCongratulations! You have mastered documentation cells. Let's move to **Example 3** to explore fast numerical computing and the native math kernel!"
+    }
+  ]
+}

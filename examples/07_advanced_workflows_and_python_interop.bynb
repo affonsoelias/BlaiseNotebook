@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "name": "07_advanced_workflows_and_python_interop",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 7,
+    "title": "Advanced Workflows, Direct Python Interop & Projects",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_adv_intro",
+      "type": "markdown",
+      "source": "# 🚀 Example 7: Advanced Workflows, Direct Python Interop & Projects\n\nCongratulations on reaching the final lesson of the **BlaiseNotebook Masterclass**! In this lesson, we explore power-user features: running custom Python code, handling long calculations, and sharing your notebooks.\n\n### 🎯 In this lesson, you will learn:\n1. When and how to execute raw Python code with `PyRun` and `PyEval`.\n2. How to pass data between Pascal and Python.\n3. How the **⏹ Stop (Interrupt)** button prevents infinite loops.\n4. How to export and share your `.bynb` notebook files.\n5. Best practices for reproducible scientific notebooks."
+    },
+    {
+      "id": "cell_2_code_python_interop",
+      "type": "code",
+      "source": "// 1. Executing Raw Python Code Directly When Needed\nvar\n  PyResult: string;\nbegin\n  Writeln('=== Custom Python Execution via BlaisePyKernel ===');\n\n  // You can execute any Python code directly:\n  PyRun(\n    'import sys, platform, math'#10 +\n    'py_ver = sys.version.split()[0]'#10 +\n    'os_name = platform.system()'#10 +\n    'fact_10 = math.factorial(10)'\n  );\n\n  // Retrieve values into Pascal strings with PyEval:\n  Writeln('CPython Engine Version: ', PyEval('py_ver'));\n  Writeln('Operating System:       ', PyEval('os_name'));\n  Writeln('Calculated 10! from Py: ', PyEval('str(fact_10)'));\nend;"
+    },
+    {
+      "id": "cell_3_code_shared_numpy",
+      "type": "code",
+      "source": "// 2. Generating Advanced NumPy Matrix Operations\nbegin\n  Writeln('Generating 4x4 Correlation Matrix with NumPy and Pandas:');\n\n  PyRun(\n    'import numpy as np, pandas as pd'#10 +\n    'np.random.seed(101)'#10 +\n    'raw_data = np.random.randn(10, 4)'#10 +\n    'corr_df = pd.DataFrame(raw_data, columns=[\"Alpha\", \"Beta\", \"Gamma\", \"Delta\"]).corr()'#10 +\n    'print(\"[NumPy] Correlation Matrix computed successfully.\")'\n  );\n\n  // Display the matrix as an interactive table:\n  ShowPyDataFrame('corr_df', 'Pearson Correlation Matrix', 10);\nend;"
+    },
+    {
+      "id": "cell_4_md_interrupt_guide",
+      "type": "markdown",
+      "source": "### ⏹ Handling Long Calculations & Interrupting\n\nIf you accidentally write an infinite loop or a calculation takes longer than expected:\n1. Click the **⏹ Stop (Interrupt)** button on the top toolbar.\n2. The mORMot 2 kernel will safely terminate the process without crashing your browser or losing unsaved notebook edits!\n3. A notification will confirm: *\"Execution interrupted by user.\"*"
+    },
+    {
+      "id": "cell_5_md_sharing_best_practices",
+      "type": "markdown",
+      "source": "### 💾 Saving, Exporting & Sharing Your Work\n\nTo save and share your notebook:\n1. Click the **📁 Project** menu button on the top toolbar.\n2. Click **💾 Export Notebook (.bynb)**.\n3. The file is downloaded to your computer as standard JSON.\n4. Send it to colleagues, upload to GitHub, or store in your archives!\n\n---\n\n### 🏆 Congratulations!\n\nYou have completed the entire **BlaiseNotebook Masterclass**! You are now equipped to:\n- Write and execute high-performance Object Pascal code.\n- Create rich documentation with formulas and markdown.\n- Load, clean, and explore datasets with `TPyDataFrame`.\n- Train AI models with Scikit-Learn without typing Python code.\n- Build stunning interactive data dashboards with Chart.js."
+    }
+  ]
+}

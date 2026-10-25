@@ -1,50 +1,42 @@
-# 📐 BlaiseNotebook Documentation
+# 📘 BlaiseNotebook User Guide & Documentation
 
-Welcome to the official documentation for **BlaiseNotebook** — the premier interactive scientific computing notebook designed specifically for the **Object Pascal** ecosystem.
+Welcome to **BlaiseNotebook** — the friendly, interactive notebook for **Object Pascal**! If you've ever used Jupyter Notebook or Google Colab, you'll feel right at home. 
 
-BlaiseNotebook unites the compiled execution speed of **Free Pascal**, the vast machine learning and data science ecosystem of **Python** (via Python4Delphi), the low-latency asynchronous server architecture of **Synopse mORMot 2**, and the reactive Web component model of **BlaiseVue** with **Chart.js (`<bv-chart>`)**.
-
----
-
-## 📚 Table of Contents
-
-1. [Getting Started & Installation](GETTING_STARTED.md)
-   - System Prerequisites (FPC, Lazarus, Python, BlaiseVue CLI)
-   - Running the Web Application
-   - Compiling and Launching the mORMot 2 Kernel Server
-   - Quick Workflow Walkthrough
-
-2. [System Architecture & Internals](ARCHITECTURE.md)
-   - Component Hierarchy & Reactive Frontend (`<bv-notebook>`, `<bv-cell>`, `<bv-code-editor>`, `<bv-output>`)
-   - Bidirectional WebSocket Execution Protocol (`execute_cell`, `stream`, `display_data`, `execute_reply`, `interrupt_all`)
-   - Native Server Sandboxing & FPC Compilation Harness (`uCodeRunner.pas`)
-   - Standalone Simulator Fallback
-
-3. [Scientific Computing & Machine Learning Guide](SCIENTIFIC_COMPUTING.md)
-   - Native Pascal Mathematics with `BlaiseMathKernel.pas` (`TVector`, Mean, StdDev, Linear Regression)
-   - Python Bridge with `BlaisePyKernel.pas` (NumPy, Pandas, Scikit-Learn)
-   - In-Cell Hardware-Accelerated Visualizations with `BlaiseOutput.pas` (`ShowChart`, `ShowTable`, `ShowPyDataFrame`)
-
-4. [Notebook File Format Specification (.bynb)](NOTEBOOK_FORMAT.md)
-   - JSON Schema Definition
-   - Metadata, Cell Objects, and Output Payloads
-   - Interoperability with Jupyter Notebooks
-
-5. [Pascal & Kernel API Reference](API_REFERENCE.md)
-   - `BlaiseMathKernel` Unit Reference
-   - `BlaisePyKernel` Unit Reference
-   - `BlaiseOutput` Unit Reference
-   - WebSocket Message Payloads & Events
+BlaiseNotebook lets you write code, explore data, draw beautiful charts, and train AI models — all in real time directly from your browser!
 
 ---
 
-## ⚡ Key Highlights
+## 🌟 What Can You Do with BlaiseNotebook?
 
-| Feature | Description |
+- ⚡ **Write & Run Pascal in the Browser**: No complex IDE setup needed. Write Object Pascal code in cells, press `Shift + Enter`, and see results instantly!
+- 📊 **Pure Pascal Data Science**: Use powerful Python libraries like **Pandas** and **Scikit-Learn** using native Pascal classes (`TPyDataFrame`, `TPySeries`, `TPyRandomForestRegressor`) — **no Python knowledge required**!
+- 📈 **Interactive Charts Under Your Code**: Hardware-accelerated Chart.js line graphs, bar charts, and scatter plots appear right below each code block.
+- 📝 **Rich Documentation**: Mix code with beautiful Markdown notes, bullet lists, tables, and LaTeX math formulas.
+- 🌓 **Day & Night Themes**: Toggle between a clean, bright Flatly theme and an eye-friendly Dark mode with a single click.
+- 💾 **Easy Project Files**: Save and load your work as portable `.bynb` notebook files to share with colleagues or students.
+
+---
+
+## 🧭 Documentation Map
+
+| Guide | Description |
 | :--- | :--- |
-| **🏎️ Compiled Speed** | Direct compilation to native Win64/Linux x86_64 machine code using Free Pascal Compiler (FPC 3.2.2+). |
-| **🐍 Python Integration** | Native CPython 3.10–3.13 API bridge via Python4Delphi, sharing memory structures and NumPy arrays. |
-| **📈 In-Cell Charting** | Interactive line, bar, scatter, radar, and doughnut charts rendered via Chart.js directly beneath each code cell. |
-| **⏹ Execution Control** | Asynchronous execution queue with instantaneous interrupt capabilities (`⏹ Interrupt`). |
-| **🎨 Responsive UI** | Built with BlaiseVue, featuring Flatly Light and Darkly Dark modes, drawer project menu, and keyboard shortcuts (`Shift+Enter`, `Ctrl+Enter`). |
-| **📜 Open Source License** | Core runtime and components licensed under **Modified LGPL v2.1 with Static Linking Exception**; Kernel binaries under **GPL v2**. |
+| 🚀 **[Getting Started Guide](GETTING_STARTED.md)** | Step-by-step beginner guide: launching the app, understanding the toolbar, and running your first cell. |
+| 🎓 **[Hands-On Course (Examples 1 to 7)](../examples/README.md)** | A complete hands-on tutorial course progressing from beginner to advanced data science. |
+| 📊 **[Data Science & Machine Learning Guide](SCIENTIFIC_COMPUTING.md)** | How to load datasets, compute statistics, plot charts, and train AI models using pure Pascal. |
+| 📖 **[Quick Reference & Cheat Sheet](API_REFERENCE.md)** | Handy copy-paste snippets and summary of all Pascal functions and classes. |
+| 💾 **[Notebook Format Guide](NOTEBOOK_FORMAT.md)** | How `.bynb` files store code, outputs, and visual charts. |
+| 🏗️ **[System Architecture](ARCHITECTURE.md)** | For curious minds: how the browser frontend communicates with the native Free Pascal kernel. |
+
+---
+
+## ⚡ Quick 30-Second Start
+
+1. Start the BlaiseNotebook server:
+   ```bash
+   cd frontend
+   bv mormot run
+   ```
+2. Open your browser at **`http://localhost:8090/`**.
+3. Click on any code cell and press **`Shift + Enter`** to run it!
+4. Check the **[Examples Course](../examples/README.md)** to learn all features step by step!

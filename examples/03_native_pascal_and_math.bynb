@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "name": "03_native_pascal_and_math",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 3,
+    "title": "Object Pascal Logic & High-Performance Math",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_math_intro",
+      "type": "markdown",
+      "source": "# ⚡ Example 3: Object Pascal Logic & High-Performance Math\n\nOne of the greatest superpowers of **BlaiseNotebook** is that your code compiles to native 64-bit machine code with **Free Pascal**. When you need sheer numerical performance, Object Pascal runs at speeds comparable to C and Fortran, completely bypassing Python's GIL (Global Interpreter Lock)!\n\n### 🎯 In this lesson, you will learn:\n1. How to use loops, dynamic arrays, and records.\n2. How to use the built-in **`TVector`** numerical record.\n3. How to generate random and linear data distributions.\n4. How to compute fast statistics (Mean, Variance, StdDev, Median, Min, Max)."
+    },
+    {
+      "id": "cell_2_code_loops",
+      "type": "code",
+      "source": "// 1. Fibonacci Sequence Generator in Pure Object Pascal\nvar\n  Fib: array of Int64;\n  i, N: Integer;\nbegin\n  N := 20;\n  SetLength(Fib, N);\n  Fib[0] := 0;\n  Fib[1] := 1;\n\n  for i := 2 to N - 1 do\n    Fib[i] := Fib[i - 1] + Fib[i - 2];\n\n  Writeln('First 20 Fibonacci Numbers:');\n  for i := 0 to N - 1 do\n    Write(Fib[i], ' ');\n  Writeln;\nend;"
+    },
+    {
+      "id": "cell_3_md_tvector",
+      "type": "markdown",
+      "source": "## 🚀 High-Performance Numerical Arrays with `TVector`\n\nThe `BlaiseMathKernel` unit provides `TVector`, an optimized 1D numerical array designed for fast scientific calculations:\n- `TVector.Create([1.0, 2.0, ...])`: Initializes from an array of numbers.\n- `TVector.CreateRandom(Count, Min, Max)`: Generates uniform random observations.\n- `TVector.CreateLinear(Count, Start, Step)`: Creates evenly spaced points (like `np.linspace`)."
+    },
+    {
+      "id": "cell_4_code_tvector",
+      "type": "code",
+      "source": "// 2. Statistical Analysis with TVector\nvar\n  V: TVector;\n  Mean, Variance, StdDev, Median, MinVal, MaxVal, Total: Double;\nbegin\n  // Generate a random vector of 100 observations between 10.0 and 50.0\n  V := TVector.CreateRandom(100, 10.0, 50.0);\n\n  Mean     := V.CalculaMedia;\n  Variance := V.CalculaVariancia;\n  StdDev   := V.CalculaDesvioPadrao;\n  Median   := V.CalculaMediana;\n  MinVal   := V.CalculaMinimo;\n  MaxVal   := V.CalculaMaximo;\n  Total    := V.Soma;\n\n  Writeln('=== Statistical Summary (100 Observations) ===');\n  Writeln(Format('Sum Total:          %.2f', [Total]));\n  Writeln(Format('Sample Mean:        %.4f', [Mean]));\n  Writeln(Format('Sample Variance:    %.4f', [Variance]));\n  Writeln(Format('Standard Deviation: %.4f', [StdDev]));\n  Writeln(Format('Median:             %.4f', [Median]));\n  Writeln(Format('Range:              [%.2f - %.2f]', [MinVal, MaxVal]));\nend;"
+    },
+    {
+      "id": "cell_5_code_linear_reg_native",
+      "type": "code",
+      "source": "// 3. Pure Pascal Linear Regression Fitting\nvar\n  X, Y: TVector;\n  Slope, Intercept, R2: Double;\n  Success: Boolean;\nbegin\n  // Known trend: Y = 2.5 * X + 10.0 (with slight variation)\n  X := TVector.Create([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);\n  Y := TVector.Create([12.4, 15.1, 17.6, 20.2, 22.4, 25.0, 27.8, 30.1]);\n\n  Success := X.LinearRegression(Y, Slope, Intercept, R2);\n  if Success then\n  begin\n    Writeln('=== Fitted Linear Trend ===');\n    Writeln(Format('Fitted Equation: Y = %.4f * X + %.4f', [Slope, Intercept]));\n    Writeln(Format('Quality of Fit (R² Score): %.4f', [R2]));\n  end;\nend;"
+    },
+    {
+      "id": "cell_6_md_conclusion",
+      "type": "markdown",
+      "source": "Excellent! You now know how to write fast numerical algorithms in pure Pascal. Proceed to **Example 4** to learn how to visualize data with interactive charts and tables!"
+    }
+  ]
+}

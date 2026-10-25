@@ -1,117 +1,107 @@
 # 🚀 Getting Started with BlaiseNotebook
 
-This guide will walk you through setting up, compiling, and running BlaiseNotebook on your machine.
+Welcome to BlaiseNotebook! This friendly guide walks you through launching the tool, navigating the interface, writing code, and viewing interactive charts.
 
 ---
 
-## 📋 System Prerequisites
+## 🏁 Step 1: Starting the Application
 
-Before running BlaiseNotebook, ensure the following dependencies are installed and available on your system:
-
-### 1. Free Pascal Compiler (FPC)
-- **Version:** FPC 3.2.2 or newer (64-bit target recommended).
-- **Verification:**
-  ```bash
-  fpc -iV
-  # Output: 3.2.2
-  ```
-- **PATH Requirement:** Ensure `fpc.exe` (or `fpc` on Linux/macOS) is available on your system `PATH`.
-
-### 2. Lazarus IDE & Python4Lazarus
-- **Version:** Lazarus 3.0+ with FPC 3.2.2.
-- **Python4Lazarus Package:** Required for the Python bridge (`BlaisePyKernel`).
-- Available via Lazarus Online Package Manager (OPM) or from [Python4Delphi GitHub repository](https://github.com/pyscripter/python4delphi).
-
-### 3. Python 3.10 – 3.13 (64-bit)
-- Standard CPython 64-bit installation matching your OS architecture.
-- Recommended scientific libraries:
-  ```bash
-  pip install numpy pandas scikit-learn websockets
-  ```
-
-### 4. BlaiseVue CLI (`bv`)
-- The BlaiseVue command-line tool coordinates transpilation, component registration, and mORMot 2 server management.
-- Verify installation:
-  ```bash
-  bv --version
-  ```
-
----
-
-## 🛠️ Installation & Setup
-
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/affonsoelias/BlaiseNotebook.git
-   cd BlaiseNotebook
-   ```
-
-2. **Select Working Branch:**
-   - Active development takes place on the `develop` branch:
-     ```bash
-     git checkout develop
-     ```
-
-3. **Navigate to the Frontend Directory:**
-   ```bash
-   cd frontend
-   ```
-
----
-
-## 🖥️ Running the Application
-
-BlaiseNotebook can be run in two primary modes:
-
-### Mode A: Full-Stack Native Server (Recommended)
-
-In this mode, Synopse mORMot 2 serves both the compiled single-page application (SPA) and hosts the native execution kernel over WebSocket (`/ws` on port `8090`):
+Starting BlaiseNotebook is as simple as running a single command:
 
 ```bash
-# 1. Compile the reactive frontend assets
-bv run build
-
-# 2. Compile the high-performance mORMot 2 server binary
-bv mormot build
-
-# 3. Launch the native server
+cd frontend
 bv mormot run
 ```
 
-- Open your browser at: **`http://localhost:8090/`**
-- The status pill in the upper-right corner will turn green: **`● Kernel mORMot 2 Connected`**.
+Then open your favorite web browser and go to:
+👉 **`http://localhost:8090/`**
 
-### Mode B: Standalone Web Simulator
-
-If you run the frontend independently without starting the mORMot 2 server (e.g., using `bv serve` or opening `dist/index.html`):
-- The status pill will display **`● Standalone Mode (Active Simulator)`**.
-- The built-in intelligent simulator will parse scientific code patterns, generate descriptive statistics, and render Chart.js graphs and responsive tables directly in the browser!
+> **💡 Status Check:** Look at the pill in the top-right corner of the screen. When it shows a green dot **`● Kernel Connected`**, your notebook is connected to the native Pascal engine!
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## 🖥️ Step 2: Getting to Know the Interface
 
-BlaiseNotebook is designed for rapid exploratory programming using standard notebook keybindings:
+BlaiseNotebook is designed to be clean, intuitive, and distraction-free:
 
-| Action | Shortcut | Scope |
-| :--- | :--- | :--- |
-| **Execute Cell** | `Shift + Enter` | Focused code cell |
-| **Execute Cell In-Place** | `Ctrl + Enter` | Focused code cell |
-| **Smart Indent (2 spaces)** | `Tab` | Code editor |
-| **Save Notebook (.bynb)** | `Ctrl + S` | Global |
-| **Open Notebook** | `Ctrl + O` | Global |
-| **New Notebook** | `Alt + N` | Global |
-| **Add Code Cell** | `Alt + C` | Global |
-| **Toggle Light / Dark Mode** | Navbar Moon/Sun icon (`☀️`/`🌙`) | Global |
+```
++------------------------------------------------------------------------------------+
+| 📁 Project | ➕ Code | ➕ Markdown | ▶ Run All | ⏹ Stop | 🗑 Clear | 🌓 Dark | ● Online |
++------------------------------------------------------------------------------------+
+|                                                                                    |
+| [1] In: [ Code Cell ]                                                              |
+|     begin                                                                          |
+|       Writeln('Hello, World!');                                                    |
+|     end.                                                                           |
+|                                                                                    |
+|     Out:                                                                           |
+|     Hello, World!                                                                  |
+|     [ 📈 Interactive Chart or Table renders directly here ]                        |
+|                                                                                    |
++------------------------------------------------------------------------------------+
+```
+
+### The Top Toolbar:
+- **📁 Project:** Opens the project sidebar to create a new notebook, open a `.bynb` file from your computer, or save your current notebook.
+- **➕ Code:** Adds a new executable Object Pascal code cell.
+- **➕ Markdown:** Adds a new formatted text cell for notes, instructions, or formulas.
+- **▶ Run All:** Executes every cell in your notebook from top to bottom.
+- **⏹ Stop (Interrupt):** Immediately halts long-running calculations.
+- **🗑 Clear:** Clears execution counts and output areas so you can start fresh.
+- **🌓 Theme Toggle:** Switches between clean Flatly Light mode and dark mode.
 
 ---
 
-## 🧪 Loading the Scientific Demo Project
+## ✍️ Step 3: Writing & Running Your First Code
 
-A pre-packaged demo notebook [`demo.bynb`](../demo.bynb) is included with the project. It provides:
-1. **Introduction Markdown:** An overview of the Object Pascal computational environment.
-2. **Native Pascal Mathematical Block:** Random vector generation, sample mean, standard deviation, and inline Bar Chart plotting with Chart.js.
-3. **Python Bridge Documentation:** Explanation of CPython 3.13 integration.
-4. **Machine Learning Pipeline:** Pandas DataFrame training history and model convergence line curve rendered under the cell.
+1. Click on the first code cell.
+2. Type a simple Pascal statement:
+   ```pascal
+   Writeln('Hello from BlaiseNotebook!');
+   Writeln('2 + 2 = ', 2 + 2);
+   ```
+3. Press **`Shift + Enter`** on your keyboard (or click the green **▶ Run** button on the cell).
+4. Watch the execution badge change:
+   - `[ * ]` while running (with time elapsed in milliseconds).
+   - `[ 1 ]` with a green checkmark when complete!
+5. Your output appears immediately underneath the cell.
 
-You can reload or save notebooks at any time using the **`📂 Open`** and **`💾 Save (.bynb)`** buttons in the toolbar.
+---
+
+## ⌨️ Handy Keyboard Shortcuts
+
+Save time and code faster with these built-in shortcuts:
+
+| Shortcut | What it does |
+| :--- | :--- |
+| **`Shift + Enter`** | Run the current cell and select the next one. |
+| **`Ctrl + Enter`** | Run the current cell and stay on it. |
+| **`Tab`** | Smart indent code by 2 spaces. |
+| **Double-Click** | Edit any Markdown cell to update notes. |
+
+---
+
+## 📊 Step 4: Drawing Your First Chart
+
+Creating interactive charts is as easy as writing one line of Pascal:
+
+```pascal
+var
+  DF: TPyDataFrame;
+begin
+  DF := TPyDataFrame.Create;
+  DF.AddColumn('Month', ['Jan', 'Feb', 'Mar', 'Apr', 'May']);
+  DF.AddColumn('Sales', [120.0, 150.0, 180.0, 220.0, 310.0]);
+  
+  // Plot a beautiful line chart under the cell:
+  DF.PlotLine('Monthly Sales Growth', 'Month', 'Sales');
+end;
+```
+
+When you press `Shift + Enter`, a smooth Chart.js canvas appears right below your code, complete with tooltips when you hover over data points!
+
+---
+
+## 🎓 Next Steps: Take the Hands-On Course!
+
+Ready to master all features of BlaiseNotebook? Head over to our **[Hands-On Course Guide](../examples/README.md)** with 7 complete progressive examples from beginner to advanced machine learning!

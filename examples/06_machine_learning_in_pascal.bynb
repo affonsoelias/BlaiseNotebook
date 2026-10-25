@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "name": "06_machine_learning_in_pascal",
+    "course": "BlaiseNotebook Masterclass",
+    "lesson": 6,
+    "title": "Machine Learning with Scikit-Learn in Pascal",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "version": "1.0.0"
+  },
+  "cells": [
+    {
+      "id": "cell_1_ml_intro",
+      "type": "markdown",
+      "source": "# 🤖 Example 6: Machine Learning with Scikit-Learn in Pascal\n\nArtificial Intelligence and Machine Learning are now first-class citizens in **BlaiseNotebook**! You can train decision trees, regression models, and clustering algorithms using intuitive Pascal classes.\n\n### 🎯 In this lesson, you will learn:\n1. How to fit a **Linear Regression** model (`TPyLinearRegression`).\n2. How to train a **Random Forest Regressor** (`TPyRandomForestRegressor`).\n3. How to evaluate accuracy using the $R^2$ score.\n4. How to predict outcomes on new data.\n5. How to plot **Feature Importances** to understand what features drive predictions."
+    },
+    {
+      "id": "cell_2_code_linear_regression",
+      "type": "code",
+      "source": "// 1. Linear Regression: Predicting Salaries by Years of Experience\nvar\n  DF: TPyDataFrame;\n  LR: TPyLinearRegression;\n  Pred: TPySeries;\nbegin\n  Writeln('=== Training Linear Regression Model ===');\n  \n  DF := TPyDataFrame.Create;\n  DF.AddColumn('Experience', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);\n  DF.AddColumn('SalaryK',    [42.0, 48.0, 56.0, 65.0, 74.0, 82.0, 91.0, 102.0, 110.0, 122.0]);\n\n  LR := TPyLinearRegression.Create;\n  LR.Fit(DF.Column('Experience'), DF.Column('SalaryK'));\n\n  Writeln('Fitted Model: ', LR.Summary);\n  Writeln(Format('Salary = %.2f * Experience + %.2f', [LR.Slope, LR.Intercept]));\n  Writeln(Format('Model Accuracy (R² Score): %.4f', [LR.Score(DF.Column('Experience'), DF.Column('SalaryK'))]));\n\n  // Visualize data:\n  DF.PlotBar('Salary ($k) by Experience', 'Experience', 'SalaryK');\nend;"
+    },
+    {
+      "id": "cell_3_code_random_forest",
+      "type": "code",
+      "source": "// 2. Random Forest Regressor: Predicting Student Exam Scores\nvar\n  DF: TPyDataFrame;\n  RF: TPyRandomForestRegressor;\n  Score: Double;\n  Predictions: TPySeries;\nbegin\n  Writeln('=== Training Random Forest Regressor (30 Decision Trees) ===');\n\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('StudyHours', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);\n  DF.AddColumn('PrepTests',  [1, 2, 2, 3, 3, 4, 4, 5, 5, 6]);\n  DF.AddColumn('SleepHours', [8.0, 7.5, 7.0, 8.0, 6.5, 7.0, 6.0, 7.5, 8.0, 7.0]);\n  DF.AddColumn('FinalGrade', [48.0, 55.0, 62.0, 71.0, 78.0, 84.0, 89.0, 93.0, 97.0, 99.0]);\n\n  // Show dataset as an interactive table:\n  DF.ShowTable('Student Exam Features', 10);\n\n  // Initialize Random Forest: 30 trees, random seed 42\n  RF := TPyRandomForestRegressor.Create(30, -1, 42);\n  RF.Fit(DF.Columns(['StudyHours', 'PrepTests', 'SleepHours']), DF.Column('FinalGrade'));\n\n  Score := RF.Score(DF.Columns(['StudyHours', 'PrepTests', 'SleepHours']), DF.Column('FinalGrade'));\n  Writeln(Format('Random Forest Model R² Score: %.4f', [Score]));\n\n  // Predict grades:\n  Predictions := RF.Predict(DF.Columns(['StudyHours', 'PrepTests', 'SleepHours']));\n  Writeln(Format('Predicted Grade for Student #1: %.2f (Actual: %.2f)', [Predictions[0], DF.Column('FinalGrade')[0]]));\n\n  // Plot Feature Importances:\n  RF.PlotFeatureImportances(['StudyHours', 'PrepTests', 'SleepHours'], 'Feature Importance Breakdown');\nend;"
+    },
+    {
+      "id": "cell_4_code_train_test_split",
+      "type": "code",
+      "source": "// 3. Train-Test Splitting with PyTrainTestSplit\nvar\n  DF: TPyDataFrame;\n  XTrain, XTest: TPyDataFrame;\n  YTrain, YTest: TPySeries;\nbegin\n  Writeln('=== Splitting Dataset for Robust Cross-Validation ===');\n\n  DF := TPyDataFrame.Create;\n  DF.AddColumn('FeatureA', [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]);\n  DF.AddColumn('FeatureB', [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0]);\n  DF.AddColumn('Target',   [15.0, 24.0, 32.0, 45.0, 53.0, 67.0, 74.0, 85.0, 92.0, 105.0]);\n\n  // Split 80% Train, 20% Test:\n  PyTrainTestSplit(DF.Columns(['FeatureA', 'FeatureB']), DF.Column('Target'), 0.20,\n    XTrain, XTest, YTrain, YTest, 42);\n\n  Writeln(Format('Full Dataset: %d samples',  [DF.RowCount]));\n  Writeln(Format('Training Set: %d samples',  [XTrain.RowCount]));\n  Writeln(Format('Testing Set:  %d samples',  [XTest.RowCount]));\nend;"
+    },
+    {
+      "id": "cell_5_md_next",
+      "type": "markdown",
+      "source": "You've successfully built and evaluated Machine Learning models in Pascal! Finally, let's explore **Example 7**: **Advanced Workflows, Direct Python Interop & Project Management**!"
+    }
+  ]
+}
