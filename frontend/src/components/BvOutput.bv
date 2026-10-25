@@ -1,20 +1,20 @@
 <template>
   <div b-if="hasOutputs" class="bv-output-root">
-    <!-- BARRA DE STATUS DA SAÍDA -->
+    <!-- OUTPUT STATUS BAR -->
     <div class="bv-output-header">
       <div class="bv-output-meta">
-        <span class="out-label">Saída</span>
+        <span class="out-label">Output</span>
         <span b-if="executionTimeMs > 0" class="out-time">⚡ {{ executionTimeMs }} ms</span>
-        <span b-if="status === 'success'" class="out-badge badge-success">Concluído</span>
-        <span b-if="status === 'error'" class="out-badge badge-error">Erro</span>
-        <span b-if="status === 'running'" class="out-badge badge-running">Processando...</span>
+        <span b-if="status === 'success'" class="out-badge badge-success">Completed</span>
+        <span b-if="status === 'error'" class="out-badge badge-error">Error</span>
+        <span b-if="status === 'running'" class="out-badge badge-running">Processing...</span>
       </div>
       <div class="bv-output-actions">
-        <button class="out-btn-clear" title="Limpar saída desta célula" @click="clearOutputs">🗑️ Limpar</button>
+        <button class="out-btn-clear" title="Clear outputs for this cell" @click="clearOutputs">🗑️ Clear</button>
       </div>
     </div>
 
-    <!-- LISTA DE SAÍDAS (MULTIPLOS TIPOS) -->
+    <!-- OUTPUT ITEMS LIST (MULTI-TYPE) -->
     <div class="bv-output-items">
       <div b-for="out in outputs" class="bv-output-item">
 
@@ -27,19 +27,19 @@
           <pre class="term-content"><code>{{ out.text }}</code></pre>
         </div>
 
-        <!-- 2. STDERR / ERRO DE COMPILAÇÃO / EXCEÇÃO -->
+        <!-- 2. STDERR / COMPILATION ERROR / EXCEPTION -->
         <div b-if="out.type === 'stderr'" class="bv-out-stderr">
           <div class="error-bar">
-            <span>⚠️ Erro de Execução / Compilação</span>
+            <span>⚠️ Execution / Compilation Error</span>
           </div>
           <pre class="error-content"><code>{{ out.text }}</code></pre>
         </div>
 
-        <!-- 3. TABELA DE DADOS / DATAFRAME -->
+        <!-- 3. DATA TABLE / DATAFRAME -->
         <div b-if="out.type === 'table'" class="bv-out-table-wrapper">
           <div class="table-header-meta">
-            <span class="table-title">📊 {{ out.title || 'Tabela de Dados' }}</span>
-            <span class="table-rows-count" b-if="out.rows">Linhas: {{ out.rows.length }}</span>
+            <span class="table-title">📊 {{ out.title || 'Data Table' }}</span>
+            <span class="table-rows-count" b-if="out.rows">Rows: {{ out.rows.length }}</span>
           </div>
           <div class="table-scroll">
             <table class="bv-data-table">
@@ -57,12 +57,12 @@
           </div>
         </div>
 
-        <!-- 4. VISUALIZAÇÃO INTERATIVA COM CHART.JS (<bv-chart>) -->
+        <!-- 4. INTERACTIVE VISUALIZATION WITH CHART.JS (<bv-chart>) -->
         <div b-if="out.type === 'chart'" class="bv-out-chart-card">
           <div class="chart-card-header">
             <div class="chart-card-info">
               <span class="chart-icon">📈</span>
-              <strong class="chart-title">{{ out.title || 'Gráfico Científico Reativo (Chart.js)' }}</strong>
+              <strong class="chart-title">{{ out.title || 'Reactive Scientific Chart (Chart.js)' }}</strong>
             </div>
             <span class="chart-type-badge">{{ out.chartType || 'Chart' }}</span>
           </div>
@@ -162,57 +162,60 @@
 
   .out-time {
     color: #58a6ff;
-    font-family: monospace;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
   }
 
   .out-badge {
     padding: 2px 8px;
     border-radius: 12px;
     font-size: 10.5px;
-    font-weight: bold;
+    font-weight: 600;
   }
 
   .badge-success {
     background: rgba(46, 160, 67, 0.2);
     color: #3fb950;
-    border: 1px solid #238636;
+    border: 1px solid rgba(46, 160, 67, 0.4);
   }
 
   .badge-error {
     background: rgba(248, 81, 73, 0.2);
     color: #f85149;
-    border: 1px solid #da3633;
+    border: 1px solid rgba(248, 81, 73, 0.4);
   }
 
   .badge-running {
     background: rgba(210, 153, 34, 0.2);
     color: #d29922;
-    border: 1px solid #9e6a03;
+    border: 1px solid rgba(210, 153, 34, 0.4);
   }
 
   .out-btn-clear {
     background: transparent;
-    border: none;
+    border: 1px solid #30363d;
     color: #8b949e;
-    cursor: pointer;
-    font-size: 11px;
-    padding: 2px 6px;
+    padding: 2px 8px;
     border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s;
   }
 
   .out-btn-clear:hover {
-    background: rgba(255,255,255,0.08);
-    color: #f85149;
+    background: #21262d;
+    color: #c9d1d9;
+    border-color: #8b949e;
   }
 
   .bv-output-items {
-    padding: 12px 16px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 10px;
   }
 
-  /* 1. Terminal stdout */
+  /* TERMINAL STDOUT STYLING */
   .bv-out-stdout {
     background: #090d13;
     border: 1px solid #21262d;
@@ -223,11 +226,10 @@
   .terminal-bar {
     display: flex;
     align-items: center;
-    gap: 8px;
     background: #161b22;
-    padding: 6px 12px;
+    padding: 4px 10px;
     border-bottom: 1px solid #21262d;
-    font-size: 11px;
+    gap: 8px;
   }
 
   .term-dots {
@@ -239,40 +241,39 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
+    background: #30363d;
     display: inline-block;
   }
-  .term-dots i:nth-child(1) { background: #ff5f56; }
-  .term-dots i:nth-child(2) { background: #ffbd2e; }
-  .term-dots i:nth-child(3) { background: #27c93f; }
 
   .term-title {
-    color: #8b949e;
     font-size: 11px;
+    color: #8b949e;
+    font-family: monospace;
   }
 
   .term-content {
     margin: 0;
     padding: 10px 14px;
-    color: #7ee787;
-    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
     font-size: 12.5px;
     line-height: 1.5;
+    color: #c9d1d9;
     white-space: pre-wrap;
-    word-break: break-all;
+    word-break: break-word;
   }
 
-  /* 2. Stderr */
+  /* STDERR STYLING */
   .bv-out-stderr {
     background: rgba(248, 81, 73, 0.08);
-    border: 1px solid #da3633;
+    border: 1px solid rgba(248, 81, 73, 0.4);
     border-radius: 6px;
     overflow: hidden;
   }
 
   .error-bar {
     background: rgba(248, 81, 73, 0.15);
-    color: #f85149;
-    padding: 6px 12px;
+    padding: 5px 12px;
+    color: #ff7b72;
     font-size: 11.5px;
     font-weight: 600;
   }
@@ -280,14 +281,14 @@
   .error-content {
     margin: 0;
     padding: 10px 14px;
-    color: #ff7b72;
     font-family: 'JetBrains Mono', 'Consolas', monospace;
-    font-size: 12.5px;
+    font-size: 12px;
     line-height: 1.5;
+    color: #ffa198;
     white-space: pre-wrap;
   }
 
-  /* 3. Data Table */
+  /* DATA TABLE STYLING */
   .bv-out-table-wrapper {
     background: #161b22;
     border: 1px solid #30363d;
@@ -299,72 +300,71 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 8px 14px;
-    background: #21262d;
+    padding: 6px 12px;
+    background: #0d1117;
     border-bottom: 1px solid #30363d;
-    font-size: 12px;
   }
 
   .table-title {
-    color: #58a6ff;
+    font-size: 12px;
     font-weight: 600;
+    color: #e6edf3;
   }
 
   .table-rows-count {
-    color: #8b949e;
     font-size: 11px;
+    color: #8b949e;
   }
 
   .table-scroll {
-    max-height: 320px;
-    overflow: auto;
+    overflow-x: auto;
+    max-height: 280px;
   }
 
   .bv-data-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12.5px;
+    font-size: 12px;
     text-align: left;
   }
 
   .bv-data-table th {
-    background: #1c2128;
+    background: #21262d;
     color: #c9d1d9;
-    padding: 8px 12px;
-    position: sticky;
-    top: 0;
-    border-bottom: 2px solid #30363d;
+    padding: 7px 12px;
     font-weight: 600;
+    border-bottom: 1px solid #30363d;
+    white-space: nowrap;
   }
 
   .bv-data-table td {
-    padding: 8px 12px;
+    padding: 6px 12px;
+    color: #adbac7;
     border-bottom: 1px solid #21262d;
-    color: #e6edf3;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px;
+    white-space: nowrap;
   }
 
   .bv-data-table tr:hover td {
-    background: rgba(88, 166, 255, 0.08);
+    background: rgba(56, 139, 253, 0.08);
+    color: #58a6ff;
   }
 
-  /* 4. Chart Card */
+  /* CHART CARD STYLING */
   .bv-out-chart-card {
-    background: #ffffff;
+    background: #161b22;
+    border: 1px solid #30363d;
     border-radius: 8px;
-    border: 1px solid #d0d7de;
     overflow: hidden;
-    color: #24292f;
+    padding-bottom: 8px;
   }
 
   .chart-card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 16px;
-    background: #f6f8fa;
-    border-bottom: 1px solid #d0d7de;
+    padding: 8px 14px;
+    background: #0d1117;
+    border-bottom: 1px solid #30363d;
   }
 
   .chart-card-info {
@@ -373,54 +373,31 @@
     gap: 8px;
   }
 
+  .chart-icon {
+    font-size: 15px;
+  }
+
   .chart-title {
-    font-size: 13.5px;
-    color: #1f2328;
+    font-size: 13px;
+    color: #e6edf3;
   }
 
   .chart-type-badge {
-    background: #0969da;
-    color: #ffffff;
+    background: #21262d;
+    color: #58a6ff;
     padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 11px;
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-family: monospace;
     font-weight: 600;
     text-transform: uppercase;
   }
 
   .chart-canvas-container {
-    padding: 16px;
-    background: #ffffff;
-    min-height: 350px;
-  }
-
-  /* 5. Image Card */
-  .bv-out-image-card {
-    background: #ffffff;
-    border-radius: 8px;
-    border: 1px solid #d0d7de;
-    overflow: hidden;
-  }
-
-  .image-card-header {
-    background: #f6f8fa;
-    padding: 8px 14px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #24292f;
-    border-bottom: 1px solid #d0d7de;
-  }
-
-  .image-wrapper {
-    padding: 16px;
-    text-align: center;
-    background: #ffffff;
-  }
-
-  .out-img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    padding: 12px;
+    position: relative;
+    height: 350px;
+    width: 100%;
+    background: #0d1117;
   }
 </style>

@@ -28,6 +28,9 @@ type
     FOnStream: TOnStreamOutput;
     FOnDisplay: TOnDisplayData;
     FOnReply: TOnExecuteReply;
+    FCurrentProcess: TProcess;
+    FCurrentCellId: string;
+    FInterrupted: Boolean;
 
     function PrepareSourceFile(const ACellId: string; const ASource: string; out APrgPath: string): Boolean;
     function CompileSource(const APrgPath: string; out AExePath: string; out AErrors: string): Boolean;
@@ -37,6 +40,7 @@ type
     destructor Destroy; override;
 
     procedure ExecuteCell(const ACellId: string; AExecCount: Integer; const ASource: string);
+    procedure Interrupt(const ACellId: string = '');
 
     property OnStream: TOnStreamOutput read FOnStream write FOnStream;
     property OnDisplay: TOnDisplayData read FOnDisplay write FOnDisplay;
@@ -209,6 +213,21 @@ begin
   end;
 end;
 
+procedure TCodeRunner.Interrupt(const ACellId: string);
+begin
+  if (ACellId = '') or (FCurrentCellId = ACellId) then
+  begin
+    FInterrupted := True;
+    if (FCurrentProcess <> nil) and FCurrentProcess.Running then
+    begin
+      try
+        FCurrentProcess.Terminate(1);
+      except
+      end;
+    end;
+  end;
+end;
+
 procedure TCodeRunner.ExecuteBinary(const ACellId: string; const AExePath: string; AExecCount: Integer; AStartTick: Int64);
 var
   Proc: TProcess;
@@ -271,7 +290,10 @@ var
   end;
 
 begin
+  FInterrupted := False;
+  FCurrentCellId := ACellId;
   Proc := TProcess.Create(nil);
+  FCurrentProcess := Proc;
   try
     Proc.Executable := AExePath;
     Proc.CurrentDirectory := FWorkspaceDir;
@@ -313,13 +335,16 @@ begin
 
     if Assigned(FOnReply) then
     begin
-      if Proc.ExitStatus = 0 then
+      if FInterrupted then
+        FOnReply(RawUtf8(ACellId), 'aborted', AExecCount, ElapsedMs)
+      else if Proc.ExitStatus = 0 then
         FOnReply(RawUtf8(ACellId), 'success', AExecCount, ElapsedMs)
       else
         FOnReply(RawUtf8(ACellId), 'error', AExecCount, ElapsedMs);
     end;
 
   finally
+    FCurrentProcess := nil;
     Proc.Free;
   end;
 end;

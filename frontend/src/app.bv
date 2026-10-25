@@ -1,54 +1,100 @@
 <template>
   <div translate="no" class="notranslate">
-    <!-- RESPONSIVE DRAWER (MENU LATERAL) -->
+    <!-- RESPONSIVE DRAWER (PROJECT MENU) -->
     <bv-drawer ref="appDrawer" title="📐 BlaiseNotebook">
       <div class="drawer-nav">
-        <a href="#/" class="drawer-link" @click="closeDrawer" style="background: #10b981; color: white; font-weight: bold;">📐 Notebook Interativo</a>
+        <!-- SECTION: PROJECT & FILES -->
+        <div class="drawer-section-title">📁 PROJECT & FILES</div>
+        <button class="drawer-item-btn" type="button" @click="onNewProject">
+          <span class="d-icon">🆕</span>
+          <span class="d-text">New Notebook</span>
+          <span class="d-shortcut">Alt+N</span>
+        </button>
+        <button class="drawer-item-btn" type="button" @click="onOpenProject">
+          <span class="d-icon">📂</span>
+          <span class="d-text">Open Notebook (.bynb)...</span>
+          <span class="d-shortcut">Ctrl+O</span>
+        </button>
+        <button class="drawer-item-btn" type="button" @click="onSaveProject">
+          <span class="d-icon">💾</span>
+          <span class="d-text">Save Notebook (.bynb)</span>
+          <span class="d-shortcut">Ctrl+S</span>
+        </button>
+        <button class="drawer-item-btn" type="button" @click="onSaveProjectAs">
+          <span class="d-icon">📑</span>
+          <span class="d-text">Save As...</span>
+        </button>
+        <button class="drawer-item-btn" type="button" @click="onExportPascal">
+          <span class="d-icon">📤</span>
+          <span class="d-text">Export Pascal Code (.pas)</span>
+        </button>
+        <button class="drawer-item-btn drawer-item-danger" type="button" @click="onCloseProject">
+          <span class="d-icon">🚪</span>
+          <span class="d-text">Close / Exit Project</span>
+        </button>
+
+        <div class="drawer-divider"></div>
+
+        <!-- SECTION: KERNEL & EXECUTION -->
+        <div class="drawer-section-title">⚡ KERNEL & EXECUTION</div>
+        <button class="drawer-item-btn drawer-item-primary" type="button" @click="onRunAll">
+          <span class="d-icon">▶▶</span>
+          <span class="d-text">Run All Cells</span>
+        </button>
+        <button class="drawer-item-btn drawer-item-warning" type="button" @click="onInterruptAll">
+          <span class="d-icon">⏹</span>
+          <span class="d-text">Interrupt Execution</span>
+          <span class="d-shortcut">Esc</span>
+        </button>
+        <button class="drawer-item-btn" type="button" @click="onRestartKernel">
+          <span class="d-icon">🔄</span>
+          <span class="d-text">Restart Kernel</span>
+        </button>
+        <button class="drawer-item-btn" type="button" @click="onClearOutputs">
+          <span class="d-icon">🧹</span>
+          <span class="d-text">Clear All Outputs</span>
+        </button>
+
+        <div class="drawer-divider"></div>
+
+        <!-- SECTION: SHORTCUTS & INFO -->
+        <div class="drawer-section-title">ℹ️ SHORTCUTS & ENVIRONMENT</div>
+        <div class="drawer-info-box">
+          <div class="info-line"><span>Run cell:</span> <code>Shift + Enter</code></div>
+          <div class="info-line"><span>Run in-place:</span> <code>Ctrl + Enter</code></div>
+          <div class="info-line"><span>Add code cell:</span> <code>Alt + C</code></div>
+          <div class="info-line"><span>Environment:</span> <strong>FPC 3.2.2 + mORMot 2</strong></div>
+          <div class="info-line"><span>AI / Python:</span> <strong>Python4Delphi 3.13</strong></div>
+        </div>
       </div>
     </bv-drawer>
 
-    <!-- NAVBAR PRINCIPAL DO BLAISENOTEBOOK -->
+    <!-- MAIN APPLICATION NAVBAR -->
     <nav class="navbar">
       <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="drawer-btn" type="button" @click="toggleDrawer" title="Menu">☰</button>
+        <button class="drawer-btn" type="button" @click="toggleDrawer" title="Project Menu (Open, Save, Exit)">☰</button>
         <span style="font-size: 24px;">📐</span>
         <strong class="brand">BlaiseNotebook</strong>
       </div>
 
-      <div class="lang-switcher">
-        <button class="lang-btn" :class="{ 'active-lang': $i18n.locale === 'pt' }" @click="$setLocale('pt')">🇧🇷 PT</button>
-        <button class="lang-btn" :class="{ 'active-lang': $i18n.locale === 'en' }" @click="$setLocale('en')">🇺🇸 EN</button>
-      </div>
-
       <div class="theme-switcher">
-        <button class="theme-toggle-btn" @click="$theme.toggle()" :title="$theme.isDark ? 'Modo Claro' : 'Modo Escuro'">
+        <button class="theme-toggle-btn" @click="$theme.toggle()" :title="$theme.isDark ? 'Light Mode' : 'Dark Mode'">
           <span b-if="$theme.isDark">☀️</span>
           <span b-if="!$theme.isDark">🌙</span>
         </button>
-        <select class="theme-select" :value="$theme.current" @change="onThemeSelect($event)">
-          <option value="flatly">Flatly</option>
-          <option value="cosmo">Cosmo</option>
-          <option value="lux">Lux</option>
-          <option value="zephyr">Zephyr</option>
-          <option value="darkly">Darkly</option>
-          <option value="cyborg">Cyborg</option>
-          <option value="solar">Solar</option>
-          <option value="vapor">Vapor</option>
-          <option value="pulse">Pulse</option>
-        </select>
       </div>
 
       <span class="nav-msg">{{ mensagem }}</span>
     </nav>
 
-    <!-- CONTAINER PRINCIPAL DO NOTEBOOK -->
+    <!-- MAIN NOTEBOOK CANVAS CONTAINER -->
     <div class="notebook-main-canvas-wrapper">
       <router-view></router-view>
     </div>
 
-    <!-- RODAPÉ PERMANENTE -->
+    <!-- PERSISTENT FOOTER -->
     <div class="footer-status desktop-only-footer">
-       📐 <strong>BlaiseNotebook v1.0</strong> | Object Pascal + Synopse mORMot 2 + Python4Delphi | Licença: <strong>Modified LGPL v2.1 (com Static Linking Exception)</strong> | Tema: <strong>{{ $theme.current.toUpperCase() }}</strong>
+       📐 <strong>BlaiseNotebook v1.0</strong> | Object Pascal + Synopse mORMot 2 + Python4Delphi | License: <strong>Modified LGPL v2.1 (with Static Linking Exception)</strong> | Theme: <strong>{{ $theme.current.toUpperCase() }}</strong>
     </div>
   </div>
 </template>
@@ -60,7 +106,7 @@
   }
 
   data:
-    mensagem: string = 'Ciência de Dados & IA em Object Pascal';
+    mensagem: string = 'Data Science & AI in Object Pascal';
 
   provide:
     begin
@@ -77,22 +123,10 @@
     begin
       TJSObject(this['$store'])['appVersion'] := '1.0.0-SCIENTIFIC';
       TJSObject(this['$store'])['user'] := 'Pascal Scientist 🔬';
-
-      I18nAddMessages('pt', '{"nav":{"notebook":"Notebook 📐"}}');
-      I18nAddMessages('en', '{"nav":{"notebook":"Notebook 📐"}}');
-      I18nSetLocale('pt');
+      ThemeSet('flatly');
     end;
 
   methods:
-    procedure onThemeSelect(e: JSValue);
-    var
-      sel: string;
-    begin
-      sel := string(TJSObject(TJSObject(e)['target'])['value']);
-      if sel <> '' then
-        ThemeSet(sel);
-    end;
-
     procedure toggleDrawer;
     begin
       TriggerRef(this, 'appDrawer', 'toggle');
@@ -101,6 +135,87 @@
     procedure closeDrawer;
     begin
       TriggerRef(this, 'appDrawer', 'close');
+    end;
+
+    { Dispatches project menu events to BvNotebook }
+    procedure onNewProject;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:new-project'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onOpenProject;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:open-project'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onSaveProject;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:save-project'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onSaveProjectAs;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:save-as'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onExportPascal;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:export-pascal'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onCloseProject;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:close-project'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onRunAll;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:run-all'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onInterruptAll;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:interrupt-all'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onRestartKernel;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:restart-kernel'));
+      end;
+      this.closeDrawer();
+    end;
+
+    procedure onClearOutputs;
+    begin
+      asm
+        window.dispatchEvent(new CustomEvent('blaise:clear-outputs'));
+      end;
+      this.closeDrawer();
     end;
 
   { Router Configuration: Maps URI hashes to Component Tags }
@@ -115,20 +230,100 @@
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f8fafc; color: #1e293b; }
   .navbar { background: #0f172a; padding: 10px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; border-bottom: 1px solid #1e293b; }
   .brand { color: #10b981; font-size: 19px; font-weight: 700; letter-spacing: -0.3px; }
-  .lang-switcher { display: flex; gap: 6px; margin-left: auto; }
-  .lang-btn { background: rgba(255,255,255,0.08); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 4px 8px; font-size: 12px; border-radius: 4px; cursor: pointer; }
-  .lang-btn:hover { background: rgba(255,255,255,0.2); }
-  .lang-btn.active-lang { background: #10b981; color: white; border-color: #10b981; font-weight: bold; }
-  .theme-switcher { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
-  .theme-toggle-btn { background: rgba(255,255,255,0.08); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 4px 8px; font-size: 13px; border-radius: 4px; cursor: pointer; }
-  .theme-toggle-btn:hover { background: rgba(255,255,255,0.2); }
-  .theme-select { background: #1e293b; color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 4px 6px; font-size: 12px; border-radius: 4px; outline: none; cursor: pointer; }
+  .theme-switcher { display: flex; align-items: center; margin-left: auto; }
+  .theme-toggle-btn { background: rgba(255,255,255,0.08); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.2); padding: 5px 10px; font-size: 14px; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+  .theme-toggle-btn:hover { background: rgba(255,255,255,0.2); border-color: #10b981; }
   .drawer-btn { background: rgba(255,255,255,0.12); color: #ecf0f1; border: 1px solid rgba(255,255,255,0.25); border-radius: 4px; padding: 5px 10px; font-size: 16px; cursor: pointer; transition: background 0.2s; }
   .drawer-btn:hover { background: rgba(255,255,255,0.25); }
-  .drawer-nav { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
-  .drawer-link { color: inherit; text-decoration: none; padding: 10px 14px; border-radius: 6px; font-size: 15px; font-weight: 500; display: block; transition: all 0.2s; }
-  .drawer-link:hover { background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 600; }
-  .nav-msg { color: #94a3b8; font-size: 12px; }
+
+  /* Drawer Menu Styles */
+  .drawer-nav { display: flex; flex-direction: column; gap: 4px; padding: 10px 4px 20px 4px; }
+  .drawer-section-title { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 12px 4px 12px; }
+  .drawer-item-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .drawer-item-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+  .drawer-item-primary {
+    color: #059669;
+    font-weight: 600;
+  }
+  .drawer-item-primary:hover {
+    background: rgba(16, 185, 129, 0.12);
+    color: #047857;
+  }
+  .drawer-item-warning {
+    color: #d97706;
+  }
+  .drawer-item-warning:hover {
+    background: #fef3c7;
+    color: #b45309;
+  }
+  .drawer-item-danger {
+    color: #e11d48;
+  }
+  .drawer-item-danger:hover {
+    background: #ffe4e6;
+    color: #be123c;
+  }
+  .d-icon { font-size: 16px; flex-shrink: 0; }
+  .d-text { flex: 1; }
+  .d-shortcut {
+    font-size: 10.5px;
+    background: rgba(0,0,0,0.05);
+    color: #64748b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+  .drawer-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 8px 4px;
+  }
+  .drawer-info-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 6px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 11.5px;
+    color: #64748b;
+  }
+  .drawer-info-box .info-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .drawer-info-box code {
+    background: #e2e8f0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 10.5px;
+    color: #0f172a;
+  }
+  .drawer-info-box strong {
+    color: #059669;
+  }
+
+  .nav-msg { color: #94a3b8; font-size: 12px; margin-left: 12px; }
   .notebook-main-canvas-wrapper { width: 100%; min-height: calc(100vh - 80px); padding-bottom: 40px; }
   @media (max-width: 768px) {
     .desktop-only-footer { display: none; }
@@ -140,6 +335,25 @@
   /* Dark Mode Integration */
   html[data-bs-theme="dark"] body, body.theme-dark {
     background: #0b0f19;
+    color: #e2e8f0;
+  }
+  html[data-bs-theme="dark"] .drawer-item-btn {
+    color: #cbd5e1;
+  }
+  html[data-bs-theme="dark"] .drawer-item-btn:hover {
+    background: #1e293b;
+    color: #ffffff;
+  }
+  html[data-bs-theme="dark"] .drawer-divider {
+    background: #334155;
+  }
+  html[data-bs-theme="dark"] .drawer-info-box {
+    background: #0f172a;
+    border-color: #334155;
+    color: #94a3b8;
+  }
+  html[data-bs-theme="dark"] .drawer-info-box code {
+    background: #1e293b;
     color: #e2e8f0;
   }
 </style>

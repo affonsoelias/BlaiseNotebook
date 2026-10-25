@@ -10,7 +10,7 @@
     {
       "id": "cell_intro",
       "type": "markdown",
-      "source": "# 🔬 BlaiseNotebook: Ciência de Dados & IA em Object Pascal\n\nBem-vindo ao **BlaiseNotebook** — o primeiro ambiente interativo de computação científica em Object Pascal (semelhante ao Jupyter Notebook e Google Colab).\n\n### ⚡ Recursos Principais:\n- **Motor Nativo Pascal**: Computação numérica e álgebra linear de alto desempenho compiladas com Free Pascal.\n- **Ponte Científica Python (Python4Delphi)**: Acesso transparente a **NumPy**, **Pandas** e **Scikit-learn** dentro das rotinas Pascal.\n- **Visualização Reativa com Chart.js (`<bv-chart>`)**: Todos os gráficos são renderizados interativamente via Canvas **diretamente abaixo de cada célula de código**.\n\n> 💡 **Como executar:** Clique em qualquer célula de código abaixo e pressione `Shift + Enter` para compilar e executar em tempo real no kernel mORMot 2!",
+      "source": "# 🔬 BlaiseNotebook: Data Science & AI in Object Pascal\n\nWelcome to **BlaiseNotebook** — the first interactive scientific computing environment for Object Pascal (similar to Jupyter Notebook and Google Colab).\n\n### ⚡ Key Features:\n- **Native Pascal Engine**: High-performance numerical computing and linear algebra compiled with Free Pascal.\n- **Python Scientific Bridge (Python4Delphi)**: Seamless access to **NumPy**, **Pandas**, and **Scikit-learn** directly within Pascal workflows.\n- **Reactive Visualizations with Chart.js (`<bv-chart>`)**: Hardware-accelerated canvas charts rendered **directly below each code cell**.\n\n> 💡 **How to run:** Click on any code cell below and press `Shift + Enter` to compile and execute in real time on the mORMot 2 kernel!",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,
@@ -19,7 +19,7 @@
     {
       "id": "cell_math_native",
       "type": "code",
-      "source": "// 1. Processamento Estatístico e Regressão Linear Nativa em Pascal\nvar\n  V: TVector;\n  Media, Desvio: Double;\nbegin\n  Writeln('=== Processamento Numérico Nativo em Free Pascal ===');\n  V := TVector.CreateRandom(50, 10.0, 100.0);\n  Media := V.CalculaMedia;\n  Desvio := V.CalculaDesvioPadrao;\n  Writeln(Format('Vetor gerado: N=%d observações | Média=%.2f | Desvio Padrão=%.2f', [V.Count, Media, Desvio]));\n\n  // Renderiza gráfico interativo com Chart.js (<bv-chart>) diretamente abaixo do código\n  ShowChart(\n    'Distribuição Amostral Simulada (Pascal Nativo)',\n    'bar',\n    '{\"labels\":[\"Cluster 1\",\"Cluster 2\",\"Cluster 3\",\"Cluster 4\",\"Cluster 5\"],\"datasets\":[{\"label\":\"Frequência Observada\",\"data\":[15.4, 28.2, 45.1, 62.0, 78.5],\"backgroundColor\":\"#10b981\"}]}'\n  );\nend;",
+      "source": "// 1. Statistical Processing and Native Linear Regression in Pascal\nvar\n  V: TVector;\n  Mean, StdDev: Double;\nbegin\n  Writeln('=== Native Numerical Processing in Free Pascal ===');\n  V := TVector.CreateRandom(50, 10.0, 100.0);\n  Mean := V.CalculaMedia;\n  StdDev := V.CalculaDesvioPadrao;\n  Writeln(Format('Generated Vector: N=%d observations | Mean=%.2f | StdDev=%.2f', [V.Count, Mean, StdDev]));\n\n  // Render interactive Chart.js (<bv-chart>) directly below code\n  ShowChart(\n    'Simulated Sample Distribution (Native Pascal)',\n    'bar',\n    '{\"labels\":[\"Cluster 1\",\"Cluster 2\",\"Cluster 3\",\"Cluster 4\",\"Cluster 5\"],\"datasets\":[{\"label\":\"Observed Frequency\",\"data\":[15.4, 28.2, 45.1, 62.0, 78.5],\"backgroundColor\":\"#10b981\"}]}'\n  );\nend;",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,
@@ -28,7 +28,7 @@
     {
       "id": "cell_md_python",
       "type": "markdown",
-      "source": "## 🐍 Ponte Científica Python4Delphi / Python4Lazarus\n\nNesta célula, o Object Pascal invoca a API do CPython 3.13 via **`BlaisePyKernel`**:\n1. Gera um DataFrame do **Pandas** com métricas de treinamento de IA (Épocas, Loss e Acurácia).\n2. Exibe a tabela interativa responsiva através de `ShowPyDataFrame`.\n3. Plota a curva de convergência com **`<bv-chart>`** interativo logo abaixo da célula de código!",
+      "source": "## 🐍 Python4Delphi / Python4Lazarus Scientific Bridge\n\nIn this cell, Object Pascal calls the CPython 3.13 API via **`BlaisePyKernel`**:\n1. Generates a **Pandas** DataFrame with AI training metrics (Iterations, Loss, and Accuracy).\n2. Displays a responsive interactive table via `ShowPyDataFrame`.\n3. Plots model convergence curve with **`<bv-chart>`** directly underneath the code cell!",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,
@@ -37,7 +37,7 @@
     {
       "id": "cell_python_bridge",
       "type": "code",
-      "source": "// 2. Machine Learning com Pandas & Scikit-Learn via BlaisePyKernel\nvar\n  PyCode: string;\nbegin\n  Writeln('[+] Invocando CPython 3.13 API via BlaisePyKernel...');\n\n  PyCode :=\n    'import pandas as pd, numpy as np'#10 +\n    'np.random.seed(42)'#10 +\n    'df = pd.DataFrame({'#10 +\n    '  \"Iteracao\": [1, 2, 3, 4, 5, 6],'#10 +\n    '  \"Loss_Treino\": [0.85, 0.62, 0.41, 0.28, 0.15, 0.08],'#10 +\n    '  \"Acuracia\": [0.65, 0.74, 0.83, 0.89, 0.95, 0.98]'#10 +\n    '})'#10 +\n    'print(\"[Python] DataFrame processado com\", len(df), \"iterações\")';\n\n  PyRun(PyCode);\n\n  // Exibe o DataFrame como tabela interativa abaixo do código\n  ShowPyDataFrame('df', 'Histórico de Treinamento da IA (Pandas)', 10);\n\n  // Exibe a curva de convergência com Chart.js (<bv-chart>) abaixo do código\n  ShowChart(\n    'Convergência do Modelo (Acurácia vs Iteração)',\n    'line',\n    '{\"labels\":[\"Iter 1\",\"Iter 2\",\"Iter 3\",\"Iter 4\",\"Iter 5\",\"Iter 6\"],\"datasets\":[{\"label\":\"Acurácia\",\"data\":[0.65,0.74,0.83,0.89,0.95,0.98],\"borderColor\":\"#2563eb\",\"backgroundColor\":\"rgba(37,99,235,0.15)\",\"tension\":0.3,\"fill\":true}]}'\n  );\nend;",
+      "source": "// 2. Machine Learning with Pandas & Scikit-Learn via BlaisePyKernel\nvar\n  PyCode: string;\nbegin\n  Writeln('[+] Invoking CPython 3.13 API via BlaisePyKernel...');\n\n  PyCode :=\n    'import pandas as pd, numpy as np'#10 +\n    'np.random.seed(42)'#10 +\n    'df = pd.DataFrame({'#10 +\n    '  \"Iteration\": [1, 2, 3, 4, 5, 6],'#10 +\n    '  \"Train_Loss\": [0.85, 0.62, 0.41, 0.28, 0.15, 0.08],'#10 +\n    '  \"Accuracy\": [0.65, 0.74, 0.83, 0.89, 0.95, 0.98]'#10 +\n    '})'#10 +\n    'print(\"[Python] DataFrame processed with\", len(df), \"iterations\")';\n\n  PyRun(PyCode);\n\n  // Display DataFrame as an interactive table below the cell\n  ShowPyDataFrame('df', 'AI Training History (Pandas)', 10);\n\n  // Display convergence curve with Chart.js (<bv-chart>) below the cell\n  ShowChart(\n    'Model Convergence (Accuracy vs Iteration)',\n    'line',\n    '{\"labels\":[\"Iter 1\",\"Iter 2\",\"Iter 3\",\"Iter 4\",\"Iter 5\",\"Iter 6\"],\"datasets\":[{\"label\":\"Accuracy\",\"data\":[0.65,0.74,0.83,0.89,0.95,0.98],\"borderColor\":\"#2563eb\",\"backgroundColor\":\"rgba(37,99,235,0.15)\",\"tension\":0.3,\"fill\":true}]}'\n  );\nend;",
       "execution_count": 0,
       "status": "idle",
       "execution_time_ms": 0,

@@ -1,18 +1,18 @@
 <template>
   <div class="bv-code-editor-root">
-    <!-- BARRA SUPERIOR DO EDITOR DE CÓDIGO -->
+    <!-- CODE EDITOR TOPBAR -->
     <div class="bv-editor-topbar">
       <div class="bv-editor-lang-tag">
         <span class="lang-dot"></span>
         <span class="lang-name">Object Pascal</span>
       </div>
       <div class="bv-editor-shortcuts">
-        <span class="shortcut-pill"><code>Shift + Enter</code> Executar</span>
-        <span class="shortcut-pill"><code>Tab</code> Indentar</span>
+        <span class="shortcut-pill"><code>Shift + Enter</code> Run</span>
+        <span class="shortcut-pill"><code>Tab</code> Indent</span>
       </div>
     </div>
 
-    <!-- ÁREA PRINCIPAL DO EDITOR COM GUTTER DE LINHAS -->
+    <!-- MAIN EDITOR AREA WITH LINE GUTTER -->
     <div class="bv-editor-wrapper">
       <div class="bv-editor-gutter">
         <div b-for="line in lineNumbers" class="gutter-num">{{ line }}</div>
@@ -41,7 +41,7 @@
 
   props:
     value: string = '';
-    placeholder: string = '// Escreva seu código Object Pascal aqui... (Shift + Enter para executar)';
+    placeholder: string = '// Write your Object Pascal code here... (Shift + Enter to run)';
     readonly: boolean = false;
 
   data:
@@ -102,71 +102,59 @@
     procedure handleKeyDown(e: JSValue);
     begin
       asm
-        const evt = e || window.event;
-        if (!evt) return;
+        const event = e;
+        if (!event) return;
 
-        // Shift + Enter: Execute cell and advance
-        if (evt.key === 'Enter' && evt.shiftKey) {
-          evt.preventDefault();
-          if (this.$emit) this.$emit('execute');
+        // Shift + Enter: Execute code cell
+        if (event.key === 'Enter' && event.shiftKey) {
+          event.preventDefault();
+          if (this.$emit) {
+            this.$emit('run');
+          }
           return;
         }
 
-        // Ctrl + Enter: Execute cell in-place
-        if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) {
-          evt.preventDefault();
-          if (this.$emit) this.$emit('execute-stay');
+        // Ctrl + Enter: Execute code cell in-place
+        if (event.key === 'Enter' && event.ctrlKey) {
+          event.preventDefault();
+          if (this.$emit) {
+            this.$emit('run');
+          }
           return;
         }
 
         // Tab: Insert 2 spaces
-        if (evt.key === 'Tab') {
-          evt.preventDefault();
-          const ta = evt.target;
-          if (!ta) return;
-          const start = ta.selectionStart;
-          const selEnd = ta.selectionEnd;
-          const curVal = ta.value || '';
-          ta.value = curVal.substring(0, start) + '  ' + curVal.substring(selEnd);
-          ta.selectionStart = ta.selectionEnd = start + 2;
-          this.value = ta.value;
+        if (event.key === 'Tab') {
+          event.preventDefault();
+          const target = event.target;
+          const start = target.selectionStart;
+          const endPos = target.selectionEnd;
+          const val = target.value;
+
+          target.value = val.substring(0, start) + '  ' + val.substring(endPos);
+          target.selectionStart = target.selectionEnd = start + 2;
+
+          this.value = target.value;
           this.updateLines();
-          if (this.$emit) this.$emit('input', this.value);
+          if (this.$emit) {
+            this.$emit('input', this.value);
+          }
         }
       end;
     end;
 
   mounted:
     begin
-      asm
-        const self = this;
-        setTimeout(function() {
-          self.updateLines();
-        }, 20);
-      end;
+      this.updateLines();
     end;
-
-  watch:
-    value:
-      begin
-        asm
-          const self = this;
-          setTimeout(function() {
-            self.updateLines();
-          }, 10);
-        end;
-      end;
 </script>
 
 <style>
   .bv-code-editor-root {
-    display: flex;
-    flex-direction: column;
-    border-radius: 8px;
-    background: #181a1f;
-    border: 1px solid #282c34;
+    background: #1e1e1e;
+    border: 1px solid #334155;
+    border-radius: 6px;
     overflow: hidden;
-    box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
   }
 
@@ -174,9 +162,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #21252b;
-    padding: 6px 12px;
-    border-bottom: 1px solid #282c34;
+    background: #252526;
+    padding: 4px 12px;
+    border-bottom: 1px solid #333333;
     font-size: 11px;
   }
 
@@ -184,16 +172,20 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    color: #98c379;
-    font-weight: 600;
   }
 
   .lang-dot {
     width: 8px;
     height: 8px;
-    background: #98c379;
     border-radius: 50%;
-    display: inline-block;
+    background: #3b82f6;
+  }
+
+  .lang-name {
+    color: #9cdcfe;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .bv-editor-shortcuts {
@@ -202,40 +194,39 @@
   }
 
   .shortcut-pill {
-    color: #5c6370;
-    font-size: 11px;
+    color: #858585;
+    font-size: 10.5px;
   }
 
   .shortcut-pill code {
-    background: #2c313a;
-    color: #abb2bf;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-family: inherit;
-    font-size: 10.5px;
+    background: #333333;
+    color: #cccccc;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10px;
   }
 
   .bv-editor-wrapper {
     display: flex;
     min-height: 80px;
-    position: relative;
     background: #1e1e1e;
   }
 
   .bv-editor-gutter {
     width: 44px;
-    padding: 12px 6px 12px 0;
-    text-align: right;
+    background: #1e1e1e;
+    border-right: 1px solid #2d2d2d;
+    padding: 8px 0;
     user-select: none;
-    color: #5c6370;
-    font-size: 13px;
-    line-height: 20px;
-    border-right: 1px solid #282c34;
-    background: #181a1f;
+    text-align: right;
   }
 
   .gutter-num {
-    height: 20px;
+    padding-right: 10px;
+    font-size: 12px;
+    line-height: 20px;
+    color: #6e7681;
+    font-family: inherit;
   }
 
   .bv-editor-textarea-wrap {
@@ -246,22 +237,24 @@
   .bv-code-textarea {
     width: 100%;
     min-height: 80px;
+    padding: 8px 12px;
     background: transparent;
     border: none;
     outline: none;
     resize: none;
-    padding: 12px 14px;
-    color: #abb2bf;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    font-family: inherit;
     font-size: 13px;
     line-height: 20px;
+    color: #d4d4d4;
+    caret-color: #58a6ff;
     white-space: pre;
-    tab-size: 2;
-    overflow-y: hidden;
+    overflow-wrap: normal;
+    overflow-x: auto;
+    box-sizing: border-box;
   }
 
   .bv-code-textarea::placeholder {
-    color: #5c6370;
+    color: #6a737d;
     font-style: italic;
   }
 </style>

@@ -154,6 +154,17 @@ begin
             finally
               FCurrentSender := nil;
             end;
+          end
+          else if (Action = 'interrupt_cell') or (Action = 'interrupt') then
+          begin
+            CellId := Doc.GetValueOrDefault('cell_id', '');
+            FRunner.Interrupt(string(CellId));
+            SendFrameJson(Sender, '{"event":"interrupt_reply","status":"interrupted"}');
+          end
+          else if Action = 'interrupt_all' then
+          begin
+            FRunner.Interrupt('');
+            SendFrameJson(Sender, '{"event":"interrupt_reply","status":"interrupted"}');
           end;
         finally
           Doc.Clear;

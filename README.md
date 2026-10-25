@@ -98,7 +98,7 @@ A complete scientific demo project is provided in the repository:
 3. **Cell 3 (Markdown)**: Explains the Python4Delphi bridge.
 4. **Cell 4 (Python4Delphi & Scikit-learn)**: Uses Pandas and CPython 3.13 to simulate machine learning iterations, outputs an interactive table (`ShowPyDataFrame`), and plots an accuracy convergence curve with `<bv-chart>` directly under the code cell!
 
-You can load this file anytime using the **📂 Abrir** button on the toolbar or simply launch the notebook (which preloads it automatically).
+You can load this file anytime using the **📂 Open** button on the toolbar or simply launch the notebook (which preloads it automatically).
 
 ---
 

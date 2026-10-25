@@ -3,15 +3,15 @@
     <div class="bv-md-header">
       <div class="bv-md-badge">
         <span class="md-icon">📝</span>
-        <span class="md-text">Documentação / Markdown</span>
+        <span class="md-text">Documentation / Markdown</span>
       </div>
       <div class="bv-md-actions">
-        <button b-if="!isEditing" class="bv-md-btn" @click="startEdit">✏️ Editar (Duplo Clique)</button>
-        <button b-if="isEditing" class="bv-md-btn btn-save" @click="finishEdit">👁️ Concluir Edição (Ctrl+Enter)</button>
+        <button b-if="!isEditing" class="bv-md-btn" @click="startEdit">✏️ Edit (Double-click)</button>
+        <button b-if="isEditing" class="bv-md-btn btn-save" @click="finishEdit">👁️ Done Editing (Ctrl+Enter)</button>
       </div>
     </div>
 
-    <!-- MODO VISUALIZAÇÃO -->
+    <!-- VIEW MODE -->
     <div
       b-if="!isEditing"
       b-ref="renderedDiv"
@@ -19,17 +19,17 @@
       @dblclick="startEdit"
     ></div>
 
-    <!-- MODO EDIÇÃO -->
+    <!-- EDIT MODE -->
     <div b-if="isEditing" class="bv-md-editor-wrap">
       <textarea
         b-ref="mdTextarea"
         class="bv-md-textarea"
-        placeholder="# Digite seu Markdown aqui..."
+        placeholder="# Enter Markdown here..."
         @input="handleInput"
         @keydown="handleKeyDown"
       ></textarea>
       <div class="bv-md-editor-hint">
-        Dica: Suporta títulos (#, ##), listas (-), negrito (**), código (`) e blocos de equações. Pressione <code>Ctrl + Enter</code> para renderizar.
+        Hint: Supports headings (#, ##), lists (-), bold (**), code (`), and equation blocks. Press <code>Ctrl + Enter</code> to render.
       </div>
     </div>
   </div>
@@ -42,7 +42,7 @@
   }
 
   props:
-    value: string = '# Título da Seção\nEscreva a documentação do seu experimento ou análise científica aqui.';
+    value: string = '# Section Title\nDescribe your experiment, analysis, or methodology here.';
     editable: boolean = true;
 
   data:
@@ -56,7 +56,7 @@
       asm
         const text = this.value || '';
         if (!text.trim()) {
-          return '<p class="bv-md-empty"><em>(Célula de documentação vazia. Dê duplo clique para editar.)</em></p>';
+          return '<p class="bv-md-empty"><em>(Empty documentation cell. Double-click to edit.)</em></p>';
         }
 
         // Basic clean parser for Markdown:
@@ -198,27 +198,22 @@
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    overflow: hidden;
-    transition: all 0.2s ease;
-  }
-
-  .bv-markdown-root:hover {
-    border-color: #cbd5e1;
+    padding: 12px 16px;
+    transition: all 0.2s;
   }
 
   .bv-md-editing {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
   }
 
   .bv-md-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: #f8fafc;
-    padding: 6px 12px;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
     border-bottom: 1px solid #f1f5f9;
-    font-size: 11.5px;
   }
 
   .bv-md-badge {
@@ -226,7 +221,8 @@
     align-items: center;
     gap: 6px;
     color: #64748b;
-    font-weight: 500;
+    font-size: 11px;
+    font-weight: 600;
   }
 
   .bv-md-actions {
@@ -235,155 +231,166 @@
   }
 
   .bv-md-btn {
-    background: #ffffff;
-    border: 1px solid #cbd5e1;
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-size: 11px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
     color: #475569;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
     cursor: pointer;
     transition: all 0.15s;
   }
 
   .bv-md-btn:hover {
-    background: #f1f5f9;
-    color: #1e293b;
+    background: #e2e8f0;
+    color: #0f172a;
   }
 
   .btn-save {
-    background: #3b82f6;
-    color: #ffffff;
-    border-color: #2563eb;
+    background: #10b981;
+    color: white;
+    border-color: #059669;
     font-weight: 600;
   }
 
   .btn-save:hover {
-    background: #2563eb;
-    color: #ffffff;
+    background: #059669;
+    color: white;
   }
 
   .bv-md-rendered {
-    padding: 16px 20px;
+    min-height: 40px;
     cursor: pointer;
-    min-height: 50px;
+    font-size: 14.5px;
     line-height: 1.6;
     color: #1e293b;
-    font-size: 14px;
-  }
-
-  .bv-md-h1 {
-    font-size: 22px;
-    margin-bottom: 12px;
-    color: #0f172a;
-    border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 6px;
-  }
-
-  .bv-md-h2 {
-    font-size: 18px;
-    margin-top: 14px;
-    margin-bottom: 8px;
-    color: #1e293b;
-    border-bottom: 1px solid #f1f5f9;
-    padding-bottom: 4px;
-  }
-
-  .bv-md-h3 {
-    font-size: 15px;
-    margin-top: 10px;
-    margin-bottom: 6px;
-    color: #334155;
-  }
-
-  .bv-md-p {
-    margin-bottom: 8px;
-  }
-
-  .bv-md-quote {
-    border-left: 4px solid #10b981;
-    padding: 8px 14px;
-    background: #f0fdf4;
-    color: #166534;
-    border-radius: 0 6px 6px 0;
-    margin: 10px 0;
-    font-style: italic;
-  }
-
-  .bv-md-ul {
-    padding-left: 24px;
-    margin-bottom: 10px;
-  }
-
-  .bv-md-li {
-    margin-bottom: 4px;
-  }
-
-  .bv-md-pre {
-    background: #1e1e1e;
-    color: #d4d4d4;
-    padding: 12px;
-    border-radius: 6px;
-    overflow-x: auto;
-    font-family: monospace;
-    font-size: 12.5px;
-    margin: 10px 0;
-  }
-
-  .bv-md-code {
-    background: #f1f5f9;
-    color: #0f172a;
-    padding: 2px 5px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 12.5px;
-    border: 1px solid #e2e8f0;
-  }
-
-  .bv-md-math-block {
-    background: #f8fafc;
-    border: 1px dashed #cbd5e1;
-    border-radius: 6px;
-    padding: 10px;
-    margin: 10px 0;
-    font-family: monospace;
-    text-align: center;
-    color: #0284c7;
-    font-size: 13.5px;
-  }
-
-  .bv-md-math-inline {
-    color: #0284c7;
-    font-weight: 600;
   }
 
   .bv-md-empty {
     color: #94a3b8;
     font-style: italic;
+    margin: 8px 0;
+  }
+
+  .bv-md-h1 {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 12px 0 8px 0;
+    color: #0f172a;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+  }
+
+  .bv-md-h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 10px 0 6px 0;
+    color: #1e293b;
+  }
+
+  .bv-md-h3 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 8px 0 4px 0;
+    color: #334155;
+  }
+
+  .bv-md-p {
+    margin: 6px 0;
+  }
+
+  .bv-md-code {
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+  }
+
+  .bv-md-pre {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 10px 14px;
+    border-radius: 6px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    margin: 8px 0;
+  }
+
+  .bv-md-quote {
+    border-left: 3px solid #3b82f6;
+    background: #eff6ff;
+    padding: 6px 12px;
+    margin: 8px 0;
+    color: #1e40af;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .bv-md-ul {
+    padding-left: 20px;
+    margin: 6px 0;
+  }
+
+  .bv-md-li {
+    margin-bottom: 3px;
+  }
+
+  .bv-md-math-block {
+    background: #faf5ff;
+    border: 1px dashed #c084fc;
+    color: #6b21a8;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 8px 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+  }
+
+  .bv-md-math-inline code {
+    background: #faf5ff;
+    color: #7e22ce;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .bv-md-link {
+    color: #2563eb;
+    text-decoration: underline;
   }
 
   .bv-md-editor-wrap {
-    padding: 12px;
-    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .bv-md-textarea {
     width: 100%;
-    min-height: 120px;
+    min-height: 100px;
+    padding: 10px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    padding: 12px;
-    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
-    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
     line-height: 1.5;
     outline: none;
-    resize: vertical;
-    background: #ffffff;
-    color: #1e293b;
+    resize: none;
+    box-sizing: border-box;
+    background: #f8fafc;
+    color: #0f172a;
   }
 
   .bv-md-editor-hint {
-    margin-top: 6px;
     font-size: 11px;
     color: #64748b;
+  }
+
+  .bv-md-editor-hint code {
+    background: #e2e8f0;
+    padding: 1px 4px;
+    border-radius: 3px;
   }
 </style>
