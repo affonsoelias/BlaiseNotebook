@@ -50,12 +50,12 @@ flowchart LR
 > **Goal:** Desacoplar 100% as bibliotecas do servidor nativo (`server.exe`), modularizando cada biblioteca (Pandas, Scikit-Learn, Math, etc.) em sua própria pasta isolada em `packages/external/`, com auto-descoberta dinâmica no Free Pascal, suporte nativo a `uses` nas células e facilidade de criação/distribuição de novos pacotes.
 
 #### 2.1 Estrutura de Pastas e Separação Modular Granular
-- [ ] **`packages/core/`**: Núcleo mínimo essencial do notebook (`BlaiseOutput.pas`, metadados de I/O, tabelas e gráficos).
-- [ ] **`packages/external/python_bridge/`**: Ponte isolada de comunicação com CPython/Python4Delphi (`BlaisePyKernel.pas`).
-- [ ] **`packages/external/pandas/`**: Wrapper oficial do Pandas (`BlaisePandas.pas`, `requirements.txt`, `package.json`).
-- [ ] **`packages/external/sklearn/`**: Wrapper oficial do Scikit-Learn (`BlaiseSklearn.pas`, `requirements.txt`, `package.json`).
-- [ ] **`packages/external/math/`**: Pacote oficial de álgebra e estatística nativa Pascal (`BlaiseMathKernel.pas`, `package.json`).
-- [ ] **`packages/external/datascience/`**: Unit de compatibilidade retroativa (`BlaiseDataScience.pas` agregando `BlaisePandas` e `BlaiseSklearn`) garantindo que nenhum notebook existente quebre.
+- [x] **`packages/core/`**: Núcleo mínimo essencial do notebook (`BlaiseOutput.pas`, metadados de I/O, tabelas e gráficos).
+- [x] **`packages/external/python_bridge/`**: Ponte isolada de comunicação com CPython/Python4Delphi (`BlaisePyKernel.pas`).
+- [x] **`packages/external/pandas/`**: Wrapper oficial do Pandas (`BlaisePandas.pas`, `requirements.txt`, `package.json`).
+- [x] **`packages/external/sklearn/`**: Wrapper oficial do Scikit-Learn (`BlaiseSklearn.pas`, `requirements.txt`, `package.json`).
+- [x] **`packages/external/math/`**: Pacote oficial de álgebra e estatística nativa Pascal (`BlaiseMathKernel.pas`, `package.json`).
+- [x] **`packages/external/datascience/`**: Unit de compatibilidade retroativa (`BlaiseDataScience.pas` agregando `BlaisePandas` e `BlaiseSklearn`) garantindo que nenhum notebook existente quebre.
 
 #### 2.2 Auto-Descoberta Dinâmica no `uCodeRunner.pas`
 - [ ] **Descoberta Automática de Subpastas (`DiscoverPackageUnits`)**: Varredura em tempo de execução de todas as subpastas em `packages/core/` e `packages/external/*`, adicionando os caminhos ao `-Fu` do FPC sem necessidade de reiniciar o servidor.

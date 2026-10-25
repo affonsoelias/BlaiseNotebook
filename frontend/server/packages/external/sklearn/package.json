@@ -1,0 +1,10 @@
+{
+  "name": "blaise-sklearn",
+  "version": "1.0.0",
+  "description": "Strongly-typed Object Pascal wrapper for Scikit-Learn Machine Learning models",
+  "main": "BlaiseSklearn.pas",
+  "type": "wrapper",
+  "dependencies": {
+    "blaise-pandas": "^1.0.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "name": "blaise-pandas",
+  "version": "1.0.0",
+  "description": "Strongly-typed Object Pascal wrapper for Python Pandas & NumPy DataFrames",
+  "main": "BlaisePandas.pas",
+  "type": "wrapper",
+  "dependencies": {
+    "blaise-core": "^1.0.0",
+    "blaise-python-bridge": "^1.0.0",
+    "blaise-math": "^1.0.0"
+  }
+}
