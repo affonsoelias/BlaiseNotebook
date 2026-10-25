@@ -47,6 +47,7 @@
 
   data:
     isEditing: boolean = false;
+    currentText: string = '';
 
   computed:
     function renderedHtml: string;
@@ -54,7 +55,7 @@
       raw: string;
     begin
       asm
-        const text = this.value || '';
+        const text = this.currentText || this.value || '';
         if (!text.trim()) {
           return '<p class="bv-md-empty"><em>(Empty documentation cell. Double-click to edit.)</em></p>';
         }
@@ -133,15 +134,17 @@
       this['isEditing'] := true;
       asm
         const self = this;
+        const initialVal = self.currentText || self.value || '';
+        self.currentText = initialVal;
         setTimeout(function() {
           const ta = self.$refs ? self.$refs.mdTextarea : null;
           if (ta) {
-            ta.value = self.value || '';
+            ta.value = initialVal;
             ta.focus();
             ta.style.height = 'auto';
             ta.style.height = Math.max(100, ta.scrollHeight) + 'px';
           }
-        }, 50);
+        }, 30);
       end;
     end;
 
@@ -149,8 +152,15 @@
     begin
       this['isEditing'] := false;
       asm
+        const ta = this.$refs ? this.$refs.mdTextarea : null;
+        const finalVal = ta ? ta.value : (this.currentText || this.value || '');
+        this.currentText = finalVal;
+        this.value = finalVal;
         this.renderHtmlContent();
-        if (this.$emit) this.$emit('change', this.value);
+        if (this.$emit) {
+          this.$emit('input', finalVal);
+          this.$emit('change', finalVal);
+        }
       end;
     end;
 
@@ -160,9 +170,13 @@
         const target = e && e.target ? e.target : null;
         if (target) {
           const newVal = target.value;
+          this.currentText = newVal;
+          this.value = newVal;
           target.style.height = 'auto';
           target.style.height = Math.max(100, target.scrollHeight) + 'px';
-          if (this.$emit) this.$emit('input', newVal);
+          if (this.$emit) {
+            this.$emit('input', newVal);
+          }
         }
       end;
     end;
@@ -182,6 +196,7 @@
   mounted:
     begin
       asm
+        this.currentText = this.value || '';
         this.renderHtmlContent();
       end;
     end;
@@ -190,6 +205,11 @@
     value:
       begin
         asm
+          this.currentText = this.value || '';
+          const ta = this.$refs ? this.$refs.mdTextarea : null;
+          if (ta && ta.value !== this.value) {
+            ta.value = this.value || '';
+          }
           this.renderHtmlContent();
         end;
       end;

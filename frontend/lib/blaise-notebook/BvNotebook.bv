@@ -1057,19 +1057,34 @@
       asm
         this._runQueue = [];
         this.isRunning = false;
-        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
-          try {
-            this._ws.send(JSON.stringify({
-              action: 'restart_kernel'
-            }));
-          } catch(e) {}
-        }
         for (let i = 0; i < (this.cells || []).length; i++) {
           const c = this.cells[i];
           if (c && c.status === 'running') {
             c.status = 'idle';
           }
         }
+        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+          try {
+            this._ws.send(JSON.stringify({
+              action: 'restart_kernel'
+            }));
+          } catch(e) {}
+        } else {
+          try {
+            this.connectWebSocket();
+          } catch(e) {}
+        }
+
+        // Instant visual feedback banner
+        this.undoToastMessage = '🔄 Kernel reiniciado com sucesso! Sessão e variáveis limpas.';
+        this.undoToastVisible = true;
+        if (this._toastTimer) clearTimeout(this._toastTimer);
+        const self = this;
+        this._toastTimer = setTimeout(() => {
+          self.undoToastVisible = false;
+          if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+        }, 4000);
+
         this.kernelStatus = 'connected';
         if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
       end;
@@ -1375,6 +1390,27 @@
       asm
         if (!msg) return;
         const self = this;
+
+        if (msg.event === 'kernel_restarted') {
+          self.isRunning = false;
+          self.kernelStatus = 'connected';
+          self.undoToastMessage = '🔄 Kernel reiniciado com sucesso! Sessão e variáveis limpas.';
+          self.undoToastVisible = true;
+          if (self._toastTimer) clearTimeout(self._toastTimer);
+          self._toastTimer = setTimeout(() => {
+            self.undoToastVisible = false;
+            if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+          }, 4000);
+          if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+          return;
+        }
+
+        if (msg.event === 'interrupt_reply') {
+          self.isRunning = false;
+          self.kernelStatus = 'connected';
+          if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+          return;
+        }
 
         // Find cell by cell_id
         const cell = (self.cells || []).find(c => c.id === msg.cell_id);

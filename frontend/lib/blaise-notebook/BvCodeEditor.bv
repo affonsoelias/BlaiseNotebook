@@ -19,10 +19,7 @@
         <div b-for="line in lineNumbers" class="gutter-num">{{ line }}</div>
       </div>
       <div class="bv-editor-textarea-wrap">
-        <!-- SYNTAX HIGHLIGHT LAYER (RENDERED BEHIND TEXTAREA) -->
-        <pre b-ref="highlightLayer" class="bv-highlight-layer" aria-hidden="true"></pre>
-
-        <!-- EDITABLE TRANSPARENT TEXTAREA (RECEIVES CARET & TYPING) -->
+        <!-- EDITABLE HIGH-CONTRAST PASCAL CODE TEXTAREA -->
         <textarea
           b-ref="codeTextarea"
           class="bv-code-textarea"
@@ -684,8 +681,6 @@
 
   /* TRANSPARENT EDITABLE TEXTAREA */
   .bv-code-textarea {
-    position: relative;
-    z-index: 2;
     width: 100%;
     min-height: 80px;
     margin: 0;
@@ -697,18 +692,18 @@
     white-space: pre;
     overflow-wrap: normal;
     overflow-x: auto;
-    background: transparent;
+    background: #1e1e1e !important;
+    color: #e2e8f0 !important;
     border: none;
     outline: none;
     resize: none;
-    color: transparent;
     caret-color: #58a6ff;
     tab-size: 2;
   }
 
   .bv-code-textarea::selection {
-    background: rgba(56, 139, 253, 0.35);
-    color: transparent;
+    background: rgba(56, 139, 253, 0.45);
+    color: #ffffff;
   }
 
   .bv-code-textarea::placeholder {
