@@ -6,21 +6,20 @@
         <span class="md-text">Documentation / Markdown</span>
       </div>
       <div class="bv-md-actions">
-        <button b-show="!isEditing" class="bv-md-btn" @click="startEdit">✏️ Edit (Double-click)</button>
-        <button b-show="isEditing" class="bv-md-btn btn-save" @click="finishEdit">👁️ Done Editing (Ctrl+Enter)</button>
+        <button class="bv-md-btn btn-edit" @click="startEdit">✏️ Edit (Double-click)</button>
+        <button class="bv-md-btn btn-save" @click="finishEdit">👁️ Done Editing (Ctrl+Enter)</button>
       </div>
     </div>
 
     <!-- VIEW MODE -->
     <div
-      b-show="!isEditing"
       b-ref="renderedDiv"
       class="bv-md-rendered"
       @dblclick="startEdit"
     ></div>
 
     <!-- EDIT MODE -->
-    <div b-show="isEditing" class="bv-md-editor-wrap">
+    <div class="bv-md-editor-wrap">
       <textarea
         b-ref="mdTextarea"
         class="bv-md-textarea"
@@ -117,15 +116,10 @@
     procedure renderHtmlContent;
     begin
       asm
-        const self = this;
-        const doRender = function() {
-          const el = self.$refs ? self.$refs.renderedDiv : null;
-          if (el) {
-            el.innerHTML = self.renderedHtml;
-          }
-        };
-        doRender();
-        setTimeout(doRender, 20);
+        const el = this.$refs ? this.$refs.renderedDiv : null;
+        if (el) {
+          el.innerHTML = this.renderedHtml;
+        }
       end;
     end;
 
@@ -136,15 +130,13 @@
         const self = this;
         const initialVal = self.currentText || self.value || '';
         self.currentText = initialVal;
-        setTimeout(function() {
-          const ta = self.$refs ? self.$refs.mdTextarea : null;
-          if (ta) {
-            ta.value = initialVal;
-            ta.focus();
-            ta.style.height = 'auto';
-            ta.style.height = Math.max(100, ta.scrollHeight) + 'px';
-          }
-        }, 30);
+        const ta = self.$refs ? self.$refs.mdTextarea : null;
+        if (ta) {
+          ta.value = initialVal;
+          ta.focus();
+          ta.style.height = 'auto';
+          ta.style.height = Math.max(100, ta.scrollHeight) + 'px';
+        }
       end;
     end;
 
@@ -155,7 +147,6 @@
         const ta = this.$refs ? this.$refs.mdTextarea : null;
         const finalVal = ta ? ta.value : (this.currentText || this.value || '');
         this.currentText = finalVal;
-        this.value = finalVal;
         this.renderHtmlContent();
         if (this.$emit) {
           this.$emit('input', finalVal);
@@ -171,7 +162,6 @@
         if (target) {
           const newVal = target.value;
           this.currentText = newVal;
-          this.value = newVal;
           target.style.height = 'auto';
           target.style.height = Math.max(100, target.scrollHeight) + 'px';
           if (this.$emit) {
@@ -189,6 +179,8 @@
         if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey)) {
           evt.preventDefault();
           this.finishEdit();
+        } else if (evt.key === 'Escape') {
+          this.finishEdit();
         }
       end;
     end;
@@ -197,25 +189,58 @@
     begin
       asm
         this.currentText = this.value || '';
+        const ta = this.$refs ? this.$refs.mdTextarea : null;
+        if (ta) {
+          ta.value = this.currentText;
+        }
         this.renderHtmlContent();
       end;
     end;
 
   watch:
-    value:
-      begin
-        asm
-          this.currentText = this.value || '';
-          const ta = this.$refs ? this.$refs.mdTextarea : null;
-          if (ta && ta.value !== this.value) {
-            ta.value = this.value || '';
-          }
-          this.renderHtmlContent();
-        end;
+    procedure value(newVal: string);
+    begin
+      asm
+        const self = this;
+        self.currentText = newVal || '';
+        const ta = self.$refs ? self.$refs.mdTextarea : null;
+        if (ta && !self.isEditing) {
+          ta.value = newVal || '';
+        }
+        if (!self.isEditing) {
+          self.renderHtmlContent();
+        }
       end;
+    end;
 </script>
 
 <style>
+  /* PURE CSS VISIBILITY TOGGLE (PREVENTS DOM UNMOUNTING OR DIRECTIVE TRAVERSAL) */
+  .bv-markdown-root .bv-md-rendered {
+    display: block;
+  }
+  .bv-markdown-root .bv-md-editor-wrap {
+    display: none;
+  }
+  .bv-markdown-root .btn-edit {
+    display: inline-block;
+  }
+  .bv-markdown-root .btn-save {
+    display: none;
+  }
+
+  .bv-markdown-root.bv-md-editing .bv-md-rendered {
+    display: none !important;
+  }
+  .bv-markdown-root.bv-md-editing .bv-md-editor-wrap {
+    display: flex !important;
+  }
+  .bv-markdown-root.bv-md-editing .btn-edit {
+    display: none !important;
+  }
+  .bv-markdown-root.bv-md-editing .btn-save {
+    display: inline-block !important;
+  }
   .bv-markdown-root {
     background: #ffffff;
     border: 1px solid #e2e8f0;

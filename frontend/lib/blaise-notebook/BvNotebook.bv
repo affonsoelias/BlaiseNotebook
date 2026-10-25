@@ -338,11 +338,8 @@
             self.canRedo = false;
             self._editSnapshotPending = false;
             self._beforeEditSnapshot = null;
-            if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
           }
         }, 400);
-
-        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
       end;
     end;
 
