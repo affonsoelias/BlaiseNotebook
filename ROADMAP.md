@@ -63,7 +63,7 @@ flowchart LR
 - [x] **Fallback de Compatibilidade para Iniciantes**: Injeção automática das bibliotecas padrão quando a célula não declarar `uses`.
 
 #### 2.3 Suporte ao Comando Mágico `%pip install` Direto na Célula
-- [ ] **Execução e Stream em Tempo Real**: Interceptar `%pip install <pacote>` no `uCodeRunner` e despachar para o `pip` do Python configurado, transmitindo a saída em tempo real no console da célula.
+- [x] **Execução e Stream em Tempo Real**: Interceptar `%pip install <pacote>` no `uCodeRunner` e despachar para o `pip` do Python configurado, transmitindo a saída em tempo real no console da célula.
 
 #### 2.4 Documentação e Template de Criação de Bibliotecas
 - [ ] Guia na documentação explicando o fluxo para criar, empacotar e distribuir novas bibliotecas em `packages/external/`.

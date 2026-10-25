@@ -35,6 +35,9 @@ type
 
     procedure DiscoverPackageDirs(ADirs: TStrings);
     function ExtractUserUses(var ASource: string; out AUserUnits: string): Boolean;
+    function FindPythonExe: string;
+    function IsPipCommand(const ASource: string; out APipArgs: string): Boolean;
+    procedure ExecutePip(const ACellId: string; AExecCount: Integer; const APipArgs: string; AStartTick: Int64);
     function PrepareSourceFile(const ACellId: string; const ASource: string; out APrgPath: string): Boolean;
     function CompileSource(const APrgPath: string; out AExePath: string; out AErrors: string): Boolean;
     procedure ExecuteBinary(const ACellId: string; const AExePath: string; AExecCount: Integer; AStartTick: Int64);
@@ -526,13 +529,185 @@ begin
   end;
 end;
 
+function TCodeRunner.FindPythonExe: string;
+const
+  CANDIDATE_PATHS: array[1..5] of string = (
+    'C:\Users\Pichau\AppData\Local\Programs\Python\Python313\python.exe',
+    'C:\Users\Pichau\AppData\Local\Programs\Python\Python312\python.exe',
+    'C:\Users\Pichau\AppData\Local\Programs\Python\Python311\python.exe',
+    'C:\Program Files\Python313\python.exe',
+    'python.exe'
+  );
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := 1 to High(CANDIDATE_PATHS) - 1 do
+  begin
+    if FileExists(CANDIDATE_PATHS[i]) then
+    begin
+      Result := CANDIDATE_PATHS[i];
+      Exit;
+    end;
+  end;
+  Result := CANDIDATE_PATHS[High(CANDIDATE_PATHS)];
+end;
+
+function TCodeRunner.IsPipCommand(const ASource: string; out APipArgs: string): Boolean;
+var
+  Trimmed: string;
+begin
+  Result := False;
+  APipArgs := '';
+  Trimmed := Trim(ASource);
+  if Trimmed = '' then Exit;
+
+  if (Copy(Trimmed, 1, 5) = '%pip ') or (Copy(Trimmed, 1, 5) = '!pip ') then
+  begin
+    APipArgs := Trim(Copy(Trimmed, 6, Length(Trimmed) - 5));
+    Result := True;
+  end
+  else if (LowerCase(Trimmed) = '%pip') or (LowerCase(Trimmed) = '!pip') then
+  begin
+    APipArgs := 'help';
+    Result := True;
+  end;
+end;
+
+procedure TCodeRunner.ExecutePip(const ACellId: string; AExecCount: Integer; const APipArgs: string; AStartTick: Int64);
+var
+  Proc: TProcess;
+  PyExe: string;
+  BytesRead: LongInt;
+  Buffer: array[0..2047] of Byte;
+  Chunk: string;
+  ElapsedMs: Integer;
+  i: Integer;
+  CurArg: string;
+  InQuote: Boolean;
+  QuoteChar: Char;
+  ArgsList: TStringList;
+begin
+  PyExe := FindPythonExe;
+  if PyExe = '' then
+  begin
+    if Assigned(FOnStream) then
+      FOnStream(RawUtf8(ACellId), 'stderr', '[Pip Error] Interpretador Python nao encontrado.'#10);
+    if Assigned(FOnReply) then
+      FOnReply(RawUtf8(ACellId), 'error', AExecCount, 0);
+    Exit;
+  end;
+
+  if Assigned(FOnStream) then
+    FOnStream(RawUtf8(ACellId), 'stdout', RawUtf8('[Pip] Executando: python -m pip ' + APipArgs + sLineBreak));
+
+  Proc := TProcess.Create(nil);
+  ArgsList := TStringList.Create;
+  try
+    Proc.Executable := PyExe;
+    Proc.Parameters.Add('-m');
+    Proc.Parameters.Add('pip');
+
+    // Parse command line arguments preserving quotes
+    CurArg := '';
+    InQuote := False;
+    QuoteChar := #0;
+    for i := 1 to Length(APipArgs) do
+    begin
+      if not InQuote and (APipArgs[i] in ['"', #39]) then
+      begin
+        InQuote := True;
+        QuoteChar := APipArgs[i];
+      end
+      else if InQuote and (APipArgs[i] = QuoteChar) then
+      begin
+        InQuote := False;
+        QuoteChar := #0;
+      end
+      else if not InQuote and (APipArgs[i] in [' ', #9, #10, #13]) then
+      begin
+        if CurArg <> '' then
+        begin
+          ArgsList.Add(CurArg);
+          CurArg := '';
+        end;
+      end
+      else
+        CurArg := CurArg + APipArgs[i];
+    end;
+    if CurArg <> '' then
+      ArgsList.Add(CurArg);
+
+    for i := 0 to ArgsList.Count - 1 do
+      Proc.Parameters.Add(ArgsList[i]);
+
+    Proc.Options := [poUsePipes, poStderrToOutPut, poNoConsole];
+    Proc.Execute;
+
+    FCurrentProcess := Proc;
+    FCurrentCellId := ACellId;
+    FInterrupted := False;
+
+    while Proc.Running do
+    begin
+      while Proc.Output.NumBytesAvailable > 0 do
+      begin
+        BytesRead := Proc.Output.Read(Buffer, SizeOf(Buffer));
+        if BytesRead > 0 then
+        begin
+          SetString(Chunk, PAnsiChar(@Buffer[0]), BytesRead);
+          if Assigned(FOnStream) then
+            FOnStream(RawUtf8(ACellId), 'stdout', RawUtf8(Chunk));
+        end;
+      end;
+      Sleep(10);
+    end;
+
+    // Read remaining bytes after exit
+    while Proc.Output.NumBytesAvailable > 0 do
+    begin
+      BytesRead := Proc.Output.Read(Buffer, SizeOf(Buffer));
+      if BytesRead > 0 then
+      begin
+        SetString(Chunk, PAnsiChar(@Buffer[0]), BytesRead);
+        if Assigned(FOnStream) then
+          FOnStream(RawUtf8(ACellId), 'stdout', RawUtf8(Chunk));
+      end;
+    end;
+
+    ElapsedMs := GetTickCount64() - AStartTick;
+
+    if Assigned(FOnReply) then
+    begin
+      if FInterrupted then
+        FOnReply(RawUtf8(ACellId), 'aborted', AExecCount, ElapsedMs)
+      else if Proc.ExitStatus = 0 then
+        FOnReply(RawUtf8(ACellId), 'success', AExecCount, ElapsedMs)
+      else
+        FOnReply(RawUtf8(ACellId), 'error', AExecCount, ElapsedMs);
+    end;
+  finally
+    FCurrentProcess := nil;
+    ArgsList.Free;
+    Proc.Free;
+  end;
+end;
+
 procedure TCodeRunner.ExecuteCell(const ACellId: string; AExecCount: Integer; const ASource: string);
 var
   PrgPath, ExePath, Errors: string;
   StartTick: Int64;
   ElapsedMs: Integer;
+  PipArgs: string;
 begin
   StartTick := GetTickCount64();
+
+  // Intercept %pip or !pip magic commands
+  if IsPipCommand(ASource, PipArgs) then
+  begin
+    ExecutePip(ACellId, AExecCount, PipArgs, StartTick);
+    Exit;
+  end;
 
   if not PrepareSourceFile(ACellId, ASource, PrgPath) then
   begin
