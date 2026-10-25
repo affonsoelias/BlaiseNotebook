@@ -74,8 +74,8 @@
           <button class="btn-tool" title="Move Up" :disabled="index === 0" @click="moveUp">▲</button>
           <button class="btn-tool" title="Move Down" :disabled="index >= total - 1" @click="moveDown">▼</button>
           <div class="cell-quick-add-group" title="Insert new cell below">
-            <button class="btn-tool-add" title="Insert Pascal Code cell below" @click="insertCodeBelow">+ Code</button>
-            <button class="btn-tool-add" title="Insert Markdown cell below" @click="insertMarkdownBelow">+ Md</button>
+            <button type="button" class="btn-tool-add" title="Insert Pascal Code cell below" @click="insertCodeBelow">+ Code</button>
+            <button type="button" class="btn-tool-add" title="Insert Markdown cell below" @click="insertMarkdownBelow">+ Md</button>
           </div>
           <button class="btn-tool btn-danger-tool" title="Delete cell" @click="deleteThis">🗑️</button>
         </div>
@@ -210,14 +210,14 @@
     procedure insertCodeBelow;
     begin
       asm
-        if (this.$emit) this.$emit('insert-code-below', this.index);
+        if (this.$emit) this.$emit('insert-code-below', this.cell);
       end;
     end;
 
     procedure insertMarkdownBelow;
     begin
       asm
-        if (this.$emit) this.$emit('insert-markdown-below', this.index);
+        if (this.$emit) this.$emit('insert-markdown-below', this.cell);
       end;
     end;
 

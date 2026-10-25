@@ -208,46 +208,97 @@
     procedure insertCodeAt(idx: integer);
     begin
       asm
-        const c = (this.createCell || window.bvCreateCell)('code', '// Inserted code block\n');
+        const makeCell = this.createCell || window.bvCreateCell;
+        const c = makeCell('code', '// Inserted code block\n');
+        const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
         this.cells.splice(idx, 0, c);
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' });
+        });
       end;
     end;
 
     procedure insertMarkdownAt(idx: integer);
     begin
       asm
-        const c = (this.createCell || window.bvCreateCell)('markdown', '### Inserted Documentation\n');
+        const makeCell = this.createCell || window.bvCreateCell;
+        const c = makeCell('markdown', '### Inserted Documentation\n');
+        const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
         this.cells.splice(idx, 0, c);
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' });
+        });
       end;
     end;
 
-    procedure insertBelowIndex(idx: integer);
+    procedure insertBelowIndex(cellOrIdx: JSValue);
     begin
       asm
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// Next step\n');
-        this.cells.splice(idx + 1, 0, c);
+        let targetIdx = -1;
+        if (cellOrIdx && typeof cellOrIdx === 'object' && cellOrIdx.id) {
+          targetIdx = (this.cells || []).findIndex(x => x && x.id === cellOrIdx.id);
+        } else if (typeof cellOrIdx === 'number') {
+          targetIdx = cellOrIdx;
+        }
+        if (targetIdx < 0 || targetIdx >= this.cells.length) {
+          targetIdx = (this.cells || []).length - 1;
+        }
+        const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
+        this.cells.splice(targetIdx + 1, 0, c);
         if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' });
+        });
       end;
     end;
 
-    procedure insertCodeBelowIndex(idx: integer);
+    procedure insertCodeBelowIndex(cellOrIdx: JSValue);
     begin
       asm
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// New Object Pascal code block\n');
-        this.cells.splice(idx + 1, 0, c);
+        let targetIdx = -1;
+        if (cellOrIdx && typeof cellOrIdx === 'object' && cellOrIdx.id) {
+          targetIdx = (this.cells || []).findIndex(x => x && x.id === cellOrIdx.id);
+        } else if (typeof cellOrIdx === 'number') {
+          targetIdx = cellOrIdx;
+        }
+        if (targetIdx < 0 || targetIdx >= this.cells.length) {
+          targetIdx = (this.cells || []).length - 1;
+        }
+        const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
+        this.cells.splice(targetIdx + 1, 0, c);
         if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' });
+        });
       end;
     end;
 
-    procedure insertMarkdownBelowIndex(idx: integer);
+    procedure insertMarkdownBelowIndex(cellOrIdx: JSValue);
     begin
       asm
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('markdown', '### New Documentation Section\nDescribe your findings here.');
-        this.cells.splice(idx + 1, 0, c);
+        let targetIdx = -1;
+        if (cellOrIdx && typeof cellOrIdx === 'object' && cellOrIdx.id) {
+          targetIdx = (this.cells || []).findIndex(x => x && x.id === cellOrIdx.id);
+        } else if (typeof cellOrIdx === 'number') {
+          targetIdx = cellOrIdx;
+        }
+        if (targetIdx < 0 || targetIdx >= this.cells.length) {
+          targetIdx = (this.cells || []).length - 1;
+        }
+        const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
+        this.cells.splice(targetIdx + 1, 0, c);
         if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' });
+        });
       end;
     end;
 
@@ -255,8 +306,13 @@
     begin
       asm
         if (idx > 0 && idx < this.cells.length) {
+          const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
           const item = this.cells.splice(idx, 1)[0];
           this.cells.splice(idx - 1, 0, item);
+          if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollY, behavior: 'instant' });
+          });
         }
       end;
     end;
@@ -265,8 +321,13 @@
     begin
       asm
         if (idx >= 0 && idx < this.cells.length - 1) {
+          const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
           const item = this.cells.splice(idx, 1)[0];
           this.cells.splice(idx + 1, 0, item);
+          if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+          requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollY, behavior: 'instant' });
+          });
         }
       end;
     end;
@@ -278,7 +339,12 @@
           alert('The notebook must contain at least one cell.');
           return;
         }
+        const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
         this.cells.splice(idx, 1);
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' });
+        });
       end;
     end;
 
