@@ -188,7 +188,7 @@
       newCell: JSValue;
     begin
       asm
-        const c = this.createCell('code', '// New Object Pascal code block\n');
+        const c = (this.createCell || window.bvCreateCell)('code', '// New Object Pascal code block\n');
         this.cells.push(c);
       end;
     end;
@@ -198,7 +198,7 @@
       newCell: JSValue;
     begin
       asm
-        const c = this.createCell('markdown', '### New Documentation Section\nDescribe your methodology or findings here.');
+        const c = (this.createCell || window.bvCreateCell)('markdown', '### New Documentation Section\nDescribe your methodology or findings here.');
         this.cells.push(c);
       end;
     end;
@@ -206,7 +206,7 @@
     procedure insertCodeAt(idx: integer);
     begin
       asm
-        const c = this.createCell('code', '// Inserted code block\n');
+        const c = (this.createCell || window.bvCreateCell)('code', '// Inserted code block\n');
         this.cells.splice(idx, 0, c);
       end;
     end;
@@ -214,7 +214,7 @@
     procedure insertMarkdownAt(idx: integer);
     begin
       asm
-        const c = this.createCell('markdown', '### Inserted Documentation\n');
+        const c = (this.createCell || window.bvCreateCell)('markdown', '### Inserted Documentation\n');
         this.cells.splice(idx, 0, c);
       end;
     end;
@@ -222,7 +222,7 @@
     procedure insertBelowIndex(idx: integer);
     begin
       asm
-        const c = this.createCell('code', '// Next step\n');
+        const c = (this.createCell || window.bvCreateCell)('code', '// Next step\n');
         this.cells.splice(idx + 1, 0, c);
       end;
     end;
@@ -574,11 +574,14 @@
     procedure newProject;
     begin
       asm
+        const makeCell = this.createCell || window.bvCreateCell || function(t, s) {
+          return { id: 'cell_' + Math.random().toString(36).substring(2, 9), type: t || 'code', source: s || '', execution_count: 0, status: 'idle', execution_time_ms: 0, outputs: [] };
+        };
         if (confirm('Create a new notebook project? Any unsaved changes will be lost.')) {
           this.notebookName = 'new_notebook';
           this.executionCounter = 0;
           this.cells = [
-            this.createCell('code', '// New Blaise Notebook\nvar\n  Msg: string;\nbegin\n  Msg := \'BlaiseNotebook environment ready!\';\n  Writeln(Msg);\nend.')
+            makeCell('code', '// New Blaise Notebook\nvar\n  Msg: string;\nbegin\n  Msg := \'BlaiseNotebook environment ready!\';\n  Writeln(Msg);\nend.')
           ];
           this.clearAllOutputs();
           this.cells = this.cells.slice();
@@ -636,10 +639,13 @@
     procedure closeProject;
     begin
       asm
+        const makeCell = this.createCell || window.bvCreateCell || function(t, s) {
+          return { id: 'cell_' + Math.random().toString(36).substring(2, 9), type: t || 'markdown', source: s || '', execution_count: 0, status: 'idle', execution_time_ms: 0, outputs: [] };
+        };
         if (confirm('Close current project?')) {
           this.notebookName = 'closed_project';
           this.cells = [
-            this.createCell('markdown', '# 📁 Project Closed\nClick the **☰** menu button in the top left corner to:\n- **New Notebook**\n- **Open Notebook (.bynb)**')
+            makeCell('markdown', '# 📁 Project Closed\n\nClick the **📁 Project** menu button in the top toolbar to:\n- **New Notebook**\n- **Open Notebook (.bynb)**')
           ];
           this.clearAllOutputs();
           this.cells = this.cells.slice();
@@ -896,11 +902,30 @@
 
   created:
     begin
+      asm
+        window.bvCreateCell = function(cellType, cellSource) {
+          return {
+            id: 'cell_' + Math.random().toString(36).substring(2, 9),
+            type: cellType || 'code',
+            source: cellSource || '',
+            execution_count: 0,
+            status: 'idle',
+            execution_time_ms: 0,
+            outputs: []
+          };
+        };
+        this.createCell = window.bvCreateCell;
+      end;
       this.loadSampleDemo();
     end;
 
   mounted:
     begin
+      asm
+        if (!this.createCell && window.bvCreateCell) {
+          this.createCell = window.bvCreateCell;
+        }
+      end;
       this.loadSampleDemo();
       this.connectWebSocket();
       asm
