@@ -10,7 +10,7 @@ unit uCodeRunner;
 interface
 
 uses
-  SysUtils, Classes, Process, DateUtils,
+  SysUtils, Classes, Process, DateUtils, fphttpclient,
   mormot.core.base, mormot.core.json, mormot.core.os;
 
 type
@@ -31,7 +31,12 @@ type
     FCurrentProcess: TProcess;
     FCurrentCellId: string;
     FInterrupted: Boolean;
+    FDaemonProcess: TProcess;
+    FDaemonPort: Integer;
 
+    function FindDaemonScript: string;
+    procedure EnsureSessionDaemon;
+    procedure StopSessionDaemon;
     procedure DiscoverPackageDirs(ADirs: TStrings);
     function ExtractUserUses(var ASource: string; out AUserUnits: string): Boolean;
     function FindPythonExe: string;
@@ -46,7 +51,9 @@ type
 
     procedure ExecuteCell(const ACellId: string; AExecCount: Integer; const ASource: string);
     procedure Interrupt(const ACellId: string = '');
+    procedure RestartKernel(const ACellId: string = '');
 
+    property DaemonPort: Integer read FDaemonPort write FDaemonPort;
     property OnStream: TOnStreamOutput read FOnStream write FOnStream;
     property OnDisplay: TOnDisplayData read FOnDisplay write FOnDisplay;
     property OnReply: TOnExecuteReply read FOnReply write FOnReply;
@@ -93,11 +100,193 @@ begin
   // Locate Python4Lazarus package directories
   FPython4LazarusDir := 'C:\Users\Pichau\AppData\Local\lazarus\onlinepackagemanager\packages\PythonForLazarus\python4lazarus';
   FPython4LazarusLibDir := FPython4LazarusDir + DirectorySeparator + 'lib' + DirectorySeparator + 'x86_64-win64';
+
+  FDaemonPort := 9099;
+  FDaemonProcess := nil;
+  EnsureSessionDaemon;
 end;
 
 destructor TCodeRunner.Destroy;
 begin
+  StopSessionDaemon;
   inherited Destroy;
+end;
+
+
+function TCodeRunner.FindDaemonScript: string;
+var
+  Candidate: string;
+begin
+  Result := '';
+  // 1. Check ../kernel/blaise_kernel_daemon.py
+  Candidate := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + 'kernel' + DirectorySeparator + 'blaise_kernel_daemon.py');
+  if FileExists(Candidate) then Exit(Candidate);
+
+  // 2. Check kernel/blaise_kernel_daemon.py
+  Candidate := ExpandFileName(ExtractFilePath(ParamStr(0)) + 'kernel' + DirectorySeparator + 'blaise_kernel_daemon.py');
+  if FileExists(Candidate) then Exit(Candidate);
+
+  // 3. Check frontend/server/kernel/blaise_kernel_daemon.py
+  Candidate := ExpandFileName('frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'kernel' + DirectorySeparator + 'blaise_kernel_daemon.py');
+  if FileExists(Candidate) then Exit(Candidate);
+
+  // 4. Check server/kernel/blaise_kernel_daemon.py
+  Candidate := ExpandFileName('server' + DirectorySeparator + 'kernel' + DirectorySeparator + 'blaise_kernel_daemon.py');
+  if FileExists(Candidate) then Exit(Candidate);
+
+  // 5. Check in workspace/../kernel/blaise_kernel_daemon.py
+  Candidate := ExpandFileName(FWorkspaceDir + DirectorySeparator + '..' + DirectorySeparator + 'kernel' + DirectorySeparator + 'blaise_kernel_daemon.py');
+  if FileExists(Candidate) then Exit(Candidate);
+end;
+
+procedure TCodeRunner.EnsureSessionDaemon;
+var
+  Client: TFPHttpClient;
+  Resp: string;
+  PyExe: string;
+  ScriptPath: string;
+  WaitCount: Integer;
+begin
+  // Check if daemon is already responding
+  Client := TFPHttpClient.Create(nil);
+  try
+    try
+      Client.IOTimeout := 400;
+      Resp := Client.Get('http://127.0.0.1:' + IntToStr(FDaemonPort) + '/ping');
+      if Pos('"status": "ok"', Resp) > 0 then
+        Exit; // already running!
+    except
+      // not responding, will launch below
+    end;
+  finally
+    Client.Free;
+  end;
+
+  PyExe := FindPythonExe;
+  if PyExe = '' then PyExe := 'python';
+
+  ScriptPath := FindDaemonScript;
+  if (ScriptPath = '') or not FileExists(ScriptPath) then
+    Exit;
+
+  try
+    if Assigned(FDaemonProcess) then
+    begin
+      try
+        if FDaemonProcess.Running then
+          FDaemonProcess.Terminate(0);
+      except
+      end;
+      FreeAndNil(FDaemonProcess);
+    end;
+
+    FDaemonProcess := TProcess.Create(nil);
+    FDaemonProcess.Executable := PyExe;
+    FDaemonProcess.Parameters.Add(ScriptPath);
+    FDaemonProcess.Parameters.Add('--port');
+    FDaemonProcess.Parameters.Add(IntToStr(FDaemonPort));
+    FDaemonProcess.Options := [poNoConsole];
+    FDaemonProcess.Execute;
+
+    // Wait up to 2 seconds for daemon to start
+    WaitCount := 0;
+    while (WaitCount < 20) and FDaemonProcess.Running do
+    begin
+      Sleep(100);
+      Inc(WaitCount);
+      Client := TFPHttpClient.Create(nil);
+      try
+        try
+          Client.IOTimeout := 200;
+          Resp := Client.Get('http://127.0.0.1:' + IntToStr(FDaemonPort) + '/ping');
+          if Pos('"status": "ok"', Resp) > 0 then
+            Break;
+        except
+        end;
+      finally
+        Client.Free;
+      end;
+    end;
+  except
+  end;
+end;
+
+procedure TCodeRunner.StopSessionDaemon;
+var
+  Client: TFPHttpClient;
+  Stream: TStringStream;
+begin
+  try
+    Client := TFPHttpClient.Create(nil);
+    Stream := TStringStream.Create('{}');
+    try
+      Client.IOTimeout := 500;
+      Client.AddHeader('Content-Type', 'application/json');
+      Client.RequestBody := Stream;
+      Client.Post('http://127.0.0.1:' + IntToStr(FDaemonPort) + '/shutdown');
+    except
+    end;
+    Stream.Free;
+    Client.Free;
+  except
+  end;
+
+  if Assigned(FDaemonProcess) then
+  begin
+    try
+      if FDaemonProcess.Running then
+      begin
+        Sleep(100);
+        if FDaemonProcess.Running then
+          FDaemonProcess.Terminate(0);
+      end;
+    except
+    end;
+    FreeAndNil(FDaemonProcess);
+  end;
+end;
+
+procedure TCodeRunner.RestartKernel(const ACellId: string);
+var
+  Client: TFPHttpClient;
+  Stream: TStringStream;
+  SR: TSearchRec;
+begin
+  // 1. Reset Python daemon state
+  try
+    Client := TFPHttpClient.Create(nil);
+    Stream := TStringStream.Create('{}');
+    try
+      Client.IOTimeout := 1500;
+      Client.AddHeader('Content-Type', 'application/json');
+      Client.RequestBody := Stream;
+      Client.Post('http://127.0.0.1:' + IntToStr(FDaemonPort) + '/reset');
+    except
+    end;
+    Stream.Free;
+    Client.Free;
+  except
+  end;
+
+  // 2. Ensure daemon is running
+  EnsureSessionDaemon;
+
+  // 3. Purge workspace binaries and temp files
+  if FindFirst(FWorkspaceDir + DirectorySeparator + 'cell_*.*', faAnyFile, SR) = 0 then
+  begin
+    try
+      repeat
+        DeleteFile(FWorkspaceDir + DirectorySeparator + SR.Name);
+      until FindNext(SR) <> 0;
+    finally
+      FindClose(SR);
+    end;
+  end;
+
+  if Assigned(FOnStream) then
+  begin
+    FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Memoria do workspace limpa e sessao reiniciada com sucesso.'#10);
+  end;
 end;
 
 procedure TCodeRunner.DiscoverPackageDirs(ADirs: TStrings);
@@ -701,6 +890,7 @@ var
   ElapsedMs: Integer;
   PipArgs: string;
 begin
+  EnsureSessionDaemon;
   StartTick := GetTickCount64();
 
   // Intercept %pip or !pip magic commands

@@ -145,8 +145,10 @@ type
     function DropNA(const ASubsetCols: array of string): TPyDataFrame; overload;
     function GroupBy(const AColName: string): TPyGroupBy;
 
-    // Persistence
+    // Persistence & Inter-cell continuity
     procedure ToCSV(const AFilePath: string);
+    procedure Attach(const AVarName: string);
+    procedure SaveAs(const AVarName: string);
 
     property VarName: string read FVarName;
   end;
@@ -212,6 +214,8 @@ begin
   EnsurePyPandas;
   FVarName := AVarName;
   FName := AName;
+  if FVarName <> '' then
+    TBlaisePy.Exec(Format('if "%s" not in globals(): %s = pd.Series()', [FVarName, FVarName]));
   if FName = '' then
   begin
     FName := TBlaisePy.EvalStr(Format('str(%s.name) if hasattr(%s, "name") and %s.name is not None else ""',
@@ -490,6 +494,8 @@ begin
   inherited Create;
   EnsurePyPandas;
   FVarName := AVarName;
+  if FVarName <> '' then
+    TBlaisePy.Exec(Format('if "%s" not in globals(): %s = pd.DataFrame()', [FVarName, FVarName]));
 end;
 
 class function TPyDataFrame.FromCSV(const AFilePath: string): TPyDataFrame;
@@ -1137,6 +1143,17 @@ begin
       '    os.makedirs(__csv_dir, exist_ok=True)'#10 +
       '%s.to_csv(__csv_path, index=False)',
       [SafePath, FVarName]));
+end;
+
+procedure TPyDataFrame.Attach(const AVarName: string);
+begin
+  FVarName := AVarName;
+end;
+
+procedure TPyDataFrame.SaveAs(const AVarName: string);
+begin
+  TBlaisePy.Exec(Format('%s = %s', [AVarName, FVarName]));
+  FVarName := AVarName;
 end;
 
 

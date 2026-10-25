@@ -31,6 +31,9 @@ type
 
 // Re-export utility functions
 function PyFloat(const V: Double): string; inline;
+procedure PyRun(const ACode: string); inline;
+function PyEval(const AExpr: string): string; inline;
+procedure PyReset; inline;
 procedure PyTrainTestSplit(const X: TPyDataFrame; const Y: TPySeries; TestSize: Double;
   out XTrain, XTest: TPyDataFrame; out YTrain, YTest: TPySeries; RandomState: Integer = 42); inline;
 function PyAccuracyScore(const YTrue, YPred: TPySeries): Double; inline;
@@ -42,6 +45,21 @@ implementation
 function PyFloat(const V: Double): string; inline;
 begin
   Result := BlaisePandas.PyFloat(V);
+end;
+
+procedure PyRun(const ACode: string); inline;
+begin
+  BlaisePyKernel.PyRun(ACode);
+end;
+
+function PyEval(const AExpr: string): string; inline;
+begin
+  Result := BlaisePyKernel.PyEval(AExpr);
+end;
+
+procedure PyReset; inline;
+begin
+  BlaisePyKernel.PyReset;
 end;
 
 procedure PyTrainTestSplit(const X: TPyDataFrame; const Y: TPySeries; TestSize: Double;

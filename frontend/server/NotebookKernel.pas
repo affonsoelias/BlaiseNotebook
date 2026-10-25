@@ -165,6 +165,17 @@ begin
           begin
             FRunner.Interrupt('');
             SendFrameJson(Sender, '{"event":"interrupt_reply","status":"interrupted"}');
+          end
+          else if (Action = 'restart_kernel') or (Action = 'restart') then
+          begin
+            CellId := Doc.GetValueOrDefault('cell_id', '');
+            FCurrentSender := Sender;
+            try
+              FRunner.RestartKernel(string(CellId));
+            finally
+              FCurrentSender := nil;
+            end;
+            SendFrameJson(Sender, '{"event":"kernel_restarted","status":"success"}');
           end;
         finally
           Doc.Clear;

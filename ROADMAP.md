@@ -75,9 +75,9 @@ flowchart LR
 > **Goal:** Deliver instant compilation, variable continuity across cells, and support for multi-output cells.
 
 #### 3.1 Sessão Persistente entre Células (Stateful Kernel)
-- [ ] **Shared Session Daemon**: Manter o interpretador Python (`CPython 3.13`) e variáveis Pascal/Python em execução contínua no processo do servidor.
-- [ ] **Preservação de Contexto**: Variáveis geradas na Célula 1 (ex: `DF := TPyDataFrame.FromCSV(...)`) ficam imediatamente disponíveis na Célula 2 sem necessidade de recarregamento.
-- [ ] **Reset de Sessão**: Comando `Restart Kernel` limpa completamente a memória do workspace.
+- [x] **Shared Session Daemon**: Manter o interpretador Python (`CPython 3.13`) e variáveis Pascal/Python em execução contínua no processo do servidor (`kernel/blaise_kernel_daemon.py`).
+- [x] **Preservação de Contexto**: Variáveis e DataFrames gerados na Célula 1 (ex: `DF := TPyDataFrame.Create('dados_vendas')`) ficam imediatamente disponíveis na Célula 2 sem necessidade de recarregamento.
+- [x] **Reset de Sessão**: Comando `Restart Kernel` (via botão na toolbar e WebSocket action `restart_kernel`) limpa completamente a memória do workspace e reinicia o estado do daemon.
 
 #### 3.2 Cache Inteligente de Compilação (Zero-Delay Re-run)
 - [ ] **Hash de Código SHA-256**: Gerar assinatura única do código-fonte da célula.

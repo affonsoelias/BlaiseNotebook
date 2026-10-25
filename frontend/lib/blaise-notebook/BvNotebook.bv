@@ -39,6 +39,9 @@
         <button class="tb-btn tb-btn-warning" :class="{ 'btn-interrupt-active': isRunning }" @click="interruptKernel" :disabled="!isRunning" title="Interrupt running execution in Kernel">
           ⏹ Interrupt
         </button>
+        <button class="tb-btn" @click="restartKernel" title="Restart Kernel (Clear session memory & variables)">
+          🔄 Restart Kernel
+        </button>
         <button class="tb-btn" @click="addCodeCell" title="Add Object Pascal code cell">
           ➕ Pascal Code
         </button>
@@ -661,6 +664,29 @@
       end;
     end;
 
+    procedure restartKernel;
+    begin
+      asm
+        this._runQueue = [];
+        this.isRunning = false;
+        if (this._ws && this._ws.readyState === WebSocket.OPEN) {
+          try {
+            this._ws.send(JSON.stringify({
+              action: 'restart_kernel'
+            }));
+          } catch(e) {}
+        }
+        for (let i = 0; i < (this.cells || []).length; i++) {
+          const c = this.cells[i];
+          if (c && c.status === 'running') {
+            c.status = 'idle';
+          }
+        }
+        this.kernelStatus = 'connected';
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
     procedure newProject;
     begin
       asm
@@ -995,6 +1021,11 @@
         else if (msg.event === 'display_data') {
           cell.outputs = cell.outputs || [];
           cell.outputs.push(msg.payload);
+          if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
+        }
+        else if (msg.event === 'kernel_restarted') {
+          self.isRunning = false;
+          self.kernelStatus = 'connected';
           if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
         }
         else if (msg.event === 'execute_reply') {
