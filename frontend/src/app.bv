@@ -297,7 +297,15 @@
             const attr = document.documentElement ? document.documentElement.getAttribute('data-bs-theme') : null;
             self.isDark = (attr === 'dark');
           }
-          if (self.isDark) {
+          // Remove floating DevTools debug panel
+        const killDt = function() {
+          const els = document.querySelectorAll('.bv-devtools-panel');
+          els.forEach(function(el) { if (el && el.parentNode) el.parentNode.removeChild(el); });
+        };
+        killDt();
+        setTimeout(killDt, 50);
+        setTimeout(killDt, 250);
+        if (self.isDark) {
             document.documentElement.setAttribute('data-bs-theme', 'dark');
             document.documentElement.classList.add('theme-dark');
             if (document.body) document.body.classList.add('theme-dark');
@@ -452,6 +460,14 @@
     z-index: 100;
   }
   .footer-status strong { color: #10b981; }
+
+  /* Hide DevTools Debug Floating Panel */
+  .bv-devtools-panel {
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
+  }
 
   /* Dark Mode Integration */
   html[data-bs-theme="dark"] body,
