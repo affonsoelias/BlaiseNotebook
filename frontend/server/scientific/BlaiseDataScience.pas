@@ -27,6 +27,22 @@ uses
 type
   TPySeries = class;
   TPyDataFrame = class;
+  TPyGroupBy = class;
+
+  { TPyGroupBy - GroupBy aggregator for fluent analytical queries }
+  TPyGroupBy = class
+  private
+    FDFVarName: string;
+    FGroupCol: string;
+    function EscapeStr(const S: string): string;
+  public
+    constructor Create(const ADFVarName, AGroupCol: string);
+    function Mean: TPyDataFrame;
+    function Sum: TPyDataFrame;
+    function Count: TPyDataFrame;
+    function Min: TPyDataFrame;
+    function Max: TPyDataFrame;
+  end;
 
   { TPySeries - Strongly-typed wrapper around a Pandas Series / 1D Array }
   TPySeries = class
@@ -119,6 +135,19 @@ type
     procedure PlotBar(const ATitle, AXCol: string; const AYCols: array of string); overload;
     procedure PlotScatter(const ATitle, AXCol, AYCol: string);
     procedure PlotArea(const ATitle, AXCol, AYCol: string);
+    procedure PlotPie(const ATitle, ALabelCol, AValueCol: string);
+    procedure PlotDoughnut(const ATitle, ALabelCol, AValueCol: string);
+    procedure PlotHistogram(const ATitle, ACol: string; ABins: Integer = 10);
+    procedure PlotBoxPlot(const ATitle, ACategoryCol, AValueCol: string);
+
+    // Fluent Filtering, Sorting and Transformations
+    function Filter(const AExpression: string): TPyDataFrame;
+    function SortBy(const AColName: string; Ascending: Boolean = True): TPyDataFrame; overload;
+    function SortBy(const AColNames: array of string; Ascending: Boolean = True): TPyDataFrame; overload;
+    function DropColumns(const AColNames: array of string): TPyDataFrame;
+    function DropNA: TPyDataFrame; overload;
+    function DropNA(const ASubsetCols: array of string): TPyDataFrame; overload;
+    function GroupBy(const AColName: string): TPyGroupBy;
 
     // Persistence
     procedure ToCSV(const AFilePath: string);
@@ -189,10 +218,42 @@ type
     property VarName: string read FVarName;
   end;
 
+  { TPyLogisticRegression - Scikit-learn Logistic Regression classification model }
+  TPyLogisticRegression = class
+  private
+    FVarName: string;
+  public
+    constructor Create(maxIter: Integer = 200; randomState: Integer = 42);
+    procedure Fit(const X: TPyDataFrame; const Y: TPySeries);
+    function Predict(const X: TPyDataFrame): TPySeries;
+    function Score(const X: TPyDataFrame; const Y: TPySeries): Double;
+    function PredictProba(const X: TPyDataFrame): TPyDataFrame;
+
+    property VarName: string read FVarName;
+  end;
+
+  { TPyDecisionTreeClassifier - Scikit-learn DecisionTreeClassifier model }
+  TPyDecisionTreeClassifier = class
+  private
+    FVarName: string;
+  public
+    constructor Create(maxDepth: Integer = -1; randomState: Integer = 42);
+    procedure Fit(const X: TPyDataFrame; const Y: TPySeries);
+    function Predict(const X: TPyDataFrame): TPySeries;
+    function Score(const X: TPyDataFrame; const Y: TPySeries): Double;
+    function FeatureImportances: TDoubleArray;
+    procedure PlotFeatureImportances(const AFeatures: array of string; const ATitle: string = 'Decision Tree Feature Importances');
+
+    property VarName: string read FVarName;
+  end;
+
 // Utility functions
 function PyFloat(const V: Double): string;
 procedure PyTrainTestSplit(const X: TPyDataFrame; const Y: TPySeries; TestSize: Double;
   out XTrain, XTest: TPyDataFrame; out YTrain, YTest: TPySeries; RandomState: Integer = 42);
+function PyAccuracyScore(const YTrue, YPred: TPySeries): Double;
+function PyR2Score(const YTrue, YPred: TPySeries): Double;
+function PyConfusionMatrix(const YTrue, YPred: TPySeries): TPyDataFrame;
 
 implementation
 
@@ -779,6 +840,278 @@ begin
     TBlaiseOutput.ShowChart(ATitle, 'line', ChartJson);
 end;
 
+procedure TPyDataFrame.PlotPie(const ATitle, ALabelCol, AValueCol: string);
+var
+  PyHelper, ChartJson: string;
+begin
+  PyHelper :=
+    Format(
+      '__x_labels__ = [str(x) for x in %s["%s"]]'#10 +
+      '__y_values__ = [float(x) for x in %s["%s"]]'#10 +
+      '__colors__ = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16", "#14b8a6", "#f97316", "#6366f1", "#a855f7"]'#10 +
+      '__bg_colors__ = [__colors__[i %% len(__colors__)] for i in range(len(__x_labels__))]'#10 +
+      '__chart_payload__ = json.dumps({'#10 +
+      '  "labels": __x_labels__,'#10 +
+      '  "datasets": [{'#10 +
+      '    "label": "%s",'#10 +
+      '    "data": __y_values__,'#10 +
+      '    "backgroundColor": __bg_colors__,'#10 +
+      '    "hoverOffset": 6'#10 +
+      '  }]'#10 +
+      '})',
+      [FVarName, EscapeStr(ALabelCol), FVarName, EscapeStr(AValueCol), EscapeStr(ATitle)]);
+  TBlaisePy.Exec(PyHelper);
+  ChartJson := TBlaisePy.EvalStr('__chart_payload__');
+  if ChartJson <> '' then
+    TBlaiseOutput.ShowChart(ATitle, 'pie', ChartJson);
+end;
+
+procedure TPyDataFrame.PlotDoughnut(const ATitle, ALabelCol, AValueCol: string);
+var
+  PyHelper, ChartJson: string;
+begin
+  PyHelper :=
+    Format(
+      '__x_labels__ = [str(x) for x in %s["%s"]]'#10 +
+      '__y_values__ = [float(x) for x in %s["%s"]]'#10 +
+      '__colors__ = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16", "#14b8a6", "#f97316", "#6366f1", "#a855f7"]'#10 +
+      '__bg_colors__ = [__colors__[i %% len(__colors__)] for i in range(len(__x_labels__))]'#10 +
+      '__chart_payload__ = json.dumps({'#10 +
+      '  "labels": __x_labels__,'#10 +
+      '  "datasets": [{'#10 +
+      '    "label": "%s",'#10 +
+      '    "data": __y_values__,'#10 +
+      '    "backgroundColor": __bg_colors__,'#10 +
+      '    "hoverOffset": 6'#10 +
+      '  }]'#10 +
+      '})',
+      [FVarName, EscapeStr(ALabelCol), FVarName, EscapeStr(AValueCol), EscapeStr(ATitle)]);
+  TBlaisePy.Exec(PyHelper);
+  ChartJson := TBlaisePy.EvalStr('__chart_payload__');
+  if ChartJson <> '' then
+    TBlaiseOutput.ShowChart(ATitle, 'doughnut', ChartJson);
+end;
+
+procedure TPyDataFrame.PlotHistogram(const ATitle, ACol: string; ABins: Integer);
+var
+  PyHelper, ChartJson: string;
+begin
+  PyHelper :=
+    Format(
+      '__vals__ = %s["%s"].dropna().astype(float)'#10 +
+      '__counts__, __bin_edges__ = np.histogram(__vals__, bins=%d)'#10 +
+      '__labels__ = [f"{__bin_edges__[i]:.1f} - {__bin_edges__[i+1]:.1f}" for i in range(len(__counts__))]'#10 +
+      '__chart_payload__ = json.dumps({'#10 +
+      '  "labels": __labels__,'#10 +
+      '  "datasets": [{'#10 +
+      '    "label": "%s (Frequency)",'#10 +
+      '    "data": [int(c) for c in __counts__],'#10 +
+      '    "backgroundColor": "rgba(59, 130, 246, 0.75)",'#10 +
+      '    "borderColor": "#2563eb",'#10 +
+      '    "borderWidth": 1.5,'#10 +
+      '    "borderRadius": 4'#10 +
+      '  }]'#10 +
+      '})',
+      [FVarName, EscapeStr(ACol), ABins, EscapeStr(ATitle)]);
+  TBlaisePy.Exec(PyHelper);
+  ChartJson := TBlaisePy.EvalStr('__chart_payload__');
+  if ChartJson <> '' then
+    TBlaiseOutput.ShowChart(ATitle, 'bar', ChartJson);
+end;
+
+procedure TPyDataFrame.PlotBoxPlot(const ATitle, ACategoryCol, AValueCol: string);
+var
+  PyHelper, ChartJson: string;
+begin
+  PyHelper :=
+    Format(
+      '__cats__ = [str(c) for c in %s["%s"].unique()]'#10 +
+      '__min_vals__, __q1_vals__, __med_vals__, __q3_vals__, __max_vals__ = [], [], [], [], []'#10 +
+      'for c in __cats__:'#10 +
+      '    sub = %s[%s["%s"] == c]["%s"].dropna().astype(float)'#10 +
+      '    if len(sub) > 0:'#10 +
+      '        __min_vals__.append(float(sub.min()))'#10 +
+      '        __q1_vals__.append(float(sub.quantile(0.25)))'#10 +
+      '        __med_vals__.append(float(sub.median()))'#10 +
+      '        __q3_vals__.append(float(sub.quantile(0.75)))'#10 +
+      '        __max_vals__.append(float(sub.max()))'#10 +
+      '    else:'#10 +
+      '        __min_vals__.append(0.0)'#10 +
+      '        __q1_vals__.append(0.0)'#10 +
+      '        __med_vals__.append(0.0)'#10 +
+      '        __q3_vals__.append(0.0)'#10 +
+      '        __max_vals__.append(0.0)'#10 +
+      '__chart_payload__ = json.dumps({'#10 +
+      '  "labels": __cats__,'#10 +
+      '  "datasets": ['#10 +
+      '    {"label": "Min", "data": __min_vals__, "backgroundColor": "#94a3b8"},'#10 +
+      '    {"label": "Q1 (25%%)", "data": __q1_vals__, "backgroundColor": "#60a5fa"},'#10 +
+      '    {"label": "Median", "data": __med_vals__, "backgroundColor": "#10b981"},'#10 +
+      '    {"label": "Q3 (75%%)", "data": __q3_vals__, "backgroundColor": "#f59e0b"},'#10 +
+      '    {"label": "Max", "data": __max_vals__, "backgroundColor": "#ef4444"}'#10 +
+      '  ]'#10 +
+      '})',
+      [FVarName, EscapeStr(ACategoryCol), FVarName, FVarName, EscapeStr(ACategoryCol), EscapeStr(AValueCol)]);
+  TBlaisePy.Exec(PyHelper);
+  ChartJson := TBlaisePy.EvalStr('__chart_payload__');
+  if ChartJson <> '' then
+    TBlaiseOutput.ShowChart(ATitle, 'bar', ChartJson);
+end;
+
+function TPyDataFrame.Filter(const AExpression: string): TPyDataFrame;
+var
+  NewVar, EscExpr: string;
+begin
+  NewVar := NewPyVar('df_filtered');
+  EscExpr := StringReplace(AExpression, '"', '\"', [rfReplaceAll]);
+  TBlaisePy.Exec(Format('%s = %s.query("%s").copy()', [NewVar, FVarName, EscExpr]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyDataFrame.SortBy(const AColName: string; Ascending: Boolean): TPyDataFrame;
+var
+  NewVar, AscStr: string;
+begin
+  NewVar := NewPyVar('df_sorted');
+  if Ascending then AscStr := 'True' else AscStr := 'False';
+  TBlaisePy.Exec(Format('%s = %s.sort_values(by="%s", ascending=%s).copy()',
+    [NewVar, FVarName, EscapeStr(AColName), AscStr]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyDataFrame.SortBy(const AColNames: array of string; Ascending: Boolean): TPyDataFrame;
+var
+  NewVar, AscStr, ColsList: string;
+  i: Integer;
+begin
+  NewVar := NewPyVar('df_sorted');
+  if Ascending then AscStr := 'True' else AscStr := 'False';
+  ColsList := '[';
+  for i := 0 to High(AColNames) do
+  begin
+    if i > 0 then ColsList := ColsList + ', ';
+    ColsList := ColsList + '"' + EscapeStr(AColNames[i]) + '"';
+  end;
+  ColsList := ColsList + ']';
+  TBlaisePy.Exec(Format('%s = %s.sort_values(by=%s, ascending=%s).copy()',
+    [NewVar, FVarName, ColsList, AscStr]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyDataFrame.DropColumns(const AColNames: array of string): TPyDataFrame;
+var
+  NewVar, ColsList: string;
+  i: Integer;
+begin
+  NewVar := NewPyVar('df_dropped');
+  ColsList := '[';
+  for i := 0 to High(AColNames) do
+  begin
+    if i > 0 then ColsList := ColsList + ', ';
+    ColsList := ColsList + '"' + EscapeStr(AColNames[i]) + '"';
+  end;
+  ColsList := ColsList + ']';
+  TBlaisePy.Exec(Format('%s = %s.drop(columns=%s, errors="ignore").copy()',
+    [NewVar, FVarName, ColsList]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyDataFrame.DropNA: TPyDataFrame;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('df_clean');
+  TBlaisePy.Exec(Format('%s = %s.dropna().copy()', [NewVar, FVarName]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyDataFrame.DropNA(const ASubsetCols: array of string): TPyDataFrame;
+var
+  NewVar, ColsList: string;
+  i: Integer;
+begin
+  NewVar := NewPyVar('df_clean');
+  ColsList := '[';
+  for i := 0 to High(ASubsetCols) do
+  begin
+    if i > 0 then ColsList := ColsList + ', ';
+    ColsList := ColsList + '"' + EscapeStr(ASubsetCols[i]) + '"';
+  end;
+  ColsList := ColsList + ']';
+  TBlaisePy.Exec(Format('%s = %s.dropna(subset=%s).copy()', [NewVar, FVarName, ColsList]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyDataFrame.GroupBy(const AColName: string): TPyGroupBy;
+begin
+  Result := TPyGroupBy.Create(FVarName, AColName);
+end;
+
+{ TPyGroupBy }
+
+constructor TPyGroupBy.Create(const ADFVarName, AGroupCol: string);
+begin
+  inherited Create;
+  FDFVarName := ADFVarName;
+  FGroupCol := AGroupCol;
+end;
+
+function TPyGroupBy.EscapeStr(const S: string): string;
+begin
+  Result := StringReplace(S, '"', '\"', [rfReplaceAll]);
+end;
+
+function TPyGroupBy.Mean: TPyDataFrame;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('df_mean');
+  TBlaisePy.Exec(Format('%s = %s.groupby("%s", as_index=False).mean(numeric_only=True)',
+    [NewVar, FDFVarName, EscapeStr(FGroupCol)]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyGroupBy.Sum: TPyDataFrame;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('df_sum');
+  TBlaisePy.Exec(Format('%s = %s.groupby("%s", as_index=False).sum(numeric_only=True)',
+    [NewVar, FDFVarName, EscapeStr(FGroupCol)]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyGroupBy.Count: TPyDataFrame;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('df_count');
+  TBlaisePy.Exec(Format('%s = %s.groupby("%s", as_index=False).count()',
+    [NewVar, FDFVarName, EscapeStr(FGroupCol)]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyGroupBy.Min: TPyDataFrame;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('df_min');
+  TBlaisePy.Exec(Format('%s = %s.groupby("%s", as_index=False).min(numeric_only=True)',
+    [NewVar, FDFVarName, EscapeStr(FGroupCol)]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+function TPyGroupBy.Max: TPyDataFrame;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('df_max');
+  TBlaisePy.Exec(Format('%s = %s.groupby("%s", as_index=False).max(numeric_only=True)',
+    [NewVar, FDFVarName, EscapeStr(FGroupCol)]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+
 procedure TPyDataFrame.PlotBar(const ATitle, AXCol, AYCol: string);
 var
   PyHelper, ChartJson: string;
@@ -1184,6 +1517,188 @@ begin
   YTrain := TPySeries.Create(YTrVar, 'y_train');
   YTest  := TPySeries.Create(YTeVar, 'y_test');
 end;
+
+{ TPyLogisticRegression }
+
+constructor TPyLogisticRegression.Create(maxIter: Integer; randomState: Integer);
+begin
+  inherited Create;
+  EnsurePyDataScience;
+  FVarName := NewPyVar('log_reg');
+  TBlaisePy.Exec(
+    'from sklearn.linear_model import LogisticRegression'#10 +
+    Format('%s = LogisticRegression(max_iter=%d, random_state=%d)',
+      [FVarName, maxIter, randomState]));
+end;
+
+procedure TPyLogisticRegression.Fit(const X: TPyDataFrame; const Y: TPySeries);
+begin
+  TBlaisePy.Exec(Format('%s.fit(%s, %s)', [FVarName, X.VarName, Y.VarName]));
+end;
+
+function TPyLogisticRegression.Predict(const X: TPyDataFrame): TPySeries;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('s_pred');
+  TBlaisePy.Exec(Format('%s = pd.Series(%s.predict(%s), name="LogisticRegression_Pred")',
+    [NewVar, FVarName, X.VarName]));
+  Result := TPySeries.Create(NewVar, 'LogisticRegression_Pred');
+end;
+
+function TPyLogisticRegression.Score(const X: TPyDataFrame; const Y: TPySeries): Double;
+begin
+  Result := StrToFloatDef(TBlaisePy.EvalStr(Format('float(%s.score(%s, %s))', [FVarName, X.VarName, Y.VarName])), 0.0, FormatSettingsUS);
+end;
+
+function TPyLogisticRegression.PredictProba(const X: TPyDataFrame): TPyDataFrame;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('df_proba');
+  TBlaisePy.Exec(
+    Format('__probs = %s.predict_proba(%s)'#10 +
+           '%s = pd.DataFrame(__probs, columns=[f"Class_{c}" for c in %s.classes_])',
+           [FVarName, X.VarName, NewVar, FVarName]));
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
+{ TPyDecisionTreeClassifier }
+
+constructor TPyDecisionTreeClassifier.Create(maxDepth: Integer; randomState: Integer);
+var
+  DepthParam: string;
+begin
+  inherited Create;
+  EnsurePyDataScience;
+  FVarName := NewPyVar('dt_clf');
+  if maxDepth <= 0 then DepthParam := 'None' else DepthParam := IntToStr(maxDepth);
+  TBlaisePy.Exec(
+    'from sklearn.tree import DecisionTreeClassifier'#10 +
+    Format('%s = DecisionTreeClassifier(max_depth=%s, random_state=%d)',
+      [FVarName, DepthParam, randomState]));
+end;
+
+procedure TPyDecisionTreeClassifier.Fit(const X: TPyDataFrame; const Y: TPySeries);
+begin
+  TBlaisePy.Exec(Format('%s.fit(%s, %s)', [FVarName, X.VarName, Y.VarName]));
+end;
+
+function TPyDecisionTreeClassifier.Predict(const X: TPyDataFrame): TPySeries;
+var
+  NewVar: string;
+begin
+  NewVar := NewPyVar('s_pred');
+  TBlaisePy.Exec(Format('%s = pd.Series(%s.predict(%s), name="DecisionTree_Pred")',
+    [NewVar, FVarName, X.VarName]));
+  Result := TPySeries.Create(NewVar, 'DecisionTree_Pred');
+end;
+
+function TPyDecisionTreeClassifier.Score(const X: TPyDataFrame; const Y: TPySeries): Double;
+begin
+  Result := StrToFloatDef(TBlaisePy.EvalStr(Format('float(%s.score(%s, %s))', [FVarName, X.VarName, Y.VarName])), 0.0, FormatSettingsUS);
+end;
+
+function TPyDecisionTreeClassifier.FeatureImportances: TDoubleArray;
+var
+  JsonStr, ItemStr: string;
+  P1, P2, Len: Integer;
+begin
+  SetLength(Result, 0);
+  JsonStr := TBlaisePy.EvalStr(Format('json.dumps(list(%s.feature_importances_))', [FVarName]));
+  if (Length(JsonStr) >= 2) and (JsonStr[1] = '[') and (JsonStr[Length(JsonStr)] = ']') then
+  begin
+    JsonStr := Copy(JsonStr, 2, Length(JsonStr) - 2);
+    if Trim(JsonStr) = '' then Exit;
+    P1 := 1;
+    while P1 <= Length(JsonStr) do
+    begin
+      P2 := PosEx(',', JsonStr, P1);
+      if P2 = 0 then P2 := Length(JsonStr) + 1;
+      ItemStr := Trim(Copy(JsonStr, P1, P2 - P1));
+      Len := Length(Result);
+      SetLength(Result, Len + 1);
+      Result[Len] := StrToFloatDef(ItemStr, 0.0, FormatSettingsUS);
+      P1 := P2 + 1;
+    end;
+  end;
+end;
+
+procedure TPyDecisionTreeClassifier.PlotFeatureImportances(const AFeatures: array of string; const ATitle: string);
+var
+  LabelsJson, DataJson, ChartJson: string;
+  i: Integer;
+  Imp: TDoubleArray;
+begin
+  Imp := FeatureImportances;
+  LabelsJson := '[';
+  DataJson := '[';
+  for i := 0 to High(AFeatures) do
+  begin
+    if i > 0 then
+    begin
+      LabelsJson := LabelsJson + ', ';
+      DataJson := DataJson + ', ';
+    end;
+    LabelsJson := LabelsJson + '"' + AFeatures[i] + '"';
+    if i <= High(Imp) then
+      DataJson := DataJson + PyFloat(Imp[i])
+    else
+      DataJson := DataJson + '0.0';
+  end;
+  LabelsJson := LabelsJson + ']';
+  DataJson := DataJson + ']';
+
+  ChartJson := Format('{"labels": %s, "datasets": [{"label": "Importance", "data": %s, "backgroundColor": "#8b5cf6"}]}',
+    [LabelsJson, DataJson]);
+  TBlaiseOutput.ShowChart(ATitle, 'bar', ChartJson);
+end;
+
+{ Evaluation Metrics }
+
+function PyAccuracyScore(const YTrue, YPred: TPySeries): Double;
+begin
+  EnsurePyDataScience;
+  TBlaisePy.Exec('from sklearn.metrics import accuracy_score');
+  Result := StrToFloatDef(
+    TBlaisePy.EvalStr(
+      Format('float(accuracy_score(%s, %s))',
+        [YTrue.VarName, YPred.VarName])),
+    0.0, FormatSettingsUS);
+end;
+
+function PyR2Score(const YTrue, YPred: TPySeries): Double;
+begin
+  EnsurePyDataScience;
+  TBlaisePy.Exec('from sklearn.metrics import r2_score');
+  Result := StrToFloatDef(
+    TBlaisePy.EvalStr(
+      Format('float(r2_score(%s, %s))',
+        [YTrue.VarName, YPred.VarName])),
+    0.0, FormatSettingsUS);
+end;
+
+function PyConfusionMatrix(const YTrue, YPred: TPySeries): TPyDataFrame;
+var
+  NewVar, Code: string;
+begin
+  EnsurePyDataScience;
+  NewVar := NewPyVar('df_cm');
+  Code :=
+    'from sklearn.metrics import confusion_matrix'#10 +
+    Format(
+      '__classes = sorted(list(set(list(%s) + list(%s))))'#10 +
+      '__cm = confusion_matrix(%s, %s, labels=__classes)'#10 +
+      '__labels = [f"Pred_{c}" for c in __classes]'#10 +
+      '__idx = [f"True_{c}" for c in __classes]'#10 +
+      '__df_cm = pd.DataFrame(__cm, columns=__labels)'#10 +
+      '__df_cm.insert(0, "Actual / True", __idx)'#10 +
+      '%s = __df_cm',
+      [YTrue.VarName, YPred.VarName, YTrue.VarName, YPred.VarName, NewVar]);
+  TBlaisePy.Exec(Code);
+  Result := TPyDataFrame.Create(NewVar);
+end;
+
 
 initialization
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);

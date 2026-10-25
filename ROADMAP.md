@@ -24,21 +24,21 @@ flowchart LR
 > **Goal:** Empower Pascal programmers with complete tabular analytics, statistical visualizations, and machine learning models without writing raw Python scripts.
 
 #### 1.1 Novos Gráficos Científicos Nativos (Chart.js via Pascal)
-- [ ] **`DF.PlotPie(Title, LabelCol, ValueCol)`**: Gráficos de pizza e rosca com paleta moderna e porcentagens automáticas.
-- [ ] **`DF.PlotArea(Title, XCol, YCol)`**: Gráfico de área preenchida com transparência e gradientes.
-- [ ] **`DF.PlotHistogram(Title, Col, Bins)`**: Histograma de distribuição de frequências com cálculo automático de compartimentos (bins).
-- [ ] **`DF.PlotBoxPlot(Title, CategoryCol, ValueCol)`**: Boxplot para análise de dispersão e detecção de outliers.
+- [x] **`DF.PlotPie(Title, LabelCol, ValueCol)`**: Gráficos de pizza e rosca com paleta moderna e porcentagens automáticas.
+- [x] **`DF.PlotArea(Title, XCol, YCol)`**: Gráfico de área preenchida com transparência e gradientes.
+- [x] **`DF.PlotHistogram(Title, Col, Bins)`**: Histograma de distribuição de frequências com cálculo automático de compartimentos (bins).
+- [x] **`DF.PlotBoxPlot(Title, CategoryCol, ValueCol)`**: Boxplot para análise de dispersão e detecção de outliers.
 
 #### 1.2 Manipulação Fluente de Dados (Pandas em Pascal)
-- [ ] **Filtragem de Expressão**: `DF.Filter('RevenueK > 25.0 and Month in ["Jan", "Mar"]')`.
-- [ ] **Ordenação Flexível**: `DF.SortBy('RevenueK', Ascending: Boolean)`.
-- [ ] **Eliminação de Colunas / Nulos**: `DF.DropColumns(['ColA', 'ColB'])` e `DF.DropNA`.
-- [ ] **Agrupamento e Agregação**: `DF.GroupBy('Category').Mean` e `DF.GroupBy('Category').Sum`.
+- [x] **Filtragem de Expressão**: `DF.Filter('RevenueK > 25.0 and Month in ["Jan", "Mar"]')`.
+- [x] **Ordenação Flexível**: `DF.SortBy('RevenueK', Ascending: Boolean)`.
+- [x] **Eliminação de Colunas / Nulos**: `DF.DropColumns(['ColA', 'ColB'])` e `DF.DropNA`.
+- [x] **Agrupamento e Agregação**: `DF.GroupBy('Category').Mean` e `DF.GroupBy('Category').Sum`.
 
 #### 1.3 Novos Modelos de Inteligência Artificial & Métricas
-- [ ] **`TPyLogisticRegression`**: Classificação binária e multiclasse nativa.
-- [ ] **`TPyDecisionTreeClassifier`**: Árvores de decisão interpretáveis.
-- [ ] **Métricas de Avaliação de Modelos**:
+- [x] **`TPyLogisticRegression`**: Classificação binária e multiclasse nativa.
+- [x] **`TPyDecisionTreeClassifier`**: Árvores de decisão interpretáveis.
+- [x] **Métricas de Avaliação de Modelos**:
   - `PyAccuracyScore(YTrue, YPred: TPySeries): Double`
   - `PyR2Score(YTrue, YPred: TPySeries): Double`
   - `PyConfusionMatrix(YTrue, YPred: TPySeries): TPyDataFrame` (renderizável diretamente como tabela).
