@@ -22,7 +22,6 @@ type
   TCodeRunner = class
   private
     FWorkspaceDir: string;
-    FScientificDir: string;
     FPackagesDir: string;
     FPython4LazarusDir: string;
     FPython4LazarusLibDir: string;
@@ -76,15 +75,6 @@ begin
   if not DirectoryExists(FPackagesDir) then
     FPackagesDir := ExpandFileName('frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages');
 
-  // Locate scientific/ directory with BlaiseOutput and BlaiseMathKernel
-  FScientificDir := ExtractFilePath(ParamStr(0)) + 'scientific';
-  if not DirectoryExists(FScientificDir) then
-    FScientificDir := ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + 'scientific';
-  if not DirectoryExists(FScientificDir) then
-    FScientificDir := ExpandFileName('scientific');
-  if not DirectoryExists(FScientificDir) then
-    FScientificDir := ExpandFileName('frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'scientific');
-
   // Locate Python4Lazarus package directories
   FPython4LazarusDir := 'C:\Users\Pichau\AppData\Local\lazarus\onlinepackagemanager\packages\PythonForLazarus\python4lazarus';
   FPython4LazarusLibDir := FPython4LazarusDir + DirectorySeparator + 'lib' + DirectorySeparator + 'x86_64-win64';
@@ -129,10 +119,6 @@ begin
       end;
     end;
   end;
-
-  // 3. Backward-compatible scientific/ dir if present
-  if (FScientificDir <> '') and DirectoryExists(FScientificDir) and (ADirs.IndexOf(FScientificDir) < 0) then
-    ADirs.Add(FScientificDir);
 
   // 4. Current workspace dir
   if (FWorkspaceDir <> '') and DirectoryExists(FWorkspaceDir) and (ADirs.IndexOf(FWorkspaceDir) < 0) then

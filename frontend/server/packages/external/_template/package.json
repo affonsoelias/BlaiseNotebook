@@ -1,0 +1,11 @@
+{
+  "name": "my-library-template",
+  "version": "1.0.0",
+  "description": "Starter template for BlaiseNotebook modular external packages",
+  "main": "MyLibrary.pas",
+  "type": "library",
+  "author": "Your Name <you@example.com>",
+  "dependencies": {
+    "blaise-core": "^1.0.0"
+  }
+}

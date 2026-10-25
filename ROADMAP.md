@@ -11,7 +11,7 @@ Transform **BlaiseNotebook** into a premier scientific computing and interactive
 
 ```mermaid
 flowchart LR
-    M1["Milestone 1<br/><b>Data Science API</b><br/><i>Concluído</i>"] --> M2["Milestone 2<br/><b>Modular Packages</b><br/><i>Desacoplamento</i>"]
+    M1["Milestone 1<br/><b>Data Science API</b><br/><i>Concluído</i>"] --> M2["Milestone 2<br/><b>Modular Packages</b><br/><i>Concluído</i>"]
     M2 --> M3["Milestone 3<br/><b>Stateful Kernel</b><br/><i>Backend & Cache</i>"]
     M3 --> M4["Milestone 4<br/><b>Frontend UX</b><br/><i>IntelliSense & DataGrid</i>"]
     M4 --> M5["Milestone 5<br/><b>Dashboard View</b><br/><i>Presentation Mode</i>"]
@@ -46,7 +46,7 @@ flowchart LR
 
 ---
 
-### Milestone 2: Arquitetura Modular de Bibliotecas Desacopladas (`frontend/server/packages/`) 🚀 PRÓXIMO A IMPLEMENTAR
+### Milestone 2: Arquitetura Modular de Bibliotecas Desacopladas (`frontend/server/packages/`) ✅ CONCLUÍDO
 > **Goal:** Desacoplar 100% as bibliotecas do servidor nativo (`server.exe`), modularizando cada biblioteca (Pandas, Scikit-Learn, Math, etc.) em sua própria pasta isolada em `packages/external/`, com auto-descoberta dinâmica no Free Pascal, suporte nativo a `uses` nas células e facilidade de criação/distribuição de novos pacotes.
 
 #### 2.1 Estrutura de Pastas e Separação Modular Granular
@@ -66,11 +66,12 @@ flowchart LR
 - [x] **Execução e Stream em Tempo Real**: Interceptar `%pip install <pacote>` no `uCodeRunner` e despachar para o `pip` do Python configurado, transmitindo a saída em tempo real no console da célula.
 
 #### 2.4 Documentação e Template de Criação de Bibliotecas
-- [ ] Guia na documentação explicando o fluxo para criar, empacotar e distribuir novas bibliotecas em `packages/external/`.
+- [x] Guia na documentação explicando o fluxo para criar, empacotar e distribuir novas bibliotecas em `packages/external/`.
+- [x] Template inicial pronto em `packages/external/_template/` com Unit Pascal, `package.json`, `requirements.txt` e README.
 
 ---
 
-### Milestone 3: Arquitetura do Kernel e Desempenho (Backend Pascal)
+### Milestone 3: Arquitetura do Kernel e Desempenho (Backend Pascal) 🚀 PRÓXIMO A IMPLEMENTAR
 > **Goal:** Deliver instant compilation, variable continuity across cells, and support for multi-output cells.
 
 #### 3.1 Sessão Persistente entre Células (Stateful Kernel)
@@ -136,8 +137,8 @@ flowchart LR
 ## 📌 Ordem de Execução Atualizada
 
 1. **Fase 1 (Base Científica - CONCLUÍDO)**: Milestone 1 (Novos gráficos, métodos fluentes e modelos no `BlaiseDataScience.pas`).
-2. **Fase 2 (Arquitetura Modular - PRÓXIMO)**: Milestone 2 (Desacoplamento em `packages/core/` e `packages/external/`, modularização de Pandas, Sklearn, Math, suporte a `uses` dinâmico e `%pip`).
-3. **Fase 3 (Velocidade e Continuidade)**: Milestone 3 (Cache de compilação, múltiplas saídas e sessão persistente).
+2. **Fase 2 (Arquitetura Modular - CONCLUÍDO)**: Milestone 2 (Desacoplamento em `packages/core/` e `packages/external/`, modularização de Pandas, Sklearn, Math, suporte a `uses` dinâmico e `%pip`).
+3. **Fase 3 (Velocidade e Continuidade - PRÓXIMO)**: Milestone 3 (Cache de compilação, múltiplas saídas e sessão persistente).
 4. **Fase 4 (Interface Avançada)**: Milestone 4 (Autocompletion de Pascal e DataGrid Pro com paginação/ordenação).
 5. **Fase 5 (Apresentação Final)**: Milestone 5 (Dashboard View executivo).
 

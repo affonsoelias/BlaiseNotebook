@@ -14,6 +14,7 @@ BlaiseNotebook lets you write code, explore data, draw beautiful charts, and tra
 - 📝 **Rich Documentation**: Mix code with beautiful Markdown notes, bullet lists, tables, and LaTeX math formulas.
 - 🌓 **Day & Night Themes**: Toggle between a clean, bright Flatly theme and an eye-friendly Dark mode with a single click.
 - 💾 **Easy Project Files**: Save and load your work as portable `.bynb` notebook files to share with colleagues or students.
+- 📦 **Modular Extensibility**: Install packages with `%pip`, consume libraries with `uses`, and drop new libraries into `packages/external/` with instant zero-restart discovery!
 
 ---
 
@@ -25,6 +26,7 @@ BlaiseNotebook lets you write code, explore data, draw beautiful charts, and tra
 | 🚀 **[Getting Started Guide](GETTING_STARTED.md)** | Step-by-step beginner guide: launching the app, understanding the toolbar, and running your first cell. |
 | 🧪 **[Hands-On Notebooks (Examples 1 to 9)](../examples/README.md)** | Pre-built interactive .bynb notebooks progressing from fundamentals to AI pipelines. |
 | 📊 **[Data Science & Machine Learning Guide](SCIENTIFIC_COMPUTING.md)** | How to load datasets, compute statistics, plot charts, and train AI models using pure Pascal. |
+| 📦 **[Modular Packages & Extensibility](PACKAGES.md)** | How to install Python packages with `%pip`, consume libraries with `uses`, and build custom Pascal packages. |
 | 📖 **[Quick Reference & Cheat Sheet](API_REFERENCE.md)** | Handy copy-paste snippets and summary of all Pascal functions and classes. |
 | 💾 **[Notebook Format Guide](NOTEBOOK_FORMAT.md)** | How `.bynb` files store code, outputs, and visual charts. |
 | 🏗️ **[System Architecture](ARCHITECTURE.md)** | For curious minds: how the browser frontend communicates with the native Free Pascal kernel. |
