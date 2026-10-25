@@ -89,7 +89,7 @@
 
     <!-- MAIN NOTEBOOK CANVAS CONTAINER -->
     <div class="notebook-main-canvas-wrapper">
-      <router-view></router-view>
+      <bv-notebook></bv-notebook>
     </div>
 
     <!-- PERSISTENT FOOTER -->
@@ -134,6 +134,7 @@
       TJSObject(this['$store'])['appVersion'] := '1.0.0-SCIENTIFIC';
       TJSObject(this['$store'])['user'] := 'Pascal Scientist 🔬';
       asm
+        if (typeof document !== 'undefined') document.title = 'BlaiseNotebook';
         let saved = null;
         try {
           if (window.localStorage) {
@@ -286,8 +287,10 @@
   mounted:
     begin
       asm
+        if (typeof document !== 'undefined') document.title = 'BlaiseNotebook';
         const self = this;
         setTimeout(function() {
+          if (typeof document !== 'undefined') document.title = 'BlaiseNotebook';
           if (window.$theme) {
             self.isDark = (window.$theme.isDark === true);
           } else {
