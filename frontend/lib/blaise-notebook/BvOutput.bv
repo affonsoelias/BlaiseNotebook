@@ -35,25 +35,142 @@
           <pre class="error-content"><code>{{ out.text }}</code></pre>
         </div>
 
-        <!-- 3. DATA TABLE / DATAFRAME -->
+        <!-- 3. DATA TABLE / DATAFRAME (DATAGRID PRO) -->
         <div b-if="out.type === 'table'" class="bv-out-table-wrapper">
+          <!-- TOP TOOLBAR: TITLE, ROWS INFO, SEARCH & CSV EXPORT -->
           <div class="table-header-meta">
-            <span class="table-title">📊 {{ out.title || 'Data Table' }}</span>
-            <span class="table-rows-count" b-if="out.rows">Rows: {{ out.rows.length }}</span>
+            <div class="table-header-left">
+              <span class="table-title">📊 {{ out.title || 'Data Table' }}</span>
+              <span class="table-rows-count" b-if="out.rows">{{ getPageInfo(out) }}</span>
+            </div>
+            
+            <div class="table-header-actions">
+              <!-- QUICK SEARCH BOX -->
+              <div class="dg-search-box">
+                <input
+                  type="text"
+                  class="dg-search-input"
+                  placeholder="🔍 Buscar..."
+                  :value="out._grid ? out._grid.search : ''"
+                  @input="handleSearch(out, $event)"
+                />
+                <button
+                  b-if="out._grid && out._grid.search"
+                  class="dg-btn-clear-search"
+                  title="Limpar busca"
+                  @click="clearSearch(out)"
+                >✕</button>
+              </div>
+
+              <!-- CSV EXPORT BUTTONS -->
+              <div class="dg-export-group">
+                <button
+                  class="dg-btn-action"
+                  title="Copiar dados da tabela como CSV"
+                  @click="copyCSV(out)"
+                >
+                  📋 Copiar CSV
+                </button>
+                <button
+                  class="dg-btn-action"
+                  title="Baixar arquivo CSV formatado"
+                  @click="downloadCSV(out)"
+                >
+                  💾 Download CSV
+                </button>
+              </div>
+            </div>
           </div>
+
+          <!-- TABLE SCROLL CONTAINER -->
           <div class="table-scroll">
             <table class="bv-data-table">
               <thead>
                 <tr>
-                  <th b-for="col in out.columns">{{ col }}</th>
+                  <th
+                    b-for="col in out.columns"
+                    class="dg-th-sortable"
+                    :class="(out._grid && out._grid.sortCol === col) ? 'is-sorted' : ''"
+                    @click="handleSort(out, col)"
+                    title="Clique para ordenar por esta coluna"
+                  >
+                    <div class="th-content">
+                      <span class="th-label">{{ col }}</span>
+                      <span class="th-sort-icon">{{ getSortIcon(out, col) }}</span>
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                <tr b-for="row in out.rows">
+                <tr b-for="row in getPagedRows(out)">
                   <td b-for="col in out.columns">{{ getCellVal(row, col, $index) }}</td>
+                </tr>
+                <tr b-if="!getPagedRows(out) || getPagedRows(out).length === 0">
+                  <td :colspan="out.columns ? out.columns.length : 1" class="dg-empty-td">
+                    Nenhum registro encontrado.
+                  </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- BOTTOM PAGINATION & PAGE-SIZE BAR -->
+          <div class="table-pagination-bar">
+            <div class="pg-page-size-selector">
+              <span class="pg-label">Exibir por página:</span>
+              <button
+                class="pg-btn-size"
+                :class="(!out._grid || out._grid.pageSize === 10) ? 'is-active' : ''"
+                @click="setPageSize(out, 10)"
+              >10</button>
+              <button
+                class="pg-btn-size"
+                :class="(out._grid && out._grid.pageSize === 25) ? 'is-active' : ''"
+                @click="setPageSize(out, 25)"
+              >25</button>
+              <button
+                class="pg-btn-size"
+                :class="(out._grid && out._grid.pageSize === 50) ? 'is-active' : ''"
+                @click="setPageSize(out, 50)"
+              >50</button>
+              <button
+                class="pg-btn-size"
+                :class="(out._grid && out._grid.pageSize === 100) ? 'is-active' : ''"
+                @click="setPageSize(out, 100)"
+              >100</button>
+            </div>
+
+            <div class="pg-nav-controls">
+              <button
+                class="pg-btn-nav"
+                :disabled="!out._grid || out._grid.page <= 1"
+                @click="setPage(out, 1)"
+                title="Primeira página"
+              >⏮</button>
+              <button
+                class="pg-btn-nav"
+                :disabled="!out._grid || out._grid.page <= 1"
+                @click="prevPage(out)"
+                title="Página anterior"
+              >◀</button>
+              
+              <span class="pg-current-page">
+                {{ (out._grid && out._grid.page) ? out._grid.page : 1 }}
+              </span>
+
+              <button
+                class="pg-btn-nav"
+                :disabled="isLastPage(out)"
+                @click="nextPage(out)"
+                title="Próxima página"
+              >▶</button>
+              <button
+                class="pg-btn-nav"
+                :disabled="isLastPage(out)"
+                @click="setPage(out, 999999)"
+                title="Última página"
+              >⏭</button>
+            </div>
           </div>
         </div>
 
@@ -83,7 +200,7 @@
 
 <script>
   {
-    BvOutput.bv - Cell Execution Output Area (Stdout, Tables, Chart.js & Plots)
+    BvOutput.bv - Cell Execution Output Area (Stdout, DataGrid Pro & Plots)
     Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
   }
 
@@ -92,6 +209,9 @@
     status: string = 'idle';
     executionCount: integer = 0;
     executionTimeMs: integer = 0;
+
+  data:
+    gridVer: integer = 0;
 
   computed:
     function hasOutputs: boolean;
@@ -103,19 +223,348 @@
     end;
 
   methods:
-    function getCellVal(row: JSValue; col: JSValue; idx: integer): string;
+    procedure getCellVal(row: JSValue; col: JSValue; colIdx: integer);
     begin
       asm
-        if (!row) return '';
+        if (row === null || row === undefined) return '';
         if (Array.isArray(row)) {
-          return row[idx] !== undefined ? String(row[idx]) : '';
+          if (colIdx !== undefined && colIdx >= 0 && colIdx < row.length) {
+            const v = row[colIdx];
+            return (v !== null && v !== undefined) ? String(v) : '';
+          }
+          return '';
         }
         if (typeof row === 'object') {
-          if (col && row[col] !== undefined) return String(row[col]);
+          if (col !== null && col !== undefined && row[col] !== undefined) {
+            const v = row[col];
+            return (v !== null && v !== undefined) ? String(v) : '';
+          }
           const keys = Object.keys(row);
-          if (keys[idx] !== undefined) return String(row[keys[idx]]);
+          if (colIdx !== undefined && colIdx >= 0 && keys[colIdx] !== undefined) {
+            const v = row[keys[colIdx]];
+            return (v !== null && v !== undefined) ? String(v) : '';
+          }
         }
         return String(row);
+      end;
+    end;
+
+    procedure getPagedRows(item: JSValue);
+    begin
+      asm
+        const out = item;
+        const _ver = this.gridVer;
+        if (!out) return [];
+        const rows = out.rows || [];
+        const cols = out.columns || [];
+
+        if (!out._grid) {
+          out._grid = {
+            search: '',
+            sortCol: '',
+            sortAsc: true,
+            page: 1,
+            pageSize: 10
+          };
+        }
+        const g = out._grid;
+
+        // 1. Filtragem rápida em memória across all columns
+        let filtered = rows;
+        const q = (g.search || '').trim().toLowerCase();
+        if (q) {
+          filtered = rows.filter(function(row) {
+            if (!row) return false;
+            if (Array.isArray(row)) {
+              return row.some(function(cell) {
+                return cell !== null && cell !== undefined && String(cell).toLowerCase().indexOf(q) !== -1;
+              });
+            }
+            if (typeof row === 'object') {
+              const vals = Object.values(row);
+              return vals.some(function(cell) {
+                return cell !== null && cell !== undefined && String(cell).toLowerCase().indexOf(q) !== -1;
+              });
+            }
+            return String(row).toLowerCase().indexOf(q) !== -1;
+          });
+        }
+
+        // 2. Ordenação numérica e textual
+        if (g.sortCol) {
+          const colIdx = cols.indexOf(g.sortCol);
+          const isAsc = g.sortAsc;
+
+          filtered = filtered.slice().sort(function(rowA, rowB) {
+            let valA = '';
+            let valB = '';
+
+            if (Array.isArray(rowA)) {
+              valA = (colIdx >= 0 && rowA[colIdx] !== undefined) ? rowA[colIdx] : '';
+            } else if (typeof rowA === 'object' && rowA !== null) {
+              valA = rowA[g.sortCol] !== undefined ? rowA[g.sortCol] : '';
+            }
+
+            if (Array.isArray(rowB)) {
+              valB = (colIdx >= 0 && rowB[colIdx] !== undefined) ? rowB[colIdx] : '';
+            } else if (typeof rowB === 'object' && rowB !== null) {
+              valB = rowB[g.sortCol] !== undefined ? rowB[g.sortCol] : '';
+            }
+
+            const numA = Number(valA);
+            const numB = Number(valB);
+            if (!isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '') {
+              return isAsc ? numA - numB : numB - numA;
+            }
+
+            const strA = String(valA).toLowerCase();
+            const strB = String(valB).toLowerCase();
+            if (strA < strB) return isAsc ? -1 : 1;
+            if (strA > strB) return isAsc ? 1 : -1;
+            return 0;
+          });
+        }
+
+        g._filteredCount = filtered.length;
+
+        // 3. Paginação inteligente
+        const pageSize = (g.pageSize <= 0) ? filtered.length : g.pageSize;
+        const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+        if (g.page > totalPages) g.page = totalPages;
+        if (g.page < 1) g.page = 1;
+
+        const start = (g.page - 1) * pageSize;
+        return filtered.slice(start, start + pageSize);
+      end;
+    end;
+
+    procedure handleSort(item: JSValue; col: string);
+    begin
+      asm
+        const out = item;
+        if (!out) return;
+        if (!out._grid) {
+          out._grid = { search: '', sortCol: '', sortAsc: true, page: 1, pageSize: 10 };
+        }
+        if (out._grid.sortCol === col) {
+          if (out._grid.sortAsc) {
+            out._grid.sortAsc = false;
+          } else {
+            out._grid.sortCol = '';
+            out._grid.sortAsc = true;
+          }
+        } else {
+          out._grid.sortCol = col;
+          out._grid.sortAsc = true;
+        }
+        this.gridVer = (this.gridVer || 0) + 1;
+      end;
+    end;
+
+    procedure getSortIcon(item: JSValue; col: string);
+    begin
+      asm
+        const out = item;
+        const _ver = this.gridVer;
+        if (!out || !out._grid || out._grid.sortCol !== col) return '⇅';
+        return out._grid.sortAsc ? '▲' : '▼';
+      end;
+    end;
+
+    procedure handleSearch(item: JSValue; e: JSValue);
+    begin
+      asm
+        const out = item;
+        if (!out) return;
+        if (!out._grid) {
+          out._grid = { search: '', sortCol: '', sortAsc: true, page: 1, pageSize: 10 };
+        }
+        const val = (e && e.target) ? e.target.value : '';
+        out._grid.search = val;
+        out._grid.page = 1;
+        this.gridVer = (this.gridVer || 0) + 1;
+      end;
+    end;
+
+    procedure clearSearch(item: JSValue);
+    begin
+      asm
+        const out = item;
+        if (!out) return;
+        if (out._grid) {
+          out._grid.search = '';
+          out._grid.page = 1;
+        }
+        this.gridVer = (this.gridVer || 0) + 1;
+      end;
+    end;
+
+    procedure setPage(item: JSValue; page: integer);
+    begin
+      asm
+        const out = item;
+        if (!out || !out._grid) return;
+        const totalPages = Math.max(1, Math.ceil((out._grid._filteredCount || 0) / (out._grid.pageSize || 10)));
+        let p = page;
+        if (p < 1) p = 1;
+        if (p > totalPages) p = totalPages;
+        out._grid.page = p;
+        this.gridVer = (this.gridVer || 0) + 1;
+      end;
+    end;
+
+    procedure prevPage(item: JSValue);
+    begin
+      asm
+        const out = item;
+        if (!out || !out._grid) return;
+        if (out._grid.page > 1) {
+          out._grid.page = out._grid.page - 1;
+          this.gridVer = (this.gridVer || 0) + 1;
+        }
+      end;
+    end;
+
+    procedure nextPage(item: JSValue);
+    begin
+      asm
+        const out = item;
+        if (!out || !out._grid) return;
+        const pageSize = out._grid.pageSize || 10;
+        const totalPages = Math.max(1, Math.ceil((out._grid._filteredCount || 0) / pageSize));
+        if (out._grid.page < totalPages) {
+          out._grid.page = out._grid.page + 1;
+          this.gridVer = (this.gridVer || 0) + 1;
+        }
+      end;
+    end;
+
+    procedure setPageSize(item: JSValue; size: integer);
+    begin
+      asm
+        const out = item;
+        if (!out) return;
+        if (!out._grid) {
+          out._grid = { search: '', sortCol: '', sortAsc: true, page: 1, pageSize: 10 };
+        }
+        out._grid.pageSize = size;
+        out._grid.page = 1;
+        this.gridVer = (this.gridVer || 0) + 1;
+      end;
+    end;
+
+    procedure getPageInfo(item: JSValue);
+    begin
+      asm
+        const out = item;
+        const _ver = this.gridVer;
+        if (!out) return '';
+        const total = (out.rows || []).length;
+        if (!out._grid) {
+          return 'Total: ' + total + ' linhas';
+        }
+        const filtered = out._grid._filteredCount !== undefined ? out._grid._filteredCount : total;
+        const p = out._grid.page || 1;
+        const pageSize = out._grid.pageSize || 10;
+        const totalPages = Math.max(1, Math.ceil(filtered / (pageSize || 1)));
+        if (filtered !== total) {
+          return 'Pág. ' + p + ' de ' + totalPages + ' (' + filtered + ' de ' + total + ' linhas)';
+        }
+        return 'Pág. ' + p + ' de ' + totalPages + ' (' + total + ' linhas)';
+      end;
+    end;
+
+    procedure isLastPage(item: JSValue);
+    begin
+      asm
+        const out = item;
+        const _ver = this.gridVer;
+        if (!out || !out._grid) return true;
+        const filtered = out._grid._filteredCount !== undefined ? out._grid._filteredCount : (out.rows || []).length;
+        const pageSize = out._grid.pageSize || 10;
+        const totalPages = Math.max(1, Math.ceil(filtered / (pageSize || 1)));
+        return (out._grid.page || 1) >= totalPages;
+      end;
+    end;
+
+    procedure copyCSV(item: JSValue);
+    begin
+      asm
+        const out = item;
+        if (!out) return;
+        const cols = out.columns || [];
+        const rows = out.rows || [];
+
+        function escapeCsv(val) {
+          if (val === null || val === undefined) return '';
+          const s = String(val);
+          if (s.indexOf('"') !== -1 || s.indexOf(',') !== -1 || s.indexOf('\n') !== -1 || s.indexOf('\r') !== -1) {
+            return '"' + s.split('"').join('""') + '"';
+          }
+          return s;
+        }
+
+        const lines = [];
+        lines.push(cols.map(escapeCsv).join(','));
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (Array.isArray(row)) {
+            lines.push(row.map(escapeCsv).join(','));
+          } else if (typeof row === 'object' && row !== null) {
+            lines.push(cols.map(function(c) { return escapeCsv(row[c]); }).join(','));
+          }
+        }
+
+        const csvText = lines.join('\r\n');
+        if (navigator && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(csvText).then(function() {
+            // Success
+          });
+        }
+      end;
+    end;
+
+    procedure downloadCSV(item: JSValue);
+    begin
+      asm
+        const out = item;
+        if (!out) return;
+        const cols = out.columns || [];
+        const rows = out.rows || [];
+
+        function escapeCsv(val) {
+          if (val === null || val === undefined) return '';
+          const s = String(val);
+          if (s.indexOf('"') !== -1 || s.indexOf(',') !== -1 || s.indexOf('\n') !== -1 || s.indexOf('\r') !== -1) {
+            return '"' + s.split('"').join('""') + '"';
+          }
+          return s;
+        }
+
+        const lines = [];
+        lines.push(cols.map(escapeCsv).join(','));
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (Array.isArray(row)) {
+            lines.push(row.map(escapeCsv).join(','));
+          } else if (typeof row === 'object' && row !== null) {
+            lines.push(cols.map(function(c) { return escapeCsv(row[c]); }).join(','));
+          }
+        }
+
+        const csvText = lines.join('\r\n');
+        const blob = new Blob(['\uFEFF' + csvText], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        const safeTitle = (out.title || 'dataset').replace(/[^a-zA-Z0-9_\-]/g, '_');
+        link.setAttribute('href', url);
+        link.setAttribute('download', safeTitle + '.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
       end;
     end;
 
@@ -289,25 +738,34 @@
     white-space: pre-wrap;
   }
 
-  /* DATA TABLE STYLING */
+  /* DATAGRID PRO STYLING */
   .bv-out-table-wrapper {
     background: #161b22;
     border: 1px solid #30363d;
-    border-radius: 6px;
+    border-radius: 8px;
     overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
   }
 
   .table-header-meta {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 6px 12px;
+    padding: 8px 14px;
     background: #0d1117;
     border-bottom: 1px solid #30363d;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .table-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
   }
 
   .table-title {
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
     color: #e6edf3;
   }
@@ -315,12 +773,91 @@
   .table-rows-count {
     font-size: 11px;
     color: #8b949e;
+    background: #21262d;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid #30363d;
   }
 
+  .table-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* SEARCH BOX */
+  .dg-search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .dg-search-input {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 4px 26px 4px 10px;
+    border-radius: 6px;
+    font-size: 11.5px;
+    font-family: inherit;
+    outline: none;
+    width: 140px;
+    transition: width 0.2s, border-color 0.2s;
+  }
+
+  .dg-search-input:focus {
+    width: 200px;
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.15);
+  }
+
+  .dg-btn-clear-search {
+    position: absolute;
+    right: 6px;
+    background: transparent;
+    border: none;
+    color: #8b949e;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px;
+  }
+
+  .dg-btn-clear-search:hover {
+    color: #f85149;
+  }
+
+  /* EXPORT GROUP */
+  .dg-export-group {
+    display: flex;
+    gap: 6px;
+  }
+
+  .dg-btn-action {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .dg-btn-action:hover {
+    background: #30363d;
+    border-color: #8b949e;
+    color: #ffffff;
+  }
+
+  /* TABLE & HEADERS */
   .table-scroll {
     overflow-x: auto;
     overflow-y: auto;
-    max-height: 280px;
+    max-height: 340px;
     -webkit-overflow-scrolling: touch;
   }
 
@@ -329,27 +866,155 @@
     border-collapse: collapse;
     font-size: 12px;
     text-align: left;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   }
 
   .bv-data-table th {
-    background: #21262d;
+    background: #161b22;
     color: #c9d1d9;
-    padding: 7px 12px;
+    padding: 8px 12px;
     font-weight: 600;
-    border-bottom: 1px solid #30363d;
+    border-bottom: 2px solid #30363d;
     white-space: nowrap;
+    user-select: none;
+  }
+
+  .dg-th-sortable {
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .dg-th-sortable:hover {
+    background: #21262d;
+    color: #58a6ff;
+  }
+
+  .dg-th-sortable.is-sorted {
+    background: rgba(56, 139, 253, 0.12);
+    color: #58a6ff;
+  }
+
+  .th-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .th-sort-icon {
+    font-size: 11px;
+    opacity: 0.65;
+  }
+
+  .dg-th-sortable.is-sorted .th-sort-icon {
+    opacity: 1;
+    color: #58a6ff;
   }
 
   .bv-data-table td {
-    padding: 6px 12px;
+    padding: 7px 12px;
     color: #adbac7;
     border-bottom: 1px solid #21262d;
     white-space: nowrap;
   }
 
+  .bv-data-table tbody tr:nth-child(even) td {
+    background: rgba(255, 255, 255, 0.015);
+  }
+
   .bv-data-table tr:hover td {
-    background: rgba(56, 139, 253, 0.08);
-    color: #58a6ff;
+    background: rgba(56, 139, 253, 0.08) !important;
+    color: #ffffff;
+  }
+
+  .dg-empty-td {
+    text-align: center;
+    padding: 24px !important;
+    color: #8b949e;
+    font-style: italic;
+  }
+
+  /* BOTTOM PAGINATION BAR */
+  .table-pagination-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 14px;
+    background: #0d1117;
+    border-top: 1px solid #30363d;
+    font-size: 11.5px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pg-page-size-selector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pg-label {
+    color: #8b949e;
+  }
+
+  .pg-btn-size {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #8b949e;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .pg-btn-size:hover {
+    border-color: #8b949e;
+    color: #c9d1d9;
+  }
+
+  .pg-btn-size.is-active {
+    background: #1f6feb;
+    border-color: #388bfd;
+    color: #ffffff;
+    font-weight: 600;
+  }
+
+  .pg-nav-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .pg-btn-nav {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .pg-btn-nav:hover:not(:disabled) {
+    background: #21262d;
+    border-color: #58a6ff;
+  }
+
+  .pg-btn-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .pg-current-page {
+    padding: 2px 8px;
+    background: #21262d;
+    color: #e6edf3;
+    border-radius: 4px;
+    font-weight: 600;
+    min-width: 18px;
+    text-align: center;
   }
 
   /* CHART CARD STYLING */

@@ -101,10 +101,10 @@ flowchart LR
 - [x] **Colorização Aprimorada**: Destacar strings, comentários, palavras-chave e tipos científicos (`TPyDataFrame`, `TPySeries`, `TVector`).
 
 #### 4.2 Tabelas de Dados Interativas (DataGrid Pro)
-- [ ] **Ordenação de Colunas**: Clique no cabeçalho da coluna para ordenar ascendente/descendente no frontend.
-- [ ] **Filtro / Busca Rápida**: Barra de pesquisa para filtrar linhas instantaneamente em memória.
-- [ ] **Paginação Inteligente**: Paginação de 10, 25, 50 ou 100 linhas por página com navegação fluida.
-- [ ] **Exportação Rápida**: Botão "Copiar CSV" ou "Download CSV" direto no cabeçalho da tabela gerada.
+- [x] **Ordenação de Colunas**: Clique no cabeçalho da coluna para ordenar ascendente/descendente no frontend.
+- [x] **Filtro / Busca Rápida**: Barra de pesquisa para filtrar linhas instantaneamente em memória.
+- [x] **Paginação Inteligente**: Paginação de 10, 25, 50 ou 100 linhas por página com navegação fluida.
+- [x] **Exportação Rápida**: Botão "Copiar CSV" ou "Download CSV" direto no cabeçalho da tabela gerada.
 
 ---
 
