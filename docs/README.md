@@ -21,8 +21,9 @@ BlaiseNotebook lets you write code, explore data, draw beautiful charts, and tra
 
 | Guide | Description |
 | :--- | :--- |
+| 🎓 **[Complete Learning Tracks (Course)](course/README.md)** | **Start here!** A comprehensive 4-track course from absolute beginner to Machine Learning & AI master. |
 | 🚀 **[Getting Started Guide](GETTING_STARTED.md)** | Step-by-step beginner guide: launching the app, understanding the toolbar, and running your first cell. |
-| 🎓 **[Hands-On Course (Examples 1 to 7)](../examples/README.md)** | A complete hands-on tutorial course progressing from beginner to advanced data science. |
+| 🧪 **[Hands-On Notebooks (Examples 1 to 9)](../examples/README.md)** | Pre-built interactive .bynb notebooks progressing from fundamentals to AI pipelines. |
 | 📊 **[Data Science & Machine Learning Guide](SCIENTIFIC_COMPUTING.md)** | How to load datasets, compute statistics, plot charts, and train AI models using pure Pascal. |
 | 📖 **[Quick Reference & Cheat Sheet](API_REFERENCE.md)** | Handy copy-paste snippets and summary of all Pascal functions and classes. |
 | 💾 **[Notebook Format Guide](NOTEBOOK_FORMAT.md)** | How `.bynb` files store code, outputs, and visual charts. |
