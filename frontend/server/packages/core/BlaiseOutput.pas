@@ -30,8 +30,15 @@ type
 // Global helper procedures for intuitive cell scripts
 procedure ShowTable(const ATitle: string; const AColumns: array of string; const ARowsJson: string);
 procedure ShowChart(const ATitle, AChartType, ADataJson: string; const AOptionsJson: string = '{}');
+procedure ShowText(const S: string);
 
 implementation
+
+procedure ShowText(const S: string);
+begin
+  WriteLn(S);
+  Flush(Output);
+end;
 
 procedure ShowTable(const ATitle: string; const AColumns: array of string; const ARowsJson: string);
 begin

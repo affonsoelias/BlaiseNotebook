@@ -58,9 +58,9 @@ flowchart LR
 - [x] **`packages/external/datascience/`**: Unit de compatibilidade retroativa (`BlaiseDataScience.pas` agregando `BlaisePandas` e `BlaiseSklearn`) garantindo que nenhum notebook existente quebre.
 
 #### 2.2 Auto-Descoberta Dinâmica no `uCodeRunner.pas`
-- [ ] **Descoberta Automática de Subpastas (`DiscoverPackageUnits`)**: Varredura em tempo de execução de todas as subpastas em `packages/core/` e `packages/external/*`, adicionando os caminhos ao `-Fu` do FPC sem necessidade de reiniciar o servidor.
-- [ ] **Parser Inteligente de `uses` na Célula**: Suporte a declaração explícita de `uses MinhaLib, BlaisePandas;` nas células, preservando os imports do usuário e mesclando com o núcleo mínimo do sistema.
-- [ ] **Fallback de Compatibilidade para Iniciantes**: Injeção automática das bibliotecas padrão quando a célula não declarar `uses`.
+- [x] **Descoberta Automática de Subpastas (`DiscoverPackageUnits`)**: Varredura em tempo de execução de todas as subpastas em `packages/core/` e `packages/external/*`, adicionando os caminhos ao `-Fu` do FPC sem necessidade de reiniciar o servidor.
+- [x] **Parser Inteligente de `uses` na Célula**: Suporte a declaração explícita de `uses MinhaLib, BlaisePandas;` nas células, preservando os imports do usuário e mesclando com o núcleo mínimo do sistema.
+- [x] **Fallback de Compatibilidade para Iniciantes**: Injeção automática das bibliotecas padrão quando a célula não declarar `uses`.
 
 #### 2.3 Suporte ao Comando Mágico `%pip install` Direto na Célula
 - [ ] **Execução e Stream em Tempo Real**: Interceptar `%pip install <pacote>` no `uCodeRunner` e despachar para o `pip` do Python configurado, transmitindo a saída em tempo real no console da célula.

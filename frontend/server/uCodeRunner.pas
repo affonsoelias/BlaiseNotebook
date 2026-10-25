@@ -23,6 +23,7 @@ type
   private
     FWorkspaceDir: string;
     FScientificDir: string;
+    FPackagesDir: string;
     FPython4LazarusDir: string;
     FPython4LazarusLibDir: string;
     FOnStream: TOnStreamOutput;
@@ -32,6 +33,8 @@ type
     FCurrentCellId: string;
     FInterrupted: Boolean;
 
+    procedure DiscoverPackageDirs(ADirs: TStrings);
+    function ExtractUserUses(var ASource: string; out AUserUnits: string): Boolean;
     function PrepareSourceFile(const ACellId: string; const ASource: string; out APrgPath: string): Boolean;
     function CompileSource(const APrgPath: string; out AExePath: string; out AErrors: string): Boolean;
     procedure ExecuteBinary(const ACellId: string; const AExePath: string; AExecCount: Integer; AStartTick: Int64);
@@ -61,6 +64,15 @@ begin
 
   ForceDirectories(FWorkspaceDir);
 
+  // Locate packages/ directory
+  FPackagesDir := ExtractFilePath(ParamStr(0)) + 'packages';
+  if not DirectoryExists(FPackagesDir) then
+    FPackagesDir := ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + 'packages';
+  if not DirectoryExists(FPackagesDir) then
+    FPackagesDir := ExpandFileName('packages');
+  if not DirectoryExists(FPackagesDir) then
+    FPackagesDir := ExpandFileName('frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages');
+
   // Locate scientific/ directory with BlaiseOutput and BlaiseMathKernel
   FScientificDir := ExtractFilePath(ParamStr(0)) + 'scientific';
   if not DirectoryExists(FScientificDir) then
@@ -80,6 +92,152 @@ begin
   inherited Destroy;
 end;
 
+procedure TCodeRunner.DiscoverPackageDirs(ADirs: TStrings);
+var
+  CoreDir, ExtDir: string;
+  SR: TSearchRec;
+begin
+  if ADirs = nil then Exit;
+
+  // 1. Core package dir
+  CoreDir := FPackagesDir + DirectorySeparator + 'core';
+  if DirectoryExists(CoreDir) and (ADirs.IndexOf(CoreDir) < 0) then
+    ADirs.Add(CoreDir);
+
+  // 2. Discover all subdirectories under packages/external/
+  ExtDir := FPackagesDir + DirectorySeparator + 'external';
+  if DirectoryExists(ExtDir) then
+  begin
+    if ADirs.IndexOf(ExtDir) < 0 then
+      ADirs.Add(ExtDir);
+
+    if FindFirst(ExtDir + DirectorySeparator + '*', faDirectory, SR) = 0 then
+    begin
+      try
+        repeat
+          if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') then
+          begin
+            if DirectoryExists(ExtDir + DirectorySeparator + SR.Name) and (ADirs.IndexOf(ExtDir + DirectorySeparator + SR.Name) < 0) then
+              ADirs.Add(ExtDir + DirectorySeparator + SR.Name);
+          end;
+        until FindNext(SR) <> 0;
+      finally
+        FindClose(SR);
+      end;
+    end;
+  end;
+
+  // 3. Backward-compatible scientific/ dir if present
+  if (FScientificDir <> '') and DirectoryExists(FScientificDir) and (ADirs.IndexOf(FScientificDir) < 0) then
+    ADirs.Add(FScientificDir);
+
+  // 4. Current workspace dir
+  if (FWorkspaceDir <> '') and DirectoryExists(FWorkspaceDir) and (ADirs.IndexOf(FWorkspaceDir) < 0) then
+    ADirs.Add(FWorkspaceDir);
+end;
+
+function TCodeRunner.ExtractUserUses(var ASource: string; out AUserUnits: string): Boolean;
+var
+  i, Len, UsesPos, SemiPos: Integer;
+  InComment, InLineComment: Boolean;
+  Token: string;
+begin
+  Result := False;
+  AUserUnits := '';
+  Len := Length(ASource);
+  i := 1;
+  InComment := False;
+  InLineComment := False;
+  UsesPos := 0;
+
+  while (i <= Len) do
+  begin
+    // Check line comment //
+    if not InComment and not InLineComment and (i < Len) and (ASource[i] = '/') and (ASource[i+1] = '/') then
+    begin
+      InLineComment := True;
+      Inc(i, 2);
+      Continue;
+    end;
+
+    if InLineComment then
+    begin
+      if ASource[i] in [#10, #13] then
+        InLineComment := False;
+      Inc(i);
+      Continue;
+    end;
+
+    // Check block comment { ... }
+    if not InComment and (ASource[i] = '{') then
+    begin
+      InComment := True;
+      Inc(i);
+      Continue;
+    end;
+
+    if InComment then
+    begin
+      if ASource[i] = '}' then
+        InComment := False;
+      Inc(i);
+      Continue;
+    end;
+
+    // Skip whitespace
+    if ASource[i] in [' ', #9, #10, #13] then
+    begin
+      Inc(i);
+      Continue;
+    end;
+
+    // Check identifier token
+    if (UpCase(ASource[i]) in ['A'..'Z', '_']) then
+    begin
+      Token := '';
+      UsesPos := i;
+      while (i <= Len) and (UpCase(ASource[i]) in ['A'..'Z', '0'..'9', '_']) do
+      begin
+        Token := Token + UpCase(ASource[i]);
+        Inc(i);
+      end;
+
+      if Token = 'USES' then
+      begin
+        // Found uses! Find terminating semicolon
+        SemiPos := 0;
+        while (i <= Len) do
+        begin
+          if ASource[i] = ';' then
+          begin
+            SemiPos := i;
+            Break;
+          end;
+          Inc(i);
+        end;
+
+        if SemiPos > UsesPos then
+        begin
+          // Extract units
+          AUserUnits := Trim(Copy(ASource, UsesPos + 4, SemiPos - (UsesPos + 4)));
+          // Remove uses clause from source
+          Delete(ASource, UsesPos, SemiPos - UsesPos + 1);
+          ASource := Trim(ASource);
+          Result := True;
+          Exit;
+        end;
+      end
+      else
+      begin
+        // First token is NOT 'uses' (e.g. 'var', 'begin', 'const', etc.)
+        Exit;
+      end;
+    end
+    else
+      Inc(i);
+  end;
+end;
+
 function TCodeRunner.PrepareSourceFile(const ACellId: string; const ASource: string; out APrgPath: string): Boolean;
 var
   CleanSource: string;
@@ -88,6 +246,8 @@ var
   FinalCode: TStringList;
   SafeId: string;
   FullText: string;
+  UserUnits: string;
+  HasUserUses: Boolean;
 begin
   Result := False;
   CleanSource := Trim(ASource);
@@ -114,6 +274,9 @@ begin
     end
     else
     begin
+      // Check if user provided custom uses clause
+      HasUserUses := ExtractUserUses(CleanSource, UserUnits);
+
       // Normalize snippet end:
       FullText := Trim(CleanSource);
       if Pos('begin', LowerCase(FullText)) = 0 then
@@ -133,8 +296,16 @@ begin
       FinalCode.Add('{$mode objfpc}{$H+}');
       FinalCode.Add('{$modeswitch advancedrecords}');
       FinalCode.Add('uses');
-      FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput, BlaiseMathKernel,');
-      FinalCode.Add('  PythonEngine, BlaisePyKernel, BlaiseDataScience;');
+      if HasUserUses then
+      begin
+        FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput, PythonEngine,');
+        FinalCode.Add('  ' + UserUnits + ';');
+      end
+      else
+      begin
+        FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput, BlaiseMathKernel,');
+        FinalCode.Add('  PythonEngine, BlaisePyKernel, BlaiseDataScience, BlaisePandas, BlaiseSklearn;');
+      end;
       FinalCode.Add('');
       FinalCode.Add(CleanSource);
     end;
@@ -153,6 +324,8 @@ var
   OutStream: TMemoryStream;
   BytesRead: LongInt;
   Buffer: array[0..2047] of Byte;
+  PackageDirs: TStringList;
+  i: Integer;
   OutputStr: string;
 begin
   Result := False;
@@ -161,14 +334,17 @@ begin
 
   Proc := TProcess.Create(nil);
   OutStream := TMemoryStream.Create;
+  PackageDirs := TStringList.Create;
   try
     Proc.Executable := 'fpc';
     Proc.Parameters.Add('-Mobjfpc');
     Proc.Parameters.Add('-Sh');
     Proc.Parameters.Add('-O2');
     Proc.Parameters.Add('-FE' + FWorkspaceDir);
-    if DirectoryExists(FScientificDir) then
-      Proc.Parameters.Add('-Fu' + FScientificDir);
+    // Dynamically discover and register all package directories
+    DiscoverPackageDirs(PackageDirs);
+    for i := 0 to PackageDirs.Count - 1 do
+      Proc.Parameters.Add('-Fu' + PackageDirs[i]);
     if DirectoryExists(FPython4LazarusLibDir) then
       Proc.Parameters.Add('-Fu' + FPython4LazarusLibDir);
     if DirectoryExists(FPython4LazarusDir) then
@@ -210,6 +386,7 @@ begin
   finally
     Proc.Free;
     OutStream.Free;
+    PackageDirs.Free;
   end;
 end;
 
