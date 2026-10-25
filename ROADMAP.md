@@ -71,7 +71,7 @@ flowchart LR
 
 ---
 
-### Milestone 3: Arquitetura do Kernel e Desempenho (Backend Pascal) 🚀 PRÓXIMO A IMPLEMENTAR
+### Milestone 3: Arquitetura do Kernel e Desempenho (Backend Pascal) ✅ CONCLUÍDO
 > **Goal:** Deliver instant compilation, variable continuity across cells, and support for multi-output cells.
 
 #### 3.1 Sessão Persistente entre Células (Stateful Kernel)
@@ -85,8 +85,8 @@ flowchart LR
 - [x] **Invalidação Automática de Cache**: Recompilação automática assim que qualquer caractere do código for modificado ou após um "Restart Kernel".
 
 #### 3.3 Múltiplas Saídas em uma Única Célula
-- [ ] **Multiplexação de Payloads**: Permitir que uma única execução emita múltiplos gráficos e tabelas sequenciais (ex: `DF.ShowTable(...)` seguido de `DF.PlotLine(...)` e `DF.PlotBar(...)`).
-- [ ] **Stacking Ordenado**: As saídas são empilhadas de forma organizada abaixo da célula correspondente.
+- [x] **Multiplexação de Payloads**: Uma única execução emite múltiplos gráficos e tabelas sequenciais (`DF.ShowTable(...)`, `DF.PlotLine(...)`, `DF.PlotBar(...)`) através de delimitadores `@@BLAISE_PAYLOAD@@:` sem sobreposição.
+- [x] **Stacking Ordenado**: As saídas são organizadas e empilhadas de forma fluida no componente `BvOutput.bv`, com espaçamento uniforme e isolamento visual de cada card.
 
 ---
 

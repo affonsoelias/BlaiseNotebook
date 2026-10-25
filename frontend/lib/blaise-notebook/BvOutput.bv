@@ -212,7 +212,8 @@
     padding: 8px 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
+    margin-bottom: 6px;
   }
 
   /* TERMINAL STDOUT STYLING */
