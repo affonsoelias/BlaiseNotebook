@@ -57,6 +57,8 @@ implementation
 { TCodeRunner }
 
 constructor TCodeRunner.Create(const AWorkspaceDir: string);
+var
+  SR: TSearchRec;
 begin
   inherited Create;
   if AWorkspaceDir <> '' then
@@ -67,13 +69,26 @@ begin
   ForceDirectories(FWorkspaceDir);
 
   // Locate packages/ directory
-  FPackagesDir := ExtractFilePath(ParamStr(0)) + 'packages';
+  FPackagesDir := ExpandFileName(ExtractFilePath(ParamStr(0)) + 'packages');
   if not DirectoryExists(FPackagesDir) then
-    FPackagesDir := ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + 'packages';
+    FPackagesDir := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + 'packages');
   if not DirectoryExists(FPackagesDir) then
     FPackagesDir := ExpandFileName('packages');
   if not DirectoryExists(FPackagesDir) then
     FPackagesDir := ExpandFileName('frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages');
+
+  // Purge any stale package unit artifacts from workspace to avoid PPU checksum mismatch
+  if FindFirst(FWorkspaceDir + DirectorySeparator + 'Blaise*.*', faAnyFile, SR) = 0 then
+  begin
+    try
+      repeat
+        if (LowerCase(ExtractFileExt(SR.Name)) = '.ppu') or (LowerCase(ExtractFileExt(SR.Name)) = '.o') then
+          DeleteFile(FWorkspaceDir + DirectorySeparator + SR.Name);
+      until FindNext(SR) <> 0;
+    finally
+      FindClose(SR);
+    end;
+  end;
 
   // Locate Python4Lazarus package directories
   FPython4LazarusDir := 'C:\Users\Pichau\AppData\Local\lazarus\onlinepackagemanager\packages\PythonForLazarus\python4lazarus';
@@ -104,7 +119,7 @@ begin
     if ADirs.IndexOf(ExtDir) < 0 then
       ADirs.Add(ExtDir);
 
-    if FindFirst(ExtDir + DirectorySeparator + '*', faDirectory, SR) = 0 then
+    if FindFirst(ExtDir + DirectorySeparator + '*', faAnyFile, SR) = 0 then
     begin
       try
         repeat
