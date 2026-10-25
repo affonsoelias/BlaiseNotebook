@@ -6,6 +6,18 @@ By unifying the reactive Single File Component architecture of **BlaiseVue**, ha
 
 ---
 
+## 📖 Official Documentation
+
+Comprehensive technical guides and references are available in the [`docs/`](docs/README.md) directory:
+
+- 🚀 **[Getting Started & Installation](docs/GETTING_STARTED.md):** Prerequisites, build steps, and server launch.
+- 🏛️ **[System Architecture & Internals](docs/ARCHITECTURE.md):** Frontend components, WebSocket lifecycle, and sandboxing.
+- 🔬 **[Scientific Computing & Machine Learning](docs/SCIENTIFIC_COMPUTING.md):** `TVector`, linear regression, Python4Delphi bridge, and Chart.js plotting.
+- 📄 **[Notebook File Format Specification (.bynb)](docs/NOTEBOOK_FORMAT.md):** JSON schema, cell state, and output formats.
+- 📚 **[Pascal Units & Kernel API Reference](docs/API_REFERENCE.md):** Method signatures and WebSocket event payloads.
+
+---
+
 ## 🏛️ System Architecture
 
 ```text
