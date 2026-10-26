@@ -7,6 +7,10 @@
         <span class="lang-name">Object Pascal</span>
       </div>
       <div class="bv-editor-shortcuts">
+        <button type="button" class="btn-format-code" @click="formatCode" title="Organizar e formatar código Pascal (Shift + Alt + F)">
+          🪄 Formatar
+        </button>
+        <span class="shortcut-pill"><code>Shift + Alt + F</code> Formatar</span>
         <span class="shortcut-pill"><code>Ctrl + Space</code> Autocomplete</span>
         <span class="shortcut-pill"><code>Shift + Enter</code> Run</span>
         <span class="shortcut-pill"><code>Tab</code> Indent</span>
@@ -189,6 +193,193 @@
         }
 
         hl.innerHTML = out + (val.endsWith('\n') ? ' ' : '');
+      end;
+    end;
+
+    procedure formatCode;
+    begin
+      asm
+        const ta = this.$refs ? this.$refs.codeTextarea : null;
+        const currentVal = ta ? ta.value : (this.value || '');
+        if (!currentVal || !currentVal.trim()) return;
+
+        function runPascalFormatter(code) {
+          if (!code || typeof code !== 'string') return '';
+          const lines = code.split('\n');
+          const formattedLines = [];
+          let indentLevel = 0;
+          let parenDepth = 0;
+          let inVarBlock = false;
+          let inConstBlock = false;
+          let inTypeBlock = false;
+
+          function countCharOutsideStrings(line, targetChar) {
+            let count = 0;
+            let inStr = false;
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i];
+              if (ch === "'") inStr = !inStr;
+              else if (!inStr && ch === targetChar) count++;
+            }
+            return count;
+          }
+
+          function splitCodeAndComment(line) {
+            let inStr = false;
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i];
+              if (ch === "'") inStr = !inStr;
+              else if (!inStr) {
+                if (ch === '/' && i + 1 < line.length && line[i + 1] === '/') {
+                  return { code: line.substring(0, i).trim(), comment: line.substring(i) };
+                }
+                if (ch === '{') {
+                  return { code: line.substring(0, i).trim(), comment: line.substring(i) };
+                }
+              }
+            }
+            return { code: line.trim(), comment: '' };
+          }
+
+          function normalizeSpacing(s) {
+            let res = '';
+            let inStr = false;
+            let i = 0;
+            while (i < s.length) {
+              const ch = s[i];
+              if (ch === "'") {
+                inStr = !inStr;
+                res += ch;
+                i++;
+              } else if (inStr) {
+                res += ch;
+                i++;
+              } else {
+                if (s.substring(i, i + 2) === ':=') {
+                  res += ' := ';
+                  i += 2;
+                } else if (s.substring(i, i + 2) === '<=' || s.substring(i, i + 2) === '>=' || s.substring(i, i + 2) === '<>') {
+                  res += ' ' + s.substring(i, i + 2) + ' ';
+                  i += 2;
+                } else if (ch === ',') {
+                  res += ', ';
+                  i++;
+                } else if (ch === ':' && i + 1 < s.length && s[i + 1] !== '=' && s[i + 1] !== ' ') {
+                  res += ': ';
+                  i++;
+                } else {
+                  res += ch;
+                  i++;
+                }
+              }
+            }
+            let clean = '';
+            inStr = false;
+            for (let j = 0; j < res.length; j++) {
+              if (res[j] === "'") inStr = !inStr;
+              if (!inStr && res[j] === ' ' && res[j + 1] === ' ') {
+                continue;
+              }
+              clean += res[j];
+            }
+            return clean.trim();
+          }
+
+          for (let idx = 0; idx < lines.length; idx++) {
+            const rawLine = lines[idx];
+            const trimmed = rawLine.trim();
+
+            if (!trimmed) {
+              formattedLines.push('');
+              continue;
+            }
+
+            const { code, comment } = splitCodeAndComment(trimmed);
+            const lowerCode = code.toLowerCase();
+
+            const openInLine = countCharOutsideStrings(code, '(') + countCharOutsideStrings(code, '[');
+            const closeInLine = countCharOutsideStrings(code, ')') + countCharOutsideStrings(code, ']');
+
+            if (closeInLine > openInLine && parenDepth > 0) {
+              parenDepth = Math.max(0, parenDepth - (closeInLine - openInLine));
+            }
+
+            // Dedents before line
+            if (lowerCode.startsWith('end') || lowerCode.startsWith('until') ||
+                lowerCode === 'finally' || lowerCode === 'except' ||
+                lowerCode.startsWith('finally ') || lowerCode.startsWith('except ')) {
+              if (indentLevel > 0) indentLevel--;
+              inVarBlock = false;
+              inConstBlock = false;
+              inTypeBlock = false;
+            } else if (lowerCode === 'begin' || lowerCode.startsWith('begin ') ||
+                       lowerCode === 'var' || lowerCode === 'const' || lowerCode === 'type' ||
+                       lowerCode === 'interface' || lowerCode === 'implementation' ||
+                       lowerCode === 'initialization' || lowerCode === 'finalization') {
+              if (inVarBlock || inConstBlock || inTypeBlock) {
+                if (indentLevel > 0) indentLevel--;
+                inVarBlock = false;
+                inConstBlock = false;
+                inTypeBlock = false;
+              }
+            }
+
+            let effectiveIndent = indentLevel + parenDepth;
+            if (effectiveIndent < 0) effectiveIndent = 0;
+
+            const formattedCode = code ? normalizeSpacing(code) : '';
+            let fullLine = '';
+            if (comment) {
+              if (formattedCode) {
+                fullLine = formattedCode + '  ' + comment;
+              } else {
+                fullLine = comment;
+              }
+            } else {
+              fullLine = formattedCode;
+            }
+
+            const indentSpaces = '  '.repeat(effectiveIndent);
+            formattedLines.push(indentSpaces + fullLine);
+
+            if (openInLine > closeInLine) {
+              parenDepth += (openInLine - closeInLine);
+            }
+
+            if (lowerCode === 'begin' || lowerCode.endsWith(' begin') ||
+                lowerCode.startsWith('try') || lowerCode === 'repeat' ||
+                lowerCode.startsWith('case ') || lowerCode === 'finally' ||
+                lowerCode === 'except' || lowerCode.startsWith('record') ||
+                (lowerCode.startsWith('class') && lowerCode.endsWith(';'))) {
+              indentLevel++;
+            } else if (lowerCode === 'var') {
+              inVarBlock = true;
+              indentLevel++;
+            } else if (lowerCode === 'const') {
+              inConstBlock = true;
+              indentLevel++;
+            } else if (lowerCode === 'type') {
+              inTypeBlock = true;
+              indentLevel++;
+            }
+          }
+
+          return formattedLines.join('\n');
+        }
+
+        const formatted = runPascalFormatter(currentVal);
+        if (formatted === currentVal) return;
+
+        if (ta) {
+          const oldStart = ta.selectionStart;
+          ta.value = formatted;
+          ta.selectionStart = ta.selectionEnd = Math.min(oldStart, formatted.length);
+        }
+
+        this.updateLines();
+        if (this.$emit) {
+          this.$emit('input', formatted);
+        }
       end;
     end;
 
@@ -475,6 +666,14 @@
           }
         }
 
+        // Shift + Alt + F or Ctrl + Alt + L or Ctrl + Alt + F: Format Pascal Code
+        if ((event.key === 'f' || event.key === 'F' || event.key === 'l' || event.key === 'L') &&
+            ((event.shiftKey && event.altKey) || (event.ctrlKey && event.altKey) || (event.metaKey && event.altKey))) {
+          event.preventDefault();
+          this.formatCode();
+          return;
+        }
+
         // Ctrl + Space: Trigger Autocomplete explicitly
         if (event.code === 'Space' && (event.ctrlKey || event.metaKey)) {
           event.preventDefault();
@@ -631,7 +830,34 @@
 
   .bv-editor-shortcuts {
     display: flex;
+    align-items: center;
     gap: 8px;
+  }
+
+  .btn-format-code {
+    background: #238636;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.05s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+    line-height: 16px;
+  }
+
+  .btn-format-code:hover {
+    background: #2ea043;
+    box-shadow: 0 0 6px rgba(46, 160, 67, 0.4);
+  }
+
+  .btn-format-code:active {
+    transform: scale(0.96);
   }
 
   .shortcut-pill {
