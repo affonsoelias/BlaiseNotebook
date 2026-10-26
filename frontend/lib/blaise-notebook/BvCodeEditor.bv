@@ -145,7 +145,7 @@
           'filter', 'sortby', 'groupby', 'attach', 'saveas', 'create', 'showchart'
         ]);
 
-        const tokenRegex = new RegExp('(\\/\\/[^\\n]*|\\{[^}]*\\}|\\(\\*[\\s\\S]*?\\*\\)|\x27(\x27\x27|[^\x27\\n])*\x27|\\$[0-9A-Fa-f]+\\b|\\b\\d+(?:\\.\\d+)?\\b|[A-Za-z_][A-Za-z0-9_]*|:=|<=|>=|<>|\\.\\.|[^\x27\\sA-Za-z0-9_]|\\s+)', 'g');
+        const tokenRegex = new RegExp('(\\/\\/[^\\n]*|\\{[^}]*\\}|\\(\\*[\\s\\S]*?\\*\\)|\x27(\x27\x27|[^\x27\\n])*(\x27|$)|\\$[0-9A-Fa-f]+\\b|\\b\\d+(?:\\.\\d+)?\\b|[A-Za-z_][A-Za-z0-9_]*|:=|<=|>=|<>|\\.\\.|[^\x27\\sA-Za-z0-9_]|\x27|\\s+)', 'g');
         let out = '';
         let m;
         let prevToken = '';
@@ -418,16 +418,14 @@
     end;
 
     procedure handleInput(e: JSValue);
-    var
-      newVal: string;
     begin
       asm
         const target = e && e.target ? e.target : null;
         if (target) {
-          newVal = target.value;
+          const val = target.value;
           this.updateLines();
           if (this.$emit) {
-            this.$emit('input', newVal);
+            this.$emit('input', val);
           }
           this.checkAutocomplete('auto');
         }
