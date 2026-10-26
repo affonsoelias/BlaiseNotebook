@@ -1054,9 +1054,10 @@
       asm
         this._runQueue = [];
         this.isRunning = false;
+        this.executionCounter = 0;
         for (let i = 0; i < (this.cells || []).length; i++) {
           const c = this.cells[i];
-          if (c && c.status === 'running') {
+          if (c) {
             c.status = 'idle';
           }
         }
@@ -1329,10 +1330,7 @@
       asm
         const self = this;
         try {
-          let host = window.location.host;
-          if (!host || host.indexOf(':8090') === -1) {
-            host = (window.location.hostname || 'localhost') + ':8090';
-          }
+          let host = window.location.host || ((window.location.hostname || 'localhost') + ':8090');
           const wsUrl = (window.location.protocol === 'https:' ? 'wss://' : 'ws://') + host + '/ws';
           
           const ws = new WebSocket(wsUrl);

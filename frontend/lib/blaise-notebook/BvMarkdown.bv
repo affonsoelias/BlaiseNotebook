@@ -6,8 +6,8 @@
         <span class="md-text">Documentation / Markdown</span>
       </div>
       <div class="bv-md-actions">
-        <button class="bv-md-btn btn-edit" @click="startEdit">✏️ Edit (Double-click)</button>
-        <button class="bv-md-btn btn-save" @click="finishEdit">👁️ Done Editing (Ctrl+Enter)</button>
+        <button type="button" class="bv-md-btn btn-edit" @click="startEdit">✏️ Edit (Double-click)</button>
+        <button type="button" class="bv-md-btn btn-save" @click="finishEdit">👁️ Done Editing (Ctrl+Enter)</button>
       </div>
     </div>
 
@@ -46,7 +46,6 @@
 
   data:
     isEditing: boolean = false;
-    currentText: string = '';
 
   computed:
     function renderedHtml: string;
@@ -54,7 +53,7 @@
       raw: string;
     begin
       asm
-        const text = this.currentText || this.value || '';
+        const text = (this._textBuffer !== undefined ? this._textBuffer : this.value) || '';
         if (!text.trim()) {
           return '<p class="bv-md-empty"><em>(Empty documentation cell. Double-click to edit.)</em></p>';
         }
@@ -128,8 +127,8 @@
       this['isEditing'] := true;
       asm
         const self = this;
-        const initialVal = self.currentText || self.value || '';
-        self.currentText = initialVal;
+        const initialVal = self._textBuffer !== undefined ? self._textBuffer : (self.value || '');
+        self._textBuffer = initialVal;
         const syncTa = function() {
           const ta = self.$refs ? self.$refs.mdTextarea : null;
           if (ta) {
@@ -140,7 +139,7 @@
           }
         };
         syncTa();
-        setTimeout(syncTa, 20);
+        setTimeout(syncTa, 30);
       end;
     end;
 
@@ -149,8 +148,8 @@
       this['isEditing'] := false;
       asm
         const ta = this.$refs ? this.$refs.mdTextarea : null;
-        const finalVal = ta ? ta.value : (this.currentText || this.value || '');
-        this.currentText = finalVal;
+        const finalVal = ta ? ta.value : (this._textBuffer !== undefined ? this._textBuffer : (this.value || ''));
+        this._textBuffer = finalVal;
         this.renderHtmlContent();
         if (this.$emit) {
           this.$emit('input', finalVal);
@@ -164,7 +163,7 @@
       asm
         const target = e && e.target ? e.target : null;
         if (target) {
-          this.currentText = target.value;
+          this._textBuffer = target.value;
           target.style.height = 'auto';
           target.style.height = Math.max(100, target.scrollHeight) + 'px';
         }
@@ -176,10 +175,12 @@
       asm
         const evt = e || window.event;
         if (!evt) return;
+        evt.stopPropagation();
         if (evt.key === 'Enter' && (evt.ctrlKey || evt.metaKey || evt.shiftKey)) {
           evt.preventDefault();
           this.finishEdit();
         } else if (evt.key === 'Escape') {
+          evt.preventDefault();
           this.finishEdit();
         }
       end;
@@ -188,10 +189,10 @@
   mounted:
     begin
       asm
-        this.currentText = this.value || '';
+        this._textBuffer = this.value || '';
         const ta = this.$refs ? this.$refs.mdTextarea : null;
         if (ta) {
-          ta.value = this.currentText;
+          ta.value = this._textBuffer;
         }
         this.renderHtmlContent();
       end;
@@ -202,12 +203,12 @@
     begin
       asm
         const self = this;
-        self.currentText = newVal || '';
-        const ta = self.$refs ? self.$refs.mdTextarea : null;
-        if (ta && !self.isEditing) {
-          ta.value = newVal || '';
-        }
         if (!self.isEditing) {
+          self._textBuffer = newVal || '';
+          const ta = self.$refs ? self.$refs.mdTextarea : null;
+          if (ta) {
+            ta.value = newVal || '';
+          }
           self.renderHtmlContent();
         }
       end;
