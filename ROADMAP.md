@@ -131,9 +131,9 @@ flowchart LR
 - [x] **Desfazer/Refazer Global (`Ctrl+Z` / `Ctrl+Y`)**: Manter histórico de ações estruturais no notebook (adição, deleção e reordenação de células).
 - [x] **Lixeira de Células (Recuperação Rápida)**: Capacidade de restaurar células deletadas acidentalmente via atalho `Z` no modo de comando ou banner de restauração rápida.
 
-#### 6.2 Reordenação de Células via Drag & Drop
-- [ ] **Alça Visual de Arrasto (`⠿`)**: Handle visual na lateral esquerda de cada célula permitindo arrastar e soltar para reposicionar células na ordem desejada.
-- [ ] **Feedback Visual de Posicionamento**: Linha indicadora animada mostrando exatamente onde a célula será solta.
+#### 6.2 Reordenação de Células via Drag & Drop ✅ CONCLUÍDO
+- [x] **Alça Visual de Arrasto (`⠿`)**: Handle visual na lateral esquerda de cada célula permitindo arrastar e soltar para reposicionar células na ordem desejada.
+- [x] **Feedback Visual de Posicionamento**: Linha indicadora animada mostrando exatamente onde a célula será solta.
 
 #### 6.3 Tabela de Conteúdos Automática (Outline / TOC)
 - [ ] **Painel Lateral Recolhível**: Drawer lateral que extrai automaticamente títulos Markdown (`#`, `##`, `###`) do notebook.

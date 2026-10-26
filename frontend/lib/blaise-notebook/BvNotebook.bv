@@ -112,7 +112,22 @@
 
     <!-- REACTIVE CANVAS OF CELLS -->
     <main class="notebook-cells-canvas">
-      <div b-for="cell in cells" :key="cell.id" class="cell-wrapper-outer">
+      <div
+        b-for="cell in cells"
+        :key="cell.id"
+        class="cell-wrapper-outer"
+        :data-cell-index="$index"
+        @dragover="onCellDragOver($index, $event)"
+        @dragleave="onCellDragLeave($index, $event)"
+        @drop="onCellDrop($index, $event)"
+      >
+        <!-- ANIMATED DROP INDICATOR (TOP) -->
+        <div class="cell-drop-indicator drop-indicator-line-top" aria-hidden="true">
+          <span class="drop-indicator-dot"></span>
+          <span class="drop-indicator-line"></span>
+          <span class="drop-indicator-badge">Soltar célula aqui</span>
+        </div>
+
         <!-- QUICK INSERT DIVIDER BETWEEN CELLS -->
         <div class="cell-inserter-divider">
           <div class="divider-line"></div>
@@ -138,7 +153,16 @@
           @delete="deleteCellAt"
           @change-type="onCellTypeChanged"
           @source-change="onCellSourceChanged"
+          @cell-drag-start="onCellDragStart"
+          @cell-drag-end="onCellDragEnd"
         ></bv-cell>
+
+        <!-- ANIMATED DROP INDICATOR (BOTTOM) -->
+        <div class="cell-drop-indicator drop-indicator-line-bottom" aria-hidden="true">
+          <span class="drop-indicator-dot"></span>
+          <span class="drop-indicator-line"></span>
+          <span class="drop-indicator-badge">Soltar célula aqui</span>
+        </div>
       </div>
 
       <!-- BOTTOM INSERTION BUTTONS -->
@@ -767,6 +791,167 @@
             window.scrollTo({ top: scrollY, behavior: 'instant' });
           });
         }
+      end;
+    end;
+
+    procedure onCellDragStart(payload: JSValue);
+    begin
+      asm
+        const idx = (payload && typeof payload.index === 'number') ? payload.index : window._bvDraggedCellIndex;
+        this._draggedCellIndex = (typeof idx === 'number') ? idx : -1;
+        window._bvDraggedCellIndex = this._draggedCellIndex;
+      end;
+    end;
+
+    procedure onCellDragEnd(payload: JSValue);
+    begin
+      asm
+        this._draggedCellIndex = -1;
+        window._bvDraggedCellIndex = -1;
+        const els = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
+        for (let i = 0; i < els.length; i++) {
+          els[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');
+        }
+      end;
+    end;
+
+    procedure onCellDragOver(idx: integer; e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        const fromIdx = (typeof this._draggedCellIndex === 'number' && this._draggedCellIndex >= 0)
+          ? this._draggedCellIndex
+          : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
+        if (fromIdx < 0) return;
+
+        if (evt && typeof evt.preventDefault === 'function') {
+          evt.preventDefault();
+        }
+        if (evt && evt.dataTransfer) {
+          evt.dataTransfer.dropEffect = 'move';
+        }
+
+        if (evt && typeof evt.clientY === 'number') {
+          if (evt.clientY < 75) {
+            window.scrollBy({ top: -10, behavior: 'instant' });
+          } else if (evt.clientY > window.innerHeight - 75) {
+            window.scrollBy({ top: 10, behavior: 'instant' });
+          }
+        }
+
+        const wrapper = (evt && evt.currentTarget && evt.currentTarget.classList && evt.currentTarget.classList.contains('cell-wrapper-outer'))
+          ? evt.currentTarget
+          : (evt && evt.target && evt.target.closest ? evt.target.closest('.cell-wrapper-outer') : null);
+        if (!wrapper) return;
+
+        const cellCard = wrapper.querySelector('.bv-cell-container') || wrapper;
+        const rect = cellCard.getBoundingClientRect();
+        const midY = rect.top + (rect.height / 2);
+        const isBottom = (evt ? evt.clientY : 0) >= midY;
+
+        const allWrappers = document.querySelectorAll('.cell-wrapper-outer.show-drop-top, .cell-wrapper-outer.show-drop-bottom');
+        for (let i = 0; i < allWrappers.length; i++) {
+          if (allWrappers[i] !== wrapper) {
+            allWrappers[i].classList.remove('show-drop-top', 'show-drop-bottom');
+          }
+        }
+
+        if (idx === fromIdx) {
+          wrapper.classList.remove('show-drop-top', 'show-drop-bottom');
+          return;
+        }
+
+        if (isBottom) {
+          wrapper.classList.remove('show-drop-top');
+          wrapper.classList.add('show-drop-bottom');
+        } else {
+          wrapper.classList.remove('show-drop-bottom');
+          wrapper.classList.add('show-drop-top');
+        }
+      end;
+    end;
+
+    procedure onCellDragLeave(idx: integer; e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        const wrapper = (evt && evt.currentTarget && evt.currentTarget.classList && evt.currentTarget.classList.contains('cell-wrapper-outer'))
+          ? evt.currentTarget
+          : (evt && evt.target && evt.target.closest ? evt.target.closest('.cell-wrapper-outer') : null);
+        if (!wrapper) return;
+        const related = evt ? evt.relatedTarget : null;
+        if (related && wrapper.contains(related)) return;
+        wrapper.classList.remove('show-drop-top', 'show-drop-bottom');
+      end;
+    end;
+
+    procedure onCellDrop(idx: integer; e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
+        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
+
+        let fromIdx = (typeof this._draggedCellIndex === 'number' && this._draggedCellIndex >= 0)
+          ? this._draggedCellIndex
+          : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
+
+        if (fromIdx < 0 && evt && evt.dataTransfer) {
+          try {
+            const raw = evt.dataTransfer.getData('text/plain');
+            const parsed = parseInt(raw, 10);
+            if (!isNaN(parsed)) fromIdx = parsed;
+          } catch (err) {}
+        }
+
+        const wrapper = (evt && evt.currentTarget && evt.currentTarget.classList && evt.currentTarget.classList.contains('cell-wrapper-outer'))
+          ? evt.currentTarget
+          : (evt && evt.target && evt.target.closest ? evt.target.closest('.cell-wrapper-outer') : null);
+
+        let isBottom = false;
+        if (wrapper) {
+          const cellCard = wrapper.querySelector('.bv-cell-container') || wrapper;
+          const rect = cellCard.getBoundingClientRect();
+          const midY = rect.top + (rect.height / 2);
+          isBottom = (evt ? evt.clientY : 0) >= midY;
+        }
+
+        this._draggedCellIndex = -1;
+        window._bvDraggedCellIndex = -1;
+        const els = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
+        for (let i = 0; i < els.length; i++) {
+          els[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');
+        }
+
+        if (!this.cells || fromIdx < 0 || fromIdx >= this.cells.length) return;
+        if (idx < 0 || idx >= this.cells.length) return;
+
+        const insertBeforeIdx = isBottom ? (idx + 1) : idx;
+        let finalIdx = (fromIdx < insertBeforeIdx) ? (insertBeforeIdx - 1) : insertBeforeIdx;
+        if (finalIdx < 0) finalIdx = 0;
+        if (finalIdx >= this.cells.length) finalIdx = this.cells.length - 1;
+
+        if (fromIdx === finalIdx) return;
+
+        this.pushHistory('Reordenar célula #' + (fromIdx + 1) + ' para #' + (finalIdx + 1));
+        const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
+        const movedCell = this.cells.splice(fromIdx, 1)[0];
+        const movedId = movedCell ? movedCell.id : '';
+        this.cells.splice(finalIdx, 0, movedCell);
+
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+        requestAnimationFrame(() => {
+          window.scrollTo({ top: scrollY, behavior: 'instant' });
+          if (movedId) {
+            const droppedEl = document.querySelector('[data-cell-id="' + movedId + '"]');
+            if (droppedEl) {
+              droppedEl.classList.add('cell-just-dropped');
+              setTimeout(() => {
+                droppedEl.classList.remove('cell-just-dropped');
+              }, 900);
+            }
+          }
+        });
       end;
     end;
 
@@ -1896,6 +2081,66 @@
 
   .cell-wrapper-outer {
     position: relative;
+  }
+
+  /* DRAG & DROP ANIMATED POSITIONING INDICATOR */
+  .cell-drop-indicator {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+    margin: 4px 0 4px 75px;
+    pointer-events: none;
+    z-index: 30;
+    animation: dropIndicatorPulse 0.9s infinite alternate ease-in-out;
+  }
+
+  .cell-wrapper-outer.show-drop-top > .drop-indicator-line-top {
+    display: flex;
+  }
+
+  .cell-wrapper-outer.show-drop-bottom > .drop-indicator-line-bottom {
+    display: flex;
+  }
+
+  .drop-indicator-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    flex-shrink: 0;
+  }
+
+  .drop-indicator-line {
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 60%, #60a5fa 100%);
+    box-shadow: 0 0 8px rgba(37, 99, 235, 0.45);
+  }
+
+  .drop-indicator-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #1d4ed8;
+    background: #dbeafe;
+    border: 1px solid #93c5fd;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.12);
+  }
+
+  @keyframes dropIndicatorPulse {
+    0% {
+      opacity: 0.78;
+      transform: scaleY(0.98);
+    }
+    100% {
+      opacity: 1;
+      transform: scaleY(1.04);
+    }
   }
 
   .cell-inserter-divider {

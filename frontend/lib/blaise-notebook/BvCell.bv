@@ -1,7 +1,16 @@
 <template>
   <div class="bv-cell-container" :class="cellClasses" :data-cell-id="cell ? cell.id : ''">
-    <!-- LEFT GUTTER: EXECUTION INDICATOR -->
+    <!-- LEFT GUTTER: DRAG HANDLE & EXECUTION INDICATOR -->
     <div class="cell-gutter">
+      <div
+        class="cell-drag-handle"
+        draggable="true"
+        title="Arrastar para reordenar célula (Drag & Drop)"
+        @dragstart="onHandleDragStart($event)"
+        @dragend="onHandleDragEnd($event)"
+      >
+        <span class="drag-grip-icon">⠿</span>
+      </div>
       <div b-if="isCode" class="cell-prompt" :class="{ 'prompt-running': cell && cell.status === 'running', 'prompt-done': cell && cell.status === 'success', 'prompt-error': cell && cell.status === 'error', 'prompt-aborted': cell && cell.status === 'aborted' }">
         <!-- 1. Running -->
         <span b-if="cell && cell.status === 'running'" class="prompt-spin" title="Running in Kernel...">⏳</span>
@@ -35,6 +44,13 @@
       <!-- HEADER / ACTION BAR FOR THIS CELL -->
       <div class="cell-header-bar">
         <div class="cell-type-selector">
+          <span
+            class="header-drag-handle"
+            draggable="true"
+            title="Arrastar para reordenar célula (Drag & Drop)"
+            @dragstart="onHandleDragStart($event)"
+            @dragend="onHandleDragEnd($event)"
+          >⠿</span>
           <select class="type-dropdown" b-ref="typeSelect" @change="onTypeSelectChange" title="Cell type: Pascal / Markdown">
             <option value="code" :selected="cell && cell.type === 'code'">⚡ Pascal Code</option>
             <option value="markdown" :selected="cell && cell.type === 'markdown'">📝 Markdown</option>
@@ -196,6 +212,46 @@
       end;
     end;
 
+    procedure onHandleDragStart(e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        window._bvDraggedCellIndex = this.index;
+        if (evt && evt.dataTransfer) {
+          evt.dataTransfer.effectAllowed = 'move';
+          try {
+            evt.dataTransfer.setData('text/plain', String(this.index));
+          } catch (err) {}
+          const card = evt.currentTarget && evt.currentTarget.closest
+            ? evt.currentTarget.closest('.bv-cell-container')
+            : null;
+          if (card) {
+            card.classList.add('cell-is-dragging');
+            if (typeof evt.dataTransfer.setDragImage === 'function') {
+              evt.dataTransfer.setDragImage(card, 28, 20);
+            }
+          }
+        }
+        if (this.$emit) {
+          this.$emit('cell-drag-start', { index: this.index, cell: this.cell });
+        }
+      end;
+    end;
+
+    procedure onHandleDragEnd(e: JSValue);
+    begin
+      asm
+        window._bvDraggedCellIndex = -1;
+        const draggingEls = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
+        for (let i = 0; i < draggingEls.length; i++) {
+          draggingEls[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');
+        }
+        if (this.$emit) {
+          this.$emit('cell-drag-end', { index: this.index });
+        }
+      end;
+    end;
+
     procedure moveUp;
     begin
       asm
@@ -309,7 +365,88 @@
   .cell-gutter {
     width: 75px;
     flex-shrink: 0;
-    padding-top: 32px;
+    padding-top: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .cell-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 24px;
+    margin-right: 10px;
+    border-radius: 5px;
+    color: #94a3b8;
+    cursor: grab;
+    user-select: none;
+    transition: color 0.15s, background-color 0.15s, transform 0.1s;
+  }
+
+  .cell-drag-handle:hover {
+    color: #2563eb;
+    background: #eff6ff;
+    transform: scale(1.06);
+  }
+
+  .cell-drag-handle:active {
+    cursor: grabbing;
+    color: #1d4ed8;
+    background: #dbeafe;
+  }
+
+  .drag-grip-icon {
+    font-size: 16px;
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+
+  .header-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    color: #94a3b8;
+    font-size: 15px;
+    cursor: grab;
+    user-select: none;
+    transition: color 0.15s, background-color 0.15s;
+  }
+
+  .header-drag-handle:hover {
+    color: #2563eb;
+    background: #e2e8f0;
+  }
+
+  .header-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .bv-cell-container.cell-is-dragging {
+    opacity: 0.45 !important;
+    border: 2px dashed #3b82f6 !important;
+    background: #f8fafc !important;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.15) !important;
+  }
+
+  .bv-cell-container.cell-just-dropped {
+    animation: cellDroppedFlash 0.85s ease-out;
+  }
+
+  @keyframes cellDroppedFlash {
+    0% {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.35);
+    }
+    100% {
+      border-color: #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
   }
 
   .cell-prompt {
