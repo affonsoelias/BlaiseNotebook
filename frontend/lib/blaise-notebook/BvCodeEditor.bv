@@ -19,7 +19,10 @@
         <div b-for="line in lineNumbers" class="gutter-num">{{ line }}</div>
       </div>
       <div class="bv-editor-textarea-wrap">
-        <!-- EDITABLE HIGH-CONTRAST PASCAL CODE TEXTAREA -->
+        <!-- SYNTAX HIGHLIGHT LAYER (RENDERED BEHIND TEXTAREA) -->
+        <pre b-ref="highlightLayer" class="bv-highlight-layer" aria-hidden="true"></pre>
+
+        <!-- EDITABLE TRANSPARENT TEXTAREA (RECEIVES CARET & TYPING) -->
         <textarea
           b-ref="codeTextarea"
           class="bv-code-textarea"
@@ -139,12 +142,13 @@
           'high', 'low', 'inc', 'dec', 'assigned', 'pyrun', 'pyeval', 'pyreset',
           'addcolumn', 'column', 'showtable', 'plotline', 'plotbar', 'plotscatter',
           'plotpie', 'tocsv', 'fromcsv', 'shape', 'head', 'tail', 'describe',
-          'filter', 'sortby', 'groupby', 'attach', 'saveas', 'create'
+          'filter', 'sortby', 'groupby', 'attach', 'saveas', 'create', 'showchart'
         ]);
 
         const tokenRegex = new RegExp('(\\/\\/[^\\n]*|\\{[^}]*\\}|\\(\\*[\\s\\S]*?\\*\\)|\x27(\x27\x27|[^\x27\\n])*\x27|\\$[0-9A-Fa-f]+\\b|\\b\\d+(?:\\.\\d+)?\\b|[A-Za-z_][A-Za-z0-9_]*|:=|<=|>=|<>|\\.\\.|[^\x27\\sA-Za-z0-9_]|\\s+)', 'g');
         let out = '';
         let m;
+        let prevToken = '';
         while ((m = tokenRegex.exec(val)) !== null) {
           const t = m[0];
           if (t.startsWith('//') || t.startsWith(String.fromCharCode(123)) || t.startsWith('(*')) {
@@ -157,17 +161,30 @@
             const lower = t.toLowerCase();
             if (PASCAL_KEYWORDS.has(lower)) {
               out += '<span class="tok-kw">' + escapeHtml(t) + '</span>';
-            } else if (PASCAL_TYPES.has(lower)) {
+            } else if (PASCAL_TYPES.has(lower) || (t.startsWith('T') && t.length > 1 && /^[A-Z][A-Za-z0-9_]/.test(t))) {
               out += '<span class="tok-type">' + escapeHtml(t) + '</span>';
-            } else if (PASCAL_BUILTINS.has(lower)) {
-              out += '<span class="tok-func">' + escapeHtml(t) + '</span>';
             } else {
-              out += escapeHtml(t);
+              let isCall = false;
+              let peekIdx = tokenRegex.lastIndex;
+              while (peekIdx < val.length && (val.charAt(peekIdx) === ' ' || val.charAt(peekIdx) === '\t')) {
+                peekIdx++;
+              }
+              if (peekIdx < val.length && val.charAt(peekIdx) === '(') {
+                isCall = true;
+              }
+              if (isCall || PASCAL_BUILTINS.has(lower) || prevToken === '.') {
+                out += '<span class="tok-func">' + escapeHtml(t) + '</span>';
+              } else {
+                out += escapeHtml(t);
+              }
             }
           } else if (t === ':=' || t === '<=' || t === '>=' || t === '<>') {
             out += '<span class="tok-op">' + escapeHtml(t) + '</span>';
           } else {
             out += escapeHtml(t);
+          }
+          if (t.trim().length > 0) {
+            prevToken = t.trim();
           }
         }
 
@@ -563,6 +580,14 @@
         }
       end;
       this.updateLines();
+      asm
+        const self = this;
+        setTimeout(function() {
+          if (typeof self.updateLines === 'function') {
+            self.updateLines();
+          }
+        }, 50);
+      end;
     end;
 </script>
 
@@ -681,6 +706,8 @@
 
   /* TRANSPARENT EDITABLE TEXTAREA */
   .bv-code-textarea {
+    position: relative;
+    z-index: 2;
     width: 100%;
     min-height: 80px;
     margin: 0;
@@ -689,21 +716,26 @@
     font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
     font-size: 13px;
     line-height: 20px;
+    letter-spacing: 0px;
+    word-spacing: 0px;
     white-space: pre;
     overflow-wrap: normal;
     overflow-x: auto;
-    background: #1e1e1e !important;
-    color: #e2e8f0 !important;
+    background: transparent !important;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
     border: none;
     outline: none;
     resize: none;
-    caret-color: #58a6ff;
+    caret-color: #58a6ff !important;
     tab-size: 2;
+    -moz-tab-size: 2;
   }
 
   .bv-code-textarea::selection {
-    background: rgba(56, 139, 253, 0.45);
-    color: #ffffff;
+    background: rgba(56, 139, 253, 0.4) !important;
+    color: transparent !important;
+    -webkit-text-fill-color: transparent !important;
   }
 
   .bv-code-textarea::placeholder {
