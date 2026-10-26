@@ -321,24 +321,54 @@
       end;
     end;
 
-    procedure onCellSourceChanged(cell: JSValue; const ANewVal: string);
+    procedure onCellSourceChanged(payloadOrCell: JSValue; const ANewVal: string; const AOldVal: string);
     begin
       asm
-        const rawCell = (cell && cell.__bv_raw__) ? cell.__bv_raw__ : cell;
+        let targetCell = null;
+        let newVal = '';
+        let oldVal = undefined;
+
+        if (payloadOrCell && typeof payloadOrCell === 'object' && payloadOrCell.cell !== undefined) {
+          targetCell = payloadOrCell.cell;
+          newVal = payloadOrCell.newVal !== undefined ? payloadOrCell.newVal : '';
+          oldVal = payloadOrCell.oldVal;
+        } else {
+          targetCell = payloadOrCell;
+          newVal = ANewVal !== undefined ? ANewVal : '';
+          oldVal = AOldVal;
+        }
+
+        const rawCell = (targetCell && targetCell.__bv_raw__) ? targetCell.__bv_raw__ : targetCell;
+        if (!rawCell) return;
+
+        if (oldVal === undefined) {
+          oldVal = rawCell.source;
+        }
+
+        if (newVal === oldVal && rawCell.source === newVal) return;
 
         // CRITICAL: Capture snapshot BEFORE applying the edit!
         if (!this._editSnapshotPending) {
           try {
-            this._beforeEditSnapshot = JSON.parse(JSON.stringify(this.cells || []));
+            const snap = JSON.parse(JSON.stringify(this.cells || []));
+            if (rawCell.id) {
+              for (let i = 0; i < snap.length; i++) {
+                if (snap[i].id === rawCell.id) {
+                  snap[i].source = oldVal;
+                  break;
+                }
+              }
+            }
+            this._beforeEditSnapshot = snap;
             this._editSnapshotPending = true;
-          } catch(e) {}
+          } catch(e) {
+            console.error('[BlaiseNotebook] Snapshot error:', e);
+          }
         }
 
-        if (rawCell) {
-          rawCell.source = ANewVal;
-        }
+        rawCell.source = newVal;
 
-        // Enable Undo and disable Redo for this new fork
+        // Enable Undo and disable Redo for this new modification
         this.canUndo = true;
         this.canRedo = false;
 
@@ -391,6 +421,19 @@
           redoItem.cells = currentSnapshot;
           this._redoStack.push(redoItem);
 
+          // In-place property update on existing cell proxies so active components immediately reflect the change
+          if (Array.isArray(this.cells) && Array.isArray(targetPreviousCells) && this.cells.length === targetPreviousCells.length) {
+            for (let i = 0; i < this.cells.length; i++) {
+              const curC = this.cells[i];
+              const prevC = targetPreviousCells[i];
+              if (curC && prevC && curC.id === prevC.id) {
+                curC.source = prevC.source;
+                curC.status = prevC.status;
+                curC.outputs = prevC.outputs;
+              }
+            }
+          }
+
           this.cells = targetPreviousCells;
           this.canUndo = (this._undoStack && this._undoStack.length > 0) || false;
           this.canRedo = (this._redoStack && this._redoStack.length > 0) || false;
@@ -417,7 +460,22 @@
           this._undoStack.push(undoItem);
 
           const next = this._redoStack.pop();
-          this.cells = next.cells;
+          const targetNextCells = next.cells;
+
+          // In-place property update on existing cell proxies so active components immediately reflect the change
+          if (Array.isArray(this.cells) && Array.isArray(targetNextCells) && this.cells.length === targetNextCells.length) {
+            for (let i = 0; i < this.cells.length; i++) {
+              const curC = this.cells[i];
+              const nxtC = targetNextCells[i];
+              if (curC && nxtC && curC.id === nxtC.id) {
+                curC.source = nxtC.source;
+                curC.status = nxtC.status;
+                curC.outputs = nxtC.outputs;
+              }
+            }
+          }
+
+          this.cells = targetNextCells;
           this.canUndo = this._undoStack.length > 0;
           this.canRedo = this._redoStack.length > 0;
           this._editSnapshotPending = false;

@@ -147,6 +147,10 @@
     begin
       this['isEditing'] := false;
       asm
+        if (this._debounceTimer) {
+          clearTimeout(this._debounceTimer);
+          this._debounceTimer = null;
+        }
         const ta = this.$refs ? this.$refs.mdTextarea : null;
         const finalVal = ta ? ta.value : (this._textBuffer !== undefined ? this._textBuffer : (this.value || ''));
         this._textBuffer = finalVal;
@@ -163,9 +167,18 @@
       asm
         const target = e && e.target ? e.target : null;
         if (target) {
-          this._textBuffer = target.value;
+          const val = target.value;
+          this._textBuffer = val;
           target.style.height = 'auto';
           target.style.height = Math.max(100, target.scrollHeight) + 'px';
+
+          if (this._debounceTimer) clearTimeout(this._debounceTimer);
+          const self = this;
+          this._debounceTimer = setTimeout(function() {
+            if (self.$emit) {
+              self.$emit('input', val);
+            }
+          }, 300);
         }
       end;
     end;
