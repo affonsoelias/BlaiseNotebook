@@ -286,8 +286,23 @@
     procedure pushHistory(const ADesc: string);
     begin
       asm
+        if (this._contentEditTimer) {
+          clearTimeout(this._contentEditTimer);
+          this._contentEditTimer = null;
+        }
         if (!this._undoStack) this._undoStack = [];
         if (!this._redoStack) this._redoStack = [];
+
+        // If there is an in-flight uncommitted edit session, push it first!
+        if (this._editSnapshotPending && this._beforeEditSnapshot) {
+          const editItem = new Object();
+          editItem.description = 'Edição de código/texto';
+          editItem.cells = this._beforeEditSnapshot;
+          this._undoStack.push(editItem);
+          this._editSnapshotPending = false;
+          this._beforeEditSnapshot = null;
+        }
+
         try {
           const snapshot = JSON.parse(JSON.stringify(this.cells || []));
           const histItem = new Object();
@@ -310,21 +325,25 @@
     begin
       asm
         const rawCell = (cell && cell.__bv_raw__) ? cell.__bv_raw__ : cell;
-        if (rawCell) {
-          rawCell.source = ANewVal;
-        }
 
-        // Immediately enable Undo button in toolbar on any edit!
-        this.canUndo = true;
-
-        if (this._contentEditTimer) clearTimeout(this._contentEditTimer);
-        const self = this;
+        // CRITICAL: Capture snapshot BEFORE applying the edit!
         if (!this._editSnapshotPending) {
           try {
             this._beforeEditSnapshot = JSON.parse(JSON.stringify(this.cells || []));
             this._editSnapshotPending = true;
           } catch(e) {}
         }
+
+        if (rawCell) {
+          rawCell.source = ANewVal;
+        }
+
+        // Enable Undo and disable Redo for this new fork
+        this.canUndo = true;
+        this.canRedo = false;
+
+        if (this._contentEditTimer) clearTimeout(this._contentEditTimer);
+        const self = this;
         this._contentEditTimer = setTimeout(function() {
           if (self._editSnapshotPending && self._beforeEditSnapshot) {
             if (!self._undoStack) self._undoStack = [];
@@ -339,7 +358,7 @@
             self._editSnapshotPending = false;
             self._beforeEditSnapshot = null;
           }
-        }, 400);
+        }, 500);
       end;
     end;
 
@@ -350,16 +369,21 @@
           clearTimeout(this._contentEditTimer);
           this._contentEditTimer = null;
         }
+
+        let targetPreviousCells = null;
+
+        // 1. If currently in an active editing session, the previous state is _beforeEditSnapshot
         if (this._editSnapshotPending && this._beforeEditSnapshot) {
-          if (!this._undoStack) this._undoStack = [];
-          const histItem = new Object();
-          histItem.description = 'Edição recente';
-          histItem.cells = this._beforeEditSnapshot;
-          this._undoStack.push(histItem);
+          targetPreviousCells = this._beforeEditSnapshot;
           this._editSnapshotPending = false;
           this._beforeEditSnapshot = null;
+        } else if (this._undoStack && this._undoStack.length > 0) {
+          const prev = this._undoStack.pop();
+          targetPreviousCells = prev.cells;
         }
-        if (!this._undoStack || this._undoStack.length === 0) return;
+
+        if (!targetPreviousCells) return;
+
         try {
           if (!this._redoStack) this._redoStack = [];
           const currentSnapshot = JSON.parse(JSON.stringify(this.cells || []));
@@ -367,10 +391,9 @@
           redoItem.cells = currentSnapshot;
           this._redoStack.push(redoItem);
 
-          const prev = this._undoStack.pop();
-          this.cells = prev.cells;
-          this.canUndo = this._undoStack.length > 0;
-          this.canRedo = this._redoStack.length > 0;
+          this.cells = targetPreviousCells;
+          this.canUndo = (this._undoStack && this._undoStack.length > 0) || false;
+          this.canRedo = (this._redoStack && this._redoStack.length > 0) || false;
           if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
         } catch(err) {
           console.error('[BlaiseNotebook] undoAction error:', err);
@@ -383,6 +406,10 @@
       asm
         if (!this._redoStack || this._redoStack.length === 0) return;
         try {
+          if (this._contentEditTimer) {
+            clearTimeout(this._contentEditTimer);
+            this._contentEditTimer = null;
+          }
           if (!this._undoStack) this._undoStack = [];
           const currentSnapshot = JSON.parse(JSON.stringify(this.cells || []));
           const undoItem = new Object();
@@ -393,6 +420,8 @@
           this.cells = next.cells;
           this.canUndo = this._undoStack.length > 0;
           this.canRedo = this._redoStack.length > 0;
+          this._editSnapshotPending = false;
+          this._beforeEditSnapshot = null;
           if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
         } catch(err) {
           console.error('[BlaiseNotebook] redoAction error:', err);

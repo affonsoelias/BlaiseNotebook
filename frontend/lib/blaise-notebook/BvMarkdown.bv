@@ -203,14 +203,12 @@
     begin
       asm
         const self = this;
-        if (!self.isEditing) {
-          self._textBuffer = newVal || '';
-          const ta = self.$refs ? self.$refs.mdTextarea : null;
-          if (ta) {
-            ta.value = newVal || '';
-          }
-          self.renderHtmlContent();
+        self._textBuffer = newVal || '';
+        const ta = self.$refs ? self.$refs.mdTextarea : null;
+        if (ta && ta.value !== newVal) {
+          ta.value = newVal || '';
         }
+        self.renderHtmlContent();
       end;
     end;
 </script>
