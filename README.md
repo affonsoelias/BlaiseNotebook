@@ -25,7 +25,7 @@ By unifying the reactive Single File Component architecture of **BlaiseVue**, ha
 
 Comprehensive technical guides and references are available in the [`docs/`](docs/README.md) directory:
 
-- 🚀 **[Getting Started & Installation](docs/GETTING_STARTED.md):** Cross-platform compilation (Windows & Linux), `bvnb` CLI usage, and quick-start tutorial.
+- 🚀 **[Getting Started & Installation](docs/GETTING_STARTED.md):** Cross-platform compilation (Windows & Linux), `PATH` setup, `bvnb` CLI usage, and quick-start tutorial.
 - 🏛️ **[System Architecture & Internals](docs/ARCHITECTURE.md):** Frontend components, WebSocket lifecycle, persistent daemon, and sandboxing.
 - 🔬 **[Scientific Computing & Machine Learning](docs/SCIENTIFIC_COMPUTING.md):** `TVector`, linear regression, Python bridge, and Chart.js plotting.
 - 📦 **[Modular Packages & Extensibility](docs/PACKAGES.md):** Architecture of `packages/core/`, `packages/external/`, dynamic `uses`, and `%pip`.
@@ -93,22 +93,49 @@ fpc -MObjFPC -Sh bin\bvnb.pas
 fpc -MObjFPC -Sh bin/bvnb.pas
 ```
 
-*(Tip: Add the `bin/` folder to your system `PATH` to invoke `bvnb` from any directory on your machine!)*
+### 4. Adding `bvnb` to your System `PATH` & Refreshing the Terminal
 
-### 4. Diagnosing, Building & Running with `bvnb`
+To run `bvnb` globally from any folder on your computer without typing `./bin/bvnb`, add the `bin/` folder to your user `PATH` and reload your terminal environment:
+
+**On Windows (PowerShell — Run inside the `BlaiseNotebook` folder):**
+```powershell
+# 1. Permanently add the bin\ folder to your Windows User PATH:
+$BinPath = (Resolve-Path ".\bin").Path
+$UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($UserPath -notlike "*$BinPath*") {
+    [Environment]::SetEnvironmentVariable("Path", "$UserPath;$BinPath", "User")
+    Write-Host "Added $BinPath to User PATH!" -ForegroundColor Green
+}
+
+# 2. Refresh the current terminal session immediately (no need to close the window):
+$env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+```
+
+**On Linux / macOS (Bash / Zsh — Run inside the `BlaiseNotebook` folder):**
+```bash
+# 1. Permanently add the bin/ folder to your ~/.bashrc (or ~/.zshrc):
+echo "export PATH=\"\$PATH:$(pwd)/bin\"" >> ~/.bashrc
+
+# 2. Refresh the current terminal session immediately:
+source ~/.bashrc
+```
+
+### 5. Diagnosing, Building & Running with `bvnb`
+
+Once `bvnb` is in your `PATH`, you can run these commands from any directory:
 
 ```bash
 # 1. Check your environment (FPC, Python 3, NumPy, Pandas, Scikit-Learn, BlaiseVue)
-./bin/bvnb doctor
+bvnb doctor
 
 # 2. (Optional) Automatically install numpy, pandas, and scikit-learn if missing
-./bin/bvnb setup-python
+bvnb setup-python
 
 # 3. Compile the Frontend SPA and Native mORMot 2 Server
-./bin/bvnb build
+bvnb build
 
 # 4. Launch the BlaiseNotebook server on http://localhost:8090/
-./bin/bvnb run
+bvnb run
 ```
 
 ---

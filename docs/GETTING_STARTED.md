@@ -1,6 +1,6 @@
 # 🚀 Getting Started with BlaiseNotebook
 
-Welcome to BlaiseNotebook! This guide walks you through installing prerequisites on **Windows** or **Linux**, compiling and diagnosing your environment with the official **`bvnb` CLI**, launching the server, and exploring all interactive features.
+Welcome to BlaiseNotebook! This guide walks you through installing prerequisites on **Windows** or **Linux**, cloning via `git clone`, compiling and adding the official **`bvnb` CLI** to your system `PATH`, launching the server, and exploring all interactive features.
 
 ---
 
@@ -17,7 +17,7 @@ BlaiseNotebook is **100% cross-platform and portable**. It does **not** require 
 
 ---
 
-## ⚡ Step 2: Cloning with `git clone` & Compiling the `bvnb` CLI
+## ⚡ Step 2: Cloning with `git clone`, Compiling `bvnb` & Configuring `PATH`
 
 > **⚠️ Important:** Always download the project using **`git clone`** (instead of downloading a `.zip` file). This preserves the `.git` repository metadata required by the **`bvnb self-update`** and **`bvnb channel`** auto-updater commands!
 
@@ -26,7 +26,9 @@ git clone https://github.com/affonsoelias/BlaiseNotebook.git
 cd BlaiseNotebook
 ```
 
-Next, compile the official **`bvnb`** CLI utility once using Free Pascal:
+### 2.1 Compile the `bvnb` CLI
+
+From the root directory of `BlaiseNotebook`, compile the official **`bvnb`** CLI utility once using Free Pascal:
 
 **On Windows (PowerShell / CMD):**
 ```powershell
@@ -38,27 +40,56 @@ fpc -MObjFPC -Sh bin\bvnb.pas
 fpc -MObjFPC -Sh bin/bvnb.pas
 ```
 
-Now you can diagnose, configure, compile, update, and run BlaiseNotebook with simple commands:
+### 2.2 Add `bvnb` to your System `PATH` & Refresh the Terminal
+
+To invoke `bvnb` from **any directory** on your computer, add the `bin/` folder to your user `PATH` and reload your terminal environment:
+
+**On Windows (PowerShell — Run inside the `BlaiseNotebook` folder):**
+```powershell
+# 1. Permanently add the bin\ folder to your Windows User PATH:
+$BinPath = (Resolve-Path ".\bin").Path
+$UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+if ($UserPath -notlike "*$BinPath*") {
+    [Environment]::SetEnvironmentVariable("Path", "$UserPath;$BinPath", "User")
+    Write-Host "Added $BinPath to User PATH!" -ForegroundColor Green
+}
+
+# 2. Refresh the current terminal session immediately (no need to close the window):
+$env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+```
+
+**On Linux / macOS (Bash / Zsh — Run inside the `BlaiseNotebook` folder):**
+```bash
+# 1. Permanently add the bin/ folder to your ~/.bashrc (or ~/.zshrc):
+echo "export PATH=\"\$PATH:$(pwd)/bin\"" >> ~/.bashrc
+
+# 2. Refresh the current terminal session immediately:
+source ~/.bashrc
+```
+
+### 2.3 Diagnose, Build & Run with `bvnb`
+
+Now you can run `bvnb` directly from any folder:
 
 ```bash
 # 1. Verify your environment (FPC, Python 3, NumPy, Pandas, Scikit-Learn, BlaiseVue)
-./bin/bvnb doctor
+bvnb doctor
 
 # 2. Install scientific Python dependencies automatically (if needed)
-./bin/bvnb setup-python
+bvnb setup-python
 
 # 3. Build the Frontend SPA and Native mORMot 2 Server
-./bin/bvnb build
+bvnb build
 
 # 4. Start the server on http://localhost:8090/
-./bin/bvnb run
+bvnb run
 ```
 
 > **💡 Keeping BlaiseNotebook Updated via Git:**
 > Just like BlaiseVue's `bv self-update`, you can check for updates or upgrade BlaiseNotebook directly from GitHub anytime:
-> - `./bin/bvnb self-update --check` — Check if new commits are available on GitHub.
-> - `./bin/bvnb self-update` — Pull the latest changes and automatically recompile `bvnb`, the frontend, and the native server.
-> - `./bin/bvnb channel use main` or `./bin/bvnb channel use develop` — Switch between the stable release channel and the development channel.
+> - `bvnb self-update --check` — Check if new commits are available on GitHub.
+> - `bvnb self-update` — Pull the latest changes and automatically recompile `bvnb`, the frontend, and the native server.
+> - `bvnb channel use main` or `bvnb channel use develop` — Switch between the stable release channel and the development channel.
 
 *(Alternatively, you can also run `cd frontend && bv mormot build && bv mormot run` directly).*
 
@@ -66,7 +97,7 @@ Now you can diagnose, configure, compile, update, and run BlaiseNotebook with si
 
 ## 🏁 Step 3: Opening the Notebook Interface
 
-Once `./bin/bvnb run` is running, open your browser and navigate to:
+Once `bvnb run` is running, open your browser and navigate to:
 👉 **`http://localhost:8090/`**
 
 > **💡 Status Check:** Look at the pill in the top-right corner of the screen. When it shows a green dot **`● Kernel Connected`**, your notebook is connected to the native Pascal engine!
