@@ -15,7 +15,7 @@ flowchart LR
     M2 --> M3["Milestone 3<br/><b>Stateful Kernel</b><br/><i>Concluído</i>"]
     M3 --> M4["Milestone 4<br/><b>Frontend UX</b><br/><i>Concluído</i>"]
     M4 --> M5["Milestone 5<br/><b>Dashboard View</b><br/><i>Concluído</i>"]
-    M5 --> M6["Milestone 6<br/><b>Editor DX & TOC</b><br/><i>Planejado</i>"]
+    M5 --> M6["Milestone 6<br/><b>Editor DX & TOC</b><br/><i>Concluído</i>"]
     M6 --> M7["Milestone 7<br/><b>Widgets & 3D</b><br/><i>Planejado</i>"]
     M7 --> M8["Milestone 8<br/><b>Robustness & Export</b><br/><i>Planejado</i>"]
 ```
@@ -124,7 +124,7 @@ flowchart LR
 
 ---
 
-### Milestone 6: Produtividade Avançada & Navegação no Editor (Frontend DX) 📋 PLANEJADO
+### Milestone 6: Produtividade Avançada & Navegação no Editor (Frontend DX) ✅ CONCLUÍDO
 > **Goal:** Expand user productivity with intuitive notebook navigation, command history, and reusable snippet templates.
 
 #### 6.1 Histórico de Ações e Undo/Redo no Nível do Notebook ✅ CONCLUÍDO
@@ -149,8 +149,8 @@ flowchart LR
 - [x] **Painel Lateral Recolhível**: Drawer lateral que extrai automaticamente títulos Markdown (`#`, `##`, `###`) do notebook.
 - [x] **Navegação com Rolagem Suave**: Clicar em um item do outline rola a página suavemente até a célula correspondente.
 
-#### 6.5 Snippets & Catálogo de Receitas de Código
-- [ ] **Menu de Inserção Rápida de Templates**: Modal ou submenu na toolbar para inserir receitas prontas (ex: *Carregar CSV & Resumo*, *Split Treino/Teste com Random Forest*, *Histograma + BoxPlot*).
+#### 6.5 Snippets & Catálogo de Receitas de Código ✅ CONCLUÍDO
+- [x] **Menu de Inserção Rápida de Templates**: Modal ou submenu na toolbar para inserir receitas prontas (ex: *Carregar CSV & Resumo*, *Split Treino/Teste com Random Forest*, *Histograma + BoxPlot*).
 
 ---
 
@@ -208,7 +208,7 @@ flowchart LR
 3. **Fase 3 (Velocidade e Continuidade - CONCLUÍDO)**: Milestone 3 (Cache de compilação, múltiplas saídas e sessão persistente).
 4. **Fase 4 (Interface Avançada - CONCLUÍDO)**: Milestone 4 (Autocompletion de Pascal e DataGrid Pro com paginação/ordenação).
 5. **Fase 5 (Apresentação Final - CONCLUÍDO)**: Milestone 5 (Dashboard View executivo).
-6. **Fase 6 (Produtividade, Portabilidade & CLI `bvnb` - EM ANDAMENTO)**: Milestone 6 (Undo/Redo global, Drag & Drop de células, Portabilidade Windows/Linux + CLI `bvnb` Auto-Updater, Outline/TOC e catálogo de snippets).
+6. **Fase 6 (Produtividade, Portabilidade & CLI `bvnb` - CONCLUÍDO)**: Milestone 6 (Undo/Redo global, Drag & Drop de células, Portabilidade Windows/Linux + CLI `bvnb` Auto-Updater, Outline/TOC e catálogo de snippets).
 7. **Fase 7 (Widgets e 3D - PLANEJADO)**: Milestone 7 (Widgets interativos inline, gráficos 3D/mapas e Data Profiler).
 8. **Fase 8 (Robustez e Produção - PLANEJADO)**: Milestone 8 (Interrupt de execução, telemetria de recursos e exportação HTML/script standalone).
 

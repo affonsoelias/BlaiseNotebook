@@ -48,6 +48,9 @@
         <button class="tb-btn" @click="addMarkdownCell" title="Add Markdown documentation cell">
           ➕ Documentation
         </button>
+        <button class="tb-btn tb-btn-snippets" @click="openSnippetsModal" title="Catálogo de Snippets e Receitas de Código Prontas">
+          📚 Receitas
+        </button>
         <button class="tb-btn" @click="clearAllOutputs" title="Clear all cell outputs">
           🧹 Clear Outputs
         </button>
@@ -189,6 +192,7 @@
           <div class="divider-buttons">
             <button class="btn-divider-add" @click="insertCodeAt($index)">+ Code</button>
             <button class="btn-divider-add" @click="insertMarkdownAt($index)">+ Markdown</button>
+            <button class="btn-divider-add btn-divider-snippet" @click="openSnippetsAt($index)">📚 + Receita</button>
           </div>
           <div class="divider-line"></div>
         </div>
@@ -226,6 +230,7 @@
       <div class="canvas-bottom-inserter">
         <button class="btn-large-add" @click="addCodeCell">➕ Add Code Cell</button>
         <button class="btn-large-add" @click="addMarkdownCell">📝 Add Markdown Cell</button>
+        <button class="btn-large-add btn-large-snippet" @click="openSnippetsModal">📚 Inserir Receita de Código</button>
       </div>
       </main>
     </div>
@@ -286,6 +291,112 @@
       </div>
     </div>
 
+    <!-- SNIPPETS & CODE RECIPES CATALOG MODAL -->
+    <div b-if="showSnippetsModal" class="trash-modal-backdrop snippets-modal-backdrop" @click="closeSnippetsModal">
+      <div class="snippets-modal-card" @click="onModalCardClick">
+        <div class="snippets-modal-header">
+          <div class="snippets-header-left">
+            <span class="snippets-header-icon">📚</span>
+            <div>
+              <div class="snippets-modal-title">Catálogo de Snippets & Receitas de Código</div>
+              <div class="snippets-modal-sub">Templates prontos de Data Science, Machine Learning, Gráficos e Matemática Nativa em Object Pascal</div>
+            </div>
+          </div>
+          <button class="trash-modal-close" @click="closeSnippetsModal" title="Fechar (Esc)">✕</button>
+        </div>
+
+        <!-- SEARCH & CATEGORY FILTER BAR -->
+        <div class="snippets-toolbar-bar">
+          <div class="snippets-search-wrap">
+            <span class="snippets-search-icon">🔍</span>
+            <input
+              type="text"
+              class="snippets-search-input"
+              placeholder="Buscar receita por nome, pacote ou método (ex: CSV, Random Forest, Histograma, K-Means)..."
+              :value="snippetSearchQuery"
+              @input="onSnippetSearchInput($event)"
+            />
+          </div>
+          <div class="snippets-category-pills">
+            <button
+              class="snippet-cat-pill"
+              :class="{ 'cat-active': snippetCategory === 'all' }"
+              @click="setSnippetCategory('all')"
+            >
+              ✨ Todas
+            </button>
+            <button
+              class="snippet-cat-pill"
+              :class="{ 'cat-active': snippetCategory === 'pandas' }"
+              @click="setSnippetCategory('pandas')"
+            >
+              🐼 Pandas & Dados
+            </button>
+            <button
+              class="snippet-cat-pill"
+              :class="{ 'cat-active': snippetCategory === 'charts' }"
+              @click="setSnippetCategory('charts')"
+            >
+              📊 Gráficos & EDA
+            </button>
+            <button
+              class="snippet-cat-pill"
+              :class="{ 'cat-active': snippetCategory === 'sklearn' }"
+              @click="setSnippetCategory('sklearn')"
+            >
+              🤖 Machine Learning
+            </button>
+            <button
+              class="snippet-cat-pill"
+              :class="{ 'cat-active': snippetCategory === 'math' }"
+              @click="setSnippetCategory('math')"
+            >
+              🧮 Matemática & Sistema
+            </button>
+          </div>
+        </div>
+
+        <!-- RECIPES GRID -->
+        <div class="snippets-modal-body">
+          <div b-if="filteredSnippetsCount === 0" class="trash-empty-state">
+            Nenhuma receita encontrada para o filtro atual. Tente buscar outro termo ou selecione "✨ Todas".
+          </div>
+
+          <div class="snippets-grid">
+            <div b-for="recipe in filteredSnippets" :key="recipe.id" class="snippet-card">
+              <div class="snippet-card-top">
+                <div class="snippet-title-row">
+                  <span class="snippet-icon">{{ recipe.icon }}</span>
+                  <span class="snippet-title">{{ recipe.title }}</span>
+                  <span class="snippet-cat-badge" :class="'cat-badge-' + recipe.category">{{ recipe.categoryLabel }}</span>
+                </div>
+                <p class="snippet-desc">{{ recipe.description }}</p>
+              </div>
+
+              <pre class="snippet-code-preview">{{ recipe.code }}</pre>
+
+              <div class="snippet-card-footer">
+                <span class="snippet-unit-tag">📦 {{ recipe.unitTag }}</span>
+                <div class="snippet-card-actions">
+                  <button class="btn-snippet-insert" @click="insertSnippetRecipe(recipe, false)" title="Inserir como nova célula no notebook">
+                    ➕ Inserir Célula
+                  </button>
+                  <button class="btn-snippet-run" @click="insertSnippetRecipe(recipe, true)" title="Inserir célula e executar imediatamente no Kernel">
+                    ▶ Inserir & Executar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trash-modal-footer">
+          <span class="snippets-footer-hint">💡 Dica: Todas as receitas inseridas suportam Desfazer (<code>Ctrl+Z</code>) e autocompletion.</span>
+          <button class="tb-btn tb-btn-primary" @click="closeSnippetsModal">Fechar</button>
+        </div>
+      </div>
+    </div>
+
     <!-- INFORMATIVE FOOTER -->
     <footer class="notebook-footer">
       <div class="footer-item">Total Cells: <strong>{{ cells.length }}</strong></div>
@@ -315,6 +426,12 @@
     showOutlineDrawer: boolean = false;
     outlineItems: JSValue = [];
     outlineCount: integer = 0;
+    showSnippetsModal: boolean = false;
+    snippetSearchQuery: string = '';
+    snippetCategory: string = 'all';
+    snippetInsertTargetIdx: integer = -1;
+    filteredSnippets: JSValue = [];
+    filteredSnippetsCount: integer = 0;
     undoToastVisible: boolean = false;
     undoToastMessage: string = '';
     cells: JSValue = [];
@@ -764,6 +881,364 @@
             cellCard.classList.remove('cell-outline-highlight');
           }, 1500);
         }
+      end;
+    end;
+
+    procedure initSnippetsCatalog;
+    begin
+      asm
+        if (this._allSnippets && this._allSnippets.length > 0) return;
+        this._allSnippets = [
+          {
+            id: 'snip_csv_summary',
+            icon: '🐼',
+            title: 'Criar DataFrame, Resumo & DataGrid Pro',
+            category: 'pandas',
+            categoryLabel: 'Pandas & Dados',
+            unitTag: 'BlaisePandas',
+            cellType: 'code',
+            description: 'Cria um DataFrame estruturado, exibe estatísticas descritivas e renderiza a tabela interativa DataGrid Pro com ordenação e busca.',
+            code:
+              'uses BlaisePandas;\n' +
+              'var\n' +
+              '  DF: TPyDataFrame;\n' +
+              'begin\n' +
+              '  DF := TPyDataFrame.Create(\'vendas_trimestre\');\n' +
+              '  DF.AddColumn(\'Produto\', [\'Notebook Pro\', \'Monitor 4K\', \'Teclado Mecânico\', \'Mouse Sem Fio\', \'Dock Station\', \'SSD NVMe 2TB\']);\n' +
+              '  DF.AddColumn(\'Categoria\', [\'Computadores\', \'Monitores\', \'Periféricos\', \'Periféricos\', \'Acessórios\', \'Armazenamento\']);\n' +
+              '  DF.AddColumn(\'Preco\', [6400.0, 2350.0, 580.0, 290.0, 890.0, 1150.0]);\n' +
+              '  DF.AddColumn(\'Unidades\', [42, 78, 165, 210, 64, 130]);\n\n' +
+              '  Writeln(\'Total de registros: \', DF.RowCount, \' | Colunas: \', DF.ColumnCount);\n' +
+              '  Writeln(DF.Describe);\n' +
+              '  DF.ShowTable(\'Relatório de Vendas por Produto\', 25);\n' +
+              'end.'
+          },
+          {
+            id: 'snip_load_csv',
+            icon: '📂',
+            title: 'Carregar Arquivo CSV & Filtrar Dados',
+            category: 'pandas',
+            categoryLabel: 'Pandas & Dados',
+            unitTag: 'BlaisePandas',
+            cellType: 'code',
+            description: 'Lê ou exporta um arquivo CSV com TPyDataFrame.FromCSV, remove valores nulos (DropNA), filtra linhas e ordena os resultados.',
+            code:
+              'uses BlaisePandas;\n' +
+              'var\n' +
+              '  DF, Filtrado: TPyDataFrame;\n' +
+              'begin\n' +
+              '  // 1. Cria um dataset de exemplo e salva em CSV:\n' +
+              '  DF := TPyDataFrame.Create(\'clientes_csv\');\n' +
+              '  DF.AddColumn(\'Cliente\', [\'Alfa Tech\', \'Beta Corp\', \'Gamma Analytics\', \'Delta Systems\', \'Omega Labs\']);\n' +
+              '  DF.AddColumn(\'Receita_Anual\', [120000.0, 45000.0, 310000.0, 82000.0, 195000.0]);\n' +
+              '  DF.AddColumn(\'Score_Retencao\', [94.5, 71.0, 98.2, 83.4, 91.0]);\n' +
+              '  DF.ToCSV(\'clientes_demo.csv\');\n\n' +
+              '  // 2. Carrega do CSV, filtra Receita > 100.000 e ordena decrescente:\n' +
+              '  Filtrado := TPyDataFrame.FromCSV(\'clientes_demo.csv\')\n' +
+              '                .DropNA\n' +
+              '                .Filter(\'Receita_Anual > 100000\')\n' +
+              '                .SortBy(\'Receita_Anual\', False);\n\n' +
+              '  Filtrado.ShowTable(\'Clientes Enterprise (Receita > R$ 100k)\', 20);\n' +
+              'end.'
+          },
+          {
+            id: 'snip_groupby',
+            icon: '📑',
+            title: 'Agregação GroupBy & Gráfico Comparativo',
+            category: 'pandas',
+            categoryLabel: 'Pandas & Dados',
+            unitTag: 'BlaisePandas',
+            cellType: 'code',
+            description: 'Agrupa dados por categoria (GroupBy) calculando soma ou média e plota imediatamente um gráfico de barras comparativo.',
+            code:
+              'uses BlaisePandas;\n' +
+              'var\n' +
+              '  DF, Resumo: TPyDataFrame;\n' +
+              'begin\n' +
+              '  DF := TPyDataFrame.Create(\'vendas_regiao\');\n' +
+              '  DF.AddColumn(\'Regiao\', [\'Sudeste\', \'Sul\', \'Sudeste\', \'Nordeste\', \'Sul\', \'Nordeste\', \'Centro-Oeste\']);\n' +
+              '  DF.AddColumn(\'Faturamento\', [85000.0, 52000.0, 94000.0, 48000.0, 61000.0, 53000.0, 67000.0]);\n\n' +
+              '  Resumo := DF.GroupBy(\'Regiao\').Sum;\n' +
+              '  Resumo.ShowTable(\'Faturamento Acumulado por Região\', 10);\n' +
+              '  Resumo.PlotBar(\'Faturamento Total por Região (R$)\', \'Regiao\', \'Faturamento\');\n' +
+              'end.'
+          },
+          {
+            id: 'snip_hist_boxplot',
+            icon: '📊',
+            title: 'Análise Exploratória: Histograma + BoxPlot',
+            category: 'charts',
+            categoryLabel: 'Gráficos & EDA',
+            unitTag: 'BlaisePandas',
+            cellType: 'code',
+            description: 'Plota simultaneamente um Histograma de distribuição de frequências e um BoxPlot estratificado por categoria na mesma célula.',
+            code:
+              'uses BlaisePandas;\n' +
+              'var\n' +
+              '  DF: TPyDataFrame;\n' +
+              'begin\n' +
+              '  DF := TPyDataFrame.Create(\'eda_latencia\');\n' +
+              '  DF.AddColumn(\'Servidor\', [\'Cluster-A\', \'Cluster-A\', \'Cluster-A\', \'Cluster-A\', \'Cluster-B\', \'Cluster-B\', \'Cluster-B\', \'Cluster-B\', \'Cluster-C\', \'Cluster-C\', \'Cluster-C\', \'Cluster-C\']);\n' +
+              '  DF.AddColumn(\'Latencia_ms\', [18.2, 21.5, 19.8, 24.1, 32.0, 36.4, 29.5, 41.2, 12.4, 14.1, 13.8, 15.9]);\n\n' +
+              '  DF.PlotHistogram(\'Distribuição Global de Latência (ms)\', \'Latencia_ms\', 6);\n' +
+              '  DF.PlotBoxPlot(\'Dispersão e Quartis de Latência por Cluster\', \'Servidor\', \'Latencia_ms\');\n' +
+              'end.'
+          },
+          {
+            id: 'snip_multi_charts',
+            icon: '📈',
+            title: 'Painel de Séries Temporais (Linha + Rosca)',
+            category: 'charts',
+            categoryLabel: 'Gráficos & EDA',
+            unitTag: 'BlaisePandas',
+            cellType: 'code',
+            description: 'Gera múltiplos gráficos empilhados: evolução temporal de múltiplas métricas e distribuição percentual em gráfico Doughnut.',
+            code:
+              'uses BlaisePandas;\n' +
+              'var\n' +
+              '  DF: TPyDataFrame;\n' +
+              'begin\n' +
+              '  DF := TPyDataFrame.Create(\'metricas_mensais\');\n' +
+              '  DF.AddColumn(\'Mes\', [\'Jan\', \'Fev\', \'Mar\', \'Abr\', \'Mai\', \'Jun\']);\n' +
+              '  DF.AddColumn(\'Receita\', [42.0, 48.5, 55.2, 61.8, 72.4, 84.0]);\n' +
+              '  DF.AddColumn(\'Custos\', [28.0, 29.5, 31.0, 33.2, 35.0, 37.5]);\n\n' +
+              '  DF.PlotLine(\'Evolução Mensal: Receita vs Custos (R$ Mil)\', \'Mes\', [\'Receita\', \'Custos\']);\n' +
+              '  DF.PlotDoughnut(\'Participação da Receita por Mês\', \'Mes\', \'Receita\');\n' +
+              'end.'
+          },
+          {
+            id: 'snip_rf_split',
+            icon: '🌲',
+            title: 'Split Treino/Teste & Random Forest + Importância',
+            category: 'sklearn',
+            categoryLabel: 'Machine Learning',
+            unitTag: 'BlaiseSklearn',
+            cellType: 'code',
+            description: 'Divide os dados em Treino/Teste (PyTrainTestSplit), treina uma Random Forest Regressor, avalia o R² e plota a importância das variáveis.',
+            code:
+              'uses BlaisePandas, BlaiseSklearn;\n' +
+              'var\n' +
+              '  DF, X, XTrain, XTest: TPyDataFrame;\n' +
+              '  Y, YTrain, YTest, YPred: TPySeries;\n' +
+              '  Forest: TPyRandomForestRegressor;\n' +
+              '  R2: Double;\n' +
+              'begin\n' +
+              '  DF := TPyDataFrame.Create(\'imoveis_ml\');\n' +
+              '  DF.AddColumn(\'Area_m2\',     [55, 70, 85, 110, 130, 150, 180, 210, 250, 300]);\n' +
+              '  DF.AddColumn(\'Quartos\',     [1,  2,  2,  3,   3,   4,   4,   4,   5,   5]);\n' +
+              '  DF.AddColumn(\'Vagas\',       [1,  1,  2,  2,   2,   3,   3,   4,   4,   5]);\n' +
+              '  DF.AddColumn(\'Preco_Mil\',   [310, 420, 515, 680, 790, 950, 1150, 1380, 1690, 2050]);\n\n' +
+              '  X := DF.Columns([\'Area_m2\', \'Quartos\', \'Vagas\']);\n' +
+              '  Y := DF.Column(\'Preco_Mil\');\n\n' +
+              '  PyTrainTestSplit(X, Y, 0.30, XTrain, XTest, YTrain, YTest, 42);\n\n' +
+              '  Forest := TPyRandomForestRegressor.Create(100, -1, 42);\n' +
+              '  Forest.Fit(XTrain, YTrain);\n' +
+              '  YPred := Forest.Predict(XTest);\n' +
+              '  R2 := PyR2Score(YTest, YPred);\n\n' +
+              '  Writeln(Format(\'Random Forest treinada! R² no conjunto de teste = %.4f\', [R2]));\n' +
+              '  Forest.PlotFeatureImportances([\'Area_m2\', \'Quartos\', \'Vagas\'], \'Importância das Variáveis no Preço do Imóvel\');\n' +
+              'end.'
+          },
+          {
+            id: 'snip_kmeans',
+            icon: '🎯',
+            title: 'Clusterização Não-Supervisionada com K-Means',
+            category: 'sklearn',
+            categoryLabel: 'Machine Learning',
+            unitTag: 'BlaiseSklearn',
+            cellType: 'code',
+            description: 'Segmenta observações automaticamente em clusters com TPyKMeans, anexa os rótulos ao DataFrame e plota a dispersão.',
+            code:
+              'uses BlaisePandas, BlaiseSklearn;\n' +
+              'var\n' +
+              '  DF, Features: TPyDataFrame;\n' +
+              '  KMeans: TPyKMeans;\n' +
+              'begin\n' +
+              '  DF := TPyDataFrame.Create(\'segmentacao_clientes\');\n' +
+              '  DF.AddColumn(\'Frequencia_Compras\', [2, 3, 4, 14, 16, 18, 28, 31, 35]);\n' +
+              '  DF.AddColumn(\'Ticket_Medio\',       [120, 140, 135, 450, 490, 520, 1100, 1250, 1400]);\n\n' +
+              '  Features := DF.Columns([\'Frequencia_Compras\', \'Ticket_Medio\']);\n' +
+              '  KMeans := TPyKMeans.Create(3, 42);\n' +
+              '  KMeans.Fit(Features);\n\n' +
+              '  DF.AddColumn(\'Cluster\', KMeans.Labels);\n' +
+              '  Writeln(Format(\'K-Means convergiu! Inércia total = %.2f\', [KMeans.Inertia]));\n' +
+              '  DF.ShowTable(\'Clientes Segmentados por Cluster (K=3)\', 15);\n' +
+              '  DF.PlotScatter(\'Mapa de Dispersão: Frequência vs Ticket Médio\', \'Frequencia_Compras\', \'Ticket_Medio\');\n' +
+              'end.'
+          },
+          {
+            id: 'snip_native_math',
+            icon: '🧮',
+            title: 'Vetorização & Regressão Linear em Pascal Nativo',
+            category: 'math',
+            categoryLabel: 'Matemática & Sistema',
+            unitTag: 'BlaiseMathKernel',
+            cellType: 'code',
+            description: 'Executa estatística vetorial e ajuste de Regressão Linear (Mínimos Quadrados) 100% em Free Pascal compilado (sem Python).',
+            code:
+              'uses BlaiseMathKernel, BlaiseOutput;\n' +
+              'var\n' +
+              '  X, Y: TVector;\n' +
+              '  Slope, Intercept, R2: Double;\n' +
+              'begin\n' +
+              '  X := TVector.Create([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);\n' +
+              '  Y := TVector.Create([14.2, 18.9, 24.1, 28.8, 34.5, 39.2, 44.0, 49.6, 54.1, 59.8]);\n\n' +
+              '  Writeln(Format(\'Média de Y: %.2f | Desvio Padrão: %.2f | Mediana: %.2f\', [\n' +
+              '    Y.CalculaMedia, Y.CalculaDesvioPadrao, Y.CalculaMediana\n' +
+              '  ]));\n\n' +
+              '  if X.LinearRegression(Y, Slope, Intercept, R2) then\n' +
+              '    Writeln(Format(\'Equação Ajustada: Y = %.3f * X + %.3f (R² = %.4f)\', [Slope, Intercept, R2]));\n' +
+              'end.'
+          },
+          {
+            id: 'snip_pip_install',
+            icon: '📦',
+            title: 'Instalar Biblioteca Python via %pip & Ponte Direta',
+            category: 'math',
+            categoryLabel: 'Matemática & Sistema',
+            unitTag: 'BlaisePyKernel',
+            cellType: 'code',
+            description: 'Demonstra a diretiva mágica %pip install dentro da célula e a execução direta de código Python com PyRun e PyEval.',
+            code:
+              '// Diretiva mágica opcional: descomente a linha abaixo para instalar pacotes via pip\n' +
+              '// %pip install scipy\n' +
+              'uses BlaisePyKernel, BlaiseOutput;\n' +
+              'var\n' +
+              '  Resultado: string;\n' +
+              'begin\n' +
+              '  PyRun(\n' +
+              '    \'import numpy as np\'#10 +\n' +
+              '    \'matriz = np.array([[4.0, 2.0], [1.0, 3.0]])\'#10 +\n' +
+              '    \'det = float(np.linalg.det(matriz))\'#10 +\n' +
+              '    \'autovalores = np.linalg.eigvals(matriz).tolist()\'#10 +\n' +
+              '    \'print(f"[NumPy] Determinante = {det:.2f} | Autovalores = {autovalores}")\'\n' +
+              '  );\n' +
+              '  Resultado := PyEval(\'round(det, 4)\');\n' +
+              '  Writeln(\'Valor retornado para variável Object Pascal: \', Resultado);\n' +
+              'end.'
+          }
+        ];
+        this.filterSnippetsCatalog();
+      end;
+    end;
+
+    procedure filterSnippetsCatalog;
+    begin
+      asm
+        if (!this._allSnippets) {
+          this.initSnippetsCatalog();
+          return;
+        }
+        const q = (this.snippetSearchQuery || '').trim().toLowerCase();
+        const cat = this.snippetCategory || 'all';
+        const out = [];
+        for (let i = 0; i < this._allSnippets.length; i++) {
+          const item = this._allSnippets[i];
+          if (cat !== 'all' && item.category !== cat) continue;
+          if (q !== '') {
+            const hay = (item.title + ' ' + item.description + ' ' + item.unitTag + ' ' + item.code).toLowerCase();
+            if (hay.indexOf(q) < 0) continue;
+          }
+          out.push(item);
+        }
+        this.filteredSnippets = out;
+        this.filteredSnippetsCount = out.length;
+      end;
+    end;
+
+    procedure openSnippetsModal;
+    begin
+      asm
+        this.initSnippetsCatalog();
+        this.snippetInsertTargetIdx = -1;
+        this.snippetSearchQuery = '';
+        this.snippetCategory = 'all';
+        this.filterSnippetsCatalog();
+        this.showSnippetsModal = true;
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure openSnippetsAt(idx: integer);
+    begin
+      asm
+        this.initSnippetsCatalog();
+        this.snippetInsertTargetIdx = (typeof idx === 'number') ? idx : -1;
+        this.snippetSearchQuery = '';
+        this.snippetCategory = 'all';
+        this.filterSnippetsCatalog();
+        this.showSnippetsModal = true;
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure closeSnippetsModal;
+    begin
+      asm
+        this.showSnippetsModal = false;
+        this.snippetInsertTargetIdx = -1;
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure setSnippetCategory(const ACat: string);
+    begin
+      asm
+        this.snippetCategory = ACat || 'all';
+        this.filterSnippetsCatalog();
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure onSnippetSearchInput(e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        const val = (evt && evt.target && typeof evt.target.value === 'string') ? evt.target.value : '';
+        this.snippetSearchQuery = val;
+        this.filterSnippetsCatalog();
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure insertSnippetRecipe(recipe: JSValue; runImmediately: boolean);
+    begin
+      asm
+        if (!recipe) return;
+        const rawR = recipe.__bv_raw__ ? recipe.__bv_raw__ : recipe;
+        this.pushHistory('Inserir receita: ' + (rawR.title || 'Snippet'));
+
+        const makeCell = this.createCell || window.bvCreateCell;
+        const newCell = makeCell(rawR.cellType || 'code', rawR.code || '');
+
+        let targetIdx = this.snippetInsertTargetIdx;
+        if (typeof targetIdx !== 'number' || targetIdx < 0 || targetIdx > this.cells.length) {
+          targetIdx = this.cells.length;
+        }
+
+        this.cells.splice(targetIdx, 0, newCell);
+        this.cells = this.cells.slice();
+        this.showSnippetsModal = false;
+        this.snippetInsertTargetIdx = -1;
+        this.refreshOutline();
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+
+        const self = this;
+        setTimeout(() => {
+          const el = document.querySelector('[data-cell-id="' + newCell.id + '"]');
+          if (el && typeof el.scrollIntoView === 'function') {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const cellCard = el.classList.contains('bv-cell-container') ? el : (el.querySelector('.bv-cell-container') || el);
+            cellCard.classList.add('cell-outline-highlight');
+            setTimeout(() => {
+              cellCard.classList.remove('cell-outline-highlight');
+            }, 1400);
+          }
+          if (runImmediately && newCell.type === 'code') {
+            const actualIdx = (self.cells || []).findIndex(x => x && x.id === newCell.id);
+            self.executeCell(newCell, actualIdx >= 0 ? actualIdx : targetIdx);
+          }
+        }, 70);
       end;
     end;
 
@@ -2079,6 +2554,10 @@
 
           // Escape closes modal / toast
           if (e.key === 'Escape') {
+            if (self.showSnippetsModal) {
+              self.closeSnippetsModal();
+              return;
+            }
             if (self.showTrashModal) {
               self.closeTrashModal();
               return;
@@ -3529,5 +4008,373 @@
   html.theme-dark .outline-item-marker {
     background: #1e293b !important;
     color: #94a3b8 !important;
+  }
+
+  /* ========================================================
+     SNIPPETS & CODE RECIPES CATALOG MODAL (PHASE 6.5)
+     ======================================================== */
+  .tb-btn-snippets {
+    background: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+    color: #15803d !important;
+    font-weight: 700 !important;
+  }
+
+  .tb-btn-snippets:hover:not(:disabled) {
+    background: #dcfce7 !important;
+    border-color: #86efac !important;
+    color: #166534 !important;
+  }
+
+  .btn-divider-snippet {
+    color: #15803d !important;
+    border-color: #bbf7d0 !important;
+    background: #f0fdf4 !important;
+  }
+
+  .btn-divider-snippet:hover {
+    background: #dcfce7 !important;
+    border-color: #86efac !important;
+  }
+
+  .btn-large-snippet {
+    border-color: #93c5fd !important;
+    color: #1d4ed8 !important;
+    background: #eff6ff !important;
+  }
+
+  .btn-large-snippet:hover {
+    border-color: #3b82f6 !important;
+    color: #1e40af !important;
+    background: #dbeafe !important;
+  }
+
+  .snippets-modal-card {
+    background: #ffffff;
+    color: #1e293b;
+    border-radius: 14px;
+    border: 1px solid #cbd5e1;
+    width: 100%;
+    max-width: 980px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.32);
+    overflow: hidden;
+  }
+
+  .snippets-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 22px;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(90deg, #f8fafc 0%, #eff6ff 100%);
+  }
+
+  .snippets-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .snippets-header-icon {
+    font-size: 26px;
+  }
+
+  .snippets-modal-title {
+    font-size: 16.5px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.2px;
+  }
+
+  .snippets-modal-sub {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 2px;
+  }
+
+  .snippets-toolbar-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 22px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .snippets-search-wrap {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 6px 12px;
+    gap: 8px;
+  }
+
+  .snippets-search-wrap:focus-within {
+    border-color: #3b82f6;
+    background: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  }
+
+  .snippets-search-icon {
+    font-size: 14px;
+    color: #64748b;
+  }
+
+  .snippets-search-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 13px;
+    color: #1e293b;
+  }
+
+  .snippets-category-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .snippet-cat-pill {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .snippet-cat-pill:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .snippet-cat-pill.cat-active {
+    background: #2563eb;
+    border-color: #1d4ed8;
+    color: #ffffff;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  }
+
+  .snippets-modal-body {
+    padding: 18px 22px;
+    overflow-y: auto;
+    flex: 1;
+    background: #f8fafc;
+  }
+
+  .snippets-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(430px, 1fr));
+    gap: 16px;
+  }
+
+  .snippet-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 10px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .snippet-card:hover {
+    border-color: #93c5fd;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.08);
+    transform: translateY(-1px);
+  }
+
+  .snippet-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .snippet-icon {
+    font-size: 18px;
+  }
+
+  .snippet-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+    flex: 1;
+  }
+
+  .snippet-cat-badge {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .cat-badge-pandas {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .cat-badge-charts {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  .cat-badge-sklearn {
+    background: #dcfce7;
+    color: #166534;
+  }
+
+  .cat-badge-math {
+    background: #f3e8ff;
+    color: #6b21a8;
+  }
+
+  .snippet-desc {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.45;
+    margin: 0;
+  }
+
+  .snippet-code-preview {
+    background: #0f172a;
+    color: #e2e8f0;
+    border: 1px solid #1e293b;
+    border-radius: 7px;
+    padding: 9px 11px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    max-height: 135px;
+    overflow: auto;
+    margin: 0;
+    white-space: pre;
+  }
+
+  .snippet-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .snippet-unit-tag {
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+
+  .snippet-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-snippet-insert {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-snippet-insert:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+  }
+
+  .btn-snippet-run {
+    background: #10b981;
+    color: #ffffff;
+    border: 1px solid #059669;
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-snippet-run:hover {
+    background: #059669;
+  }
+
+  .snippets-footer-hint {
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  html[data-bs-theme="dark"] .snippets-modal-card,
+  html.theme-dark .snippets-modal-card {
+    background: #0f172a;
+    color: #f8fafc;
+    border-color: #334155;
+  }
+
+  html[data-bs-theme="dark"] .snippets-modal-header,
+  html.theme-dark .snippets-modal-header {
+    background: #090d16;
+    border-bottom-color: #1e293b;
+  }
+
+  html[data-bs-theme="dark"] .snippets-modal-title,
+  html.theme-dark .snippets-modal-title,
+  html[data-bs-theme="dark"] .snippet-title,
+  html.theme-dark .snippet-title {
+    color: #f8fafc;
+  }
+
+  html[data-bs-theme="dark"] .snippets-toolbar-bar,
+  html.theme-dark .snippets-toolbar-bar {
+    background: #0f172a;
+    border-bottom-color: #1e293b;
+  }
+
+  html[data-bs-theme="dark"] .snippets-search-wrap,
+  html.theme-dark .snippets-search-wrap {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  html[data-bs-theme="dark"] .snippets-search-input,
+  html.theme-dark .snippets-search-input {
+    color: #f8fafc;
+  }
+
+  html[data-bs-theme="dark"] .snippets-modal-body,
+  html.theme-dark .snippets-modal-body {
+    background: #090d16;
+  }
+
+  html[data-bs-theme="dark"] .snippet-card,
+  html.theme-dark .snippet-card {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  html[data-bs-theme="dark"] .snippet-card-footer,
+  html.theme-dark .snippet-card-footer {
+    border-top-color: #334155;
   }
 </style>
