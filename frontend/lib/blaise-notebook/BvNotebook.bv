@@ -111,7 +111,11 @@
     </div>
 
     <!-- REACTIVE CANVAS OF CELLS -->
-    <main class="notebook-cells-canvas">
+    <main
+      class="notebook-cells-canvas"
+      @dragover="onCanvasDragOver($event)"
+      @drop="onCanvasDrop($event)"
+    >
       <div
         b-for="cell in cells"
         :key="cell.id"
@@ -121,11 +125,13 @@
         @dragleave="onCellDragLeave($index, $event)"
         @drop="onCellDrop($index, $event)"
       >
-        <!-- ANIMATED DROP INDICATOR (TOP) -->
+        <!-- ANIMATED LIVE DROP SLOT (TOP) -->
         <div class="cell-drop-indicator drop-indicator-line-top" aria-hidden="true">
-          <span class="drop-indicator-dot"></span>
-          <span class="drop-indicator-line"></span>
-          <span class="drop-indicator-badge">Soltar célula aqui</span>
+          <div class="drop-slot-box">
+            <span class="drop-indicator-dot"></span>
+            <span class="drop-indicator-badge">Soltar célula nesta posição</span>
+            <span class="drop-indicator-line"></span>
+          </div>
         </div>
 
         <!-- QUICK INSERT DIVIDER BETWEEN CELLS -->
@@ -157,11 +163,13 @@
           @cell-drag-end="onCellDragEnd"
         ></bv-cell>
 
-        <!-- ANIMATED DROP INDICATOR (BOTTOM) -->
+        <!-- ANIMATED LIVE DROP SLOT (BOTTOM) -->
         <div class="cell-drop-indicator drop-indicator-line-bottom" aria-hidden="true">
-          <span class="drop-indicator-dot"></span>
-          <span class="drop-indicator-line"></span>
-          <span class="drop-indicator-badge">Soltar célula aqui</span>
+          <div class="drop-slot-box">
+            <span class="drop-indicator-dot"></span>
+            <span class="drop-indicator-badge">Soltar célula nesta posição</span>
+            <span class="drop-indicator-line"></span>
+          </div>
         </div>
       </div>
 
@@ -800,6 +808,7 @@
         const idx = (payload && typeof payload.index === 'number') ? payload.index : window._bvDraggedCellIndex;
         this._draggedCellIndex = (typeof idx === 'number') ? idx : -1;
         window._bvDraggedCellIndex = this._draggedCellIndex;
+        window._bvPendingDropInsertIdx = -1;
       end;
     end;
 
@@ -808,9 +817,46 @@
       asm
         this._draggedCellIndex = -1;
         window._bvDraggedCellIndex = -1;
+        window._bvPendingDropInsertIdx = -1;
         const els = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
         for (let i = 0; i < els.length; i++) {
           els[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');
+        }
+      end;
+    end;
+
+    procedure updateDropSlotAt(targetIdx: integer; isBottom: boolean; fromIdx: integer);
+    begin
+      asm
+        const wrappers = document.querySelectorAll('.cell-wrapper-outer');
+        const total = wrappers.length;
+        if (total === 0 || fromIdx < 0) return;
+
+        let insertBeforeIdx = isBottom ? (targetIdx + 1) : targetIdx;
+        if (insertBeforeIdx < 0) insertBeforeIdx = 0;
+        if (insertBeforeIdx > total) insertBeforeIdx = total;
+
+        // If dropping right before or right after the dragged cell itself, it's a no-op
+        if (insertBeforeIdx === fromIdx || insertBeforeIdx === fromIdx + 1) {
+          window._bvPendingDropInsertIdx = -1;
+          for (let i = 0; i < total; i++) {
+            wrappers[i].classList.remove('show-drop-top', 'show-drop-bottom');
+          }
+          return;
+        }
+
+        window._bvPendingDropInsertIdx = insertBeforeIdx;
+
+        // Show exactly ONE animated slot so cells smoothly shift apart in real time
+        for (let i = 0; i < total; i++) {
+          wrappers[i].classList.remove('show-drop-top', 'show-drop-bottom');
+        }
+
+        if (insertBeforeIdx < total) {
+          // If the cell at insertBeforeIdx is immediately below fromIdx, prefer showing bottom slot on previous or top slot on target
+          wrappers[insertBeforeIdx].classList.add('show-drop-top');
+        } else if (total > 0) {
+          wrappers[total - 1].classList.add('show-drop-bottom');
         }
       end;
     end;
@@ -832,10 +878,10 @@
         }
 
         if (evt && typeof evt.clientY === 'number') {
-          if (evt.clientY < 75) {
-            window.scrollBy({ top: -10, behavior: 'instant' });
-          } else if (evt.clientY > window.innerHeight - 75) {
-            window.scrollBy({ top: 10, behavior: 'instant' });
+          if (evt.clientY < 85) {
+            window.scrollBy({ top: -12, behavior: 'instant' });
+          } else if (evt.clientY > window.innerHeight - 85) {
+            window.scrollBy({ top: 12, behavior: 'instant' });
           }
         }
 
@@ -846,87 +892,81 @@
 
         const cellCard = wrapper.querySelector('.bv-cell-container') || wrapper;
         const rect = cellCard.getBoundingClientRect();
-        const midY = rect.top + (rect.height / 2);
-        const isBottom = (evt ? evt.clientY : 0) >= midY;
+        const clientY = evt ? evt.clientY : 0;
 
-        const allWrappers = document.querySelectorAll('.cell-wrapper-outer.show-drop-top, .cell-wrapper-outer.show-drop-bottom');
-        for (let i = 0; i < allWrappers.length; i++) {
-          if (allWrappers[i] !== wrapper) {
-            allWrappers[i].classList.remove('show-drop-top', 'show-drop-bottom');
-          }
+        // Directional adaptive threshold:
+        // When dragging DOWN (idx > fromIdx), entering the top 22% (or 55px) of a tall cell already opens the slot BELOW it!
+        // When dragging UP (idx < fromIdx), entering the bottom 78% of the cell above already opens the slot ABOVE it!
+        let thresholdY = rect.top + (rect.height * 0.5);
+        if (idx > fromIdx) {
+          thresholdY = rect.top + Math.min(rect.height * 0.22, 60);
+        } else if (idx < fromIdx) {
+          thresholdY = rect.bottom - Math.min(rect.height * 0.22, 60);
         }
 
-        if (idx === fromIdx) {
-          wrapper.classList.remove('show-drop-top', 'show-drop-bottom');
+        const isBottom = clientY >= thresholdY;
+        this.updateDropSlotAt(idx, isBottom, fromIdx);
+      end;
+    end;
+
+    procedure onCanvasDragOver(e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        const fromIdx = (typeof this._draggedCellIndex === 'number' && this._draggedCellIndex >= 0)
+          ? this._draggedCellIndex
+          : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
+        if (fromIdx < 0) return;
+
+        if (evt && typeof evt.preventDefault === 'function') {
+          evt.preventDefault();
+        }
+        if (evt && evt.dataTransfer) {
+          evt.dataTransfer.dropEffect = 'move';
+        }
+
+        // If cursor is inside a specific cell-wrapper-outer, onCellDragOver already handled it
+        if (evt && evt.target && evt.target.closest && evt.target.closest('.cell-wrapper-outer')) {
           return;
         }
 
-        if (isBottom) {
-          wrapper.classList.remove('show-drop-top');
-          wrapper.classList.add('show-drop-bottom');
-        } else {
-          wrapper.classList.remove('show-drop-bottom');
-          wrapper.classList.add('show-drop-top');
+        // Otherwise cursor is in the gap between cells or above/below the list: find nearest cell
+        const wrappers = document.querySelectorAll('.cell-wrapper-outer');
+        if (!wrappers || wrappers.length === 0) return;
+        const clientY = evt ? evt.clientY : 0;
+
+        for (let i = 0; i < wrappers.length; i++) {
+          const r = wrappers[i].getBoundingClientRect();
+          if (clientY < r.top + (r.height / 2)) {
+            this.updateDropSlotAt(i, false, fromIdx);
+            return;
+          }
         }
+        this.updateDropSlotAt(wrappers.length - 1, true, fromIdx);
       end;
     end;
 
     procedure onCellDragLeave(idx: integer; e: JSValue);
     begin
       asm
-        const evt = e || window.event;
-        const wrapper = (evt && evt.currentTarget && evt.currentTarget.classList && evt.currentTarget.classList.contains('cell-wrapper-outer'))
-          ? evt.currentTarget
-          : (evt && evt.target && evt.target.closest ? evt.target.closest('.cell-wrapper-outer') : null);
-        if (!wrapper) return;
-        const related = evt ? evt.relatedTarget : null;
-        if (related && wrapper.contains(related)) return;
-        wrapper.classList.remove('show-drop-top', 'show-drop-bottom');
+        // Keep the live slot open while moving across gaps inside the canvas
       end;
     end;
 
-    procedure onCellDrop(idx: integer; e: JSValue);
+    procedure commitPendingDrop(fromIdx: integer; insertBeforeIdx: integer);
     begin
       asm
-        const evt = e || window.event;
-        if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
-        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
-
-        let fromIdx = (typeof this._draggedCellIndex === 'number' && this._draggedCellIndex >= 0)
-          ? this._draggedCellIndex
-          : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
-
-        if (fromIdx < 0 && evt && evt.dataTransfer) {
-          try {
-            const raw = evt.dataTransfer.getData('text/plain');
-            const parsed = parseInt(raw, 10);
-            if (!isNaN(parsed)) fromIdx = parsed;
-          } catch (err) {}
-        }
-
-        const wrapper = (evt && evt.currentTarget && evt.currentTarget.classList && evt.currentTarget.classList.contains('cell-wrapper-outer'))
-          ? evt.currentTarget
-          : (evt && evt.target && evt.target.closest ? evt.target.closest('.cell-wrapper-outer') : null);
-
-        let isBottom = false;
-        if (wrapper) {
-          const cellCard = wrapper.querySelector('.bv-cell-container') || wrapper;
-          const rect = cellCard.getBoundingClientRect();
-          const midY = rect.top + (rect.height / 2);
-          isBottom = (evt ? evt.clientY : 0) >= midY;
-        }
-
         this._draggedCellIndex = -1;
         window._bvDraggedCellIndex = -1;
+        window._bvPendingDropInsertIdx = -1;
         const els = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
         for (let i = 0; i < els.length; i++) {
           els[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');
         }
 
         if (!this.cells || fromIdx < 0 || fromIdx >= this.cells.length) return;
-        if (idx < 0 || idx >= this.cells.length) return;
+        if (insertBeforeIdx < 0) return;
 
-        const insertBeforeIdx = isBottom ? (idx + 1) : idx;
         let finalIdx = (fromIdx < insertBeforeIdx) ? (insertBeforeIdx - 1) : insertBeforeIdx;
         if (finalIdx < 0) finalIdx = 0;
         if (finalIdx >= this.cells.length) finalIdx = this.cells.length - 1;
@@ -952,6 +992,75 @@
             }
           }
         });
+      end;
+    end;
+
+    procedure onCellDrop(idx: integer; e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
+        if (evt && typeof evt.stopPropagation === 'function') evt.stopPropagation();
+
+        let fromIdx = (typeof this._draggedCellIndex === 'number' && this._draggedCellIndex >= 0)
+          ? this._draggedCellIndex
+          : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
+
+        if (fromIdx < 0 && evt && evt.dataTransfer) {
+          try {
+            const raw = evt.dataTransfer.getData('text/plain');
+            const parsed = parseInt(raw, 10);
+            if (!isNaN(parsed)) fromIdx = parsed;
+          } catch (err) {}
+        }
+
+        let insertBeforeIdx = (typeof window._bvPendingDropInsertIdx === 'number' && window._bvPendingDropInsertIdx >= 0)
+          ? window._bvPendingDropInsertIdx
+          : -1;
+
+        if (insertBeforeIdx < 0) {
+          const wrapper = (evt && evt.currentTarget && evt.currentTarget.classList && evt.currentTarget.classList.contains('cell-wrapper-outer'))
+            ? evt.currentTarget
+            : (evt && evt.target && evt.target.closest ? evt.target.closest('.cell-wrapper-outer') : null);
+          let isBottom = false;
+          if (wrapper) {
+            const cellCard = wrapper.querySelector('.bv-cell-container') || wrapper;
+            const rect = cellCard.getBoundingClientRect();
+            let thresholdY = rect.top + (rect.height * 0.5);
+            if (idx > fromIdx) thresholdY = rect.top + Math.min(rect.height * 0.22, 60);
+            else if (idx < fromIdx) thresholdY = rect.bottom - Math.min(rect.height * 0.22, 60);
+            isBottom = (evt ? evt.clientY : 0) >= thresholdY;
+          }
+          insertBeforeIdx = isBottom ? (idx + 1) : idx;
+        }
+
+        this.commitPendingDrop(fromIdx, insertBeforeIdx);
+      end;
+    end;
+
+    procedure onCanvasDrop(e: JSValue);
+    begin
+      asm
+        const evt = e || window.event;
+        if (evt && typeof evt.preventDefault === 'function') evt.preventDefault();
+
+        let fromIdx = (typeof this._draggedCellIndex === 'number' && this._draggedCellIndex >= 0)
+          ? this._draggedCellIndex
+          : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
+
+        if (fromIdx < 0 && evt && evt.dataTransfer) {
+          try {
+            const raw = evt.dataTransfer.getData('text/plain');
+            const parsed = parseInt(raw, 10);
+            if (!isNaN(parsed)) fromIdx = parsed;
+          } catch (err) {}
+        }
+
+        const insertBeforeIdx = (typeof window._bvPendingDropInsertIdx === 'number')
+          ? window._bvPendingDropInsertIdx
+          : -1;
+
+        this.commitPendingDrop(fromIdx, insertBeforeIdx);
       end;
     end;
 
@@ -2083,24 +2192,43 @@
     position: relative;
   }
 
-  /* DRAG & DROP ANIMATED POSITIONING INDICATOR */
+  /* DRAG & DROP LIVE ANIMATED SLOT (CELLS SHIFT SMOOTHLY APART) */
   .cell-drop-indicator {
-    display: none;
+    display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 2px 0;
-    margin: 4px 0 4px 75px;
+    height: 0;
+    margin: 0;
+    opacity: 0;
+    overflow: hidden;
     pointer-events: none;
     z-index: 30;
-    animation: dropIndicatorPulse 0.9s infinite alternate ease-in-out;
+    transition: height 0.18s cubic-bezier(0.2, 0, 0, 1), margin 0.18s cubic-bezier(0.2, 0, 0, 1), opacity 0.15s ease;
   }
 
   .cell-wrapper-outer.show-drop-top > .drop-indicator-line-top {
-    display: flex;
+    height: 46px;
+    margin: 6px 0 10px 0;
+    opacity: 1;
   }
 
   .cell-wrapper-outer.show-drop-bottom > .drop-indicator-line-bottom {
+    height: 46px;
+    margin: 10px 0 6px 0;
+    opacity: 1;
+  }
+
+  .drop-slot-box {
+    width: 100%;
+    height: 42px;
+    border: 2px dashed #3b82f6;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(59, 130, 246, 0.09) 0%, rgba(37, 99, 235, 0.05) 100%);
     display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    box-shadow: inset 0 0 12px rgba(59, 130, 246, 0.08);
+    animation: dropIndicatorPulse 0.9s infinite alternate ease-in-out;
   }
 
   .drop-indicator-dot {
@@ -2114,32 +2242,42 @@
 
   .drop-indicator-line {
     flex: 1;
-    height: 3px;
+    height: 2px;
     border-radius: 2px;
-    background: linear-gradient(90deg, #2563eb 0%, #3b82f6 60%, #60a5fa 100%);
-    box-shadow: 0 0 8px rgba(37, 99, 235, 0.45);
+    background: linear-gradient(90deg, #3b82f6 0%, rgba(96, 165, 250, 0.25) 100%);
   }
 
   .drop-indicator-badge {
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
     color: #1d4ed8;
     background: #dbeafe;
     border: 1px solid #93c5fd;
-    padding: 2px 8px;
+    padding: 3px 10px;
     border-radius: 999px;
     white-space: nowrap;
     box-shadow: 0 2px 4px rgba(37, 99, 235, 0.12);
   }
 
+  html[data-bs-theme="dark"] .drop-slot-box,
+  html.theme-dark .drop-slot-box {
+    border-color: #60a5fa;
+    background: rgba(37, 99, 235, 0.16);
+  }
+
+  html[data-bs-theme="dark"] .drop-indicator-badge,
+  html.theme-dark .drop-indicator-badge {
+    background: #1e3a8a;
+    color: #dbeafe;
+    border-color: #3b82f6;
+  }
+
   @keyframes dropIndicatorPulse {
     0% {
-      opacity: 0.78;
-      transform: scaleY(0.98);
+      opacity: 0.85;
     }
     100% {
       opacity: 1;
-      transform: scaleY(1.04);
     }
   }
 

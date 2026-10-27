@@ -44,13 +44,6 @@
       <!-- HEADER / ACTION BAR FOR THIS CELL -->
       <div class="cell-header-bar">
         <div class="cell-type-selector">
-          <span
-            class="header-drag-handle"
-            draggable="true"
-            title="Arrastar para reordenar célula (Drag & Drop)"
-            @dragstart="onHandleDragStart($event)"
-            @dragend="onHandleDragEnd($event)"
-          >⠿</span>
           <select class="type-dropdown" b-ref="typeSelect" @change="onTypeSelectChange" title="Cell type: Pascal / Markdown">
             <option value="code" :selected="cell && cell.type === 'code'">⚡ Pascal Code</option>
             <option value="markdown" :selected="cell && cell.type === 'markdown'">📝 Markdown</option>
@@ -402,29 +395,6 @@
     font-size: 16px;
     line-height: 1;
     letter-spacing: -1px;
-  }
-
-  .header-drag-handle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 4px;
-    color: #94a3b8;
-    font-size: 15px;
-    cursor: grab;
-    user-select: none;
-    transition: color 0.15s, background-color 0.15s;
-  }
-
-  .header-drag-handle:hover {
-    color: #2563eb;
-    background: #e2e8f0;
-  }
-
-  .header-drag-handle:active {
-    cursor: grabbing;
   }
 
   .bv-cell-container.cell-is-dragging {
