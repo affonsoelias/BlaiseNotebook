@@ -23,8 +23,6 @@ type
   private
     FWorkspaceDir: string;
     FPackagesDir: string;
-    FPython4LazarusDir: string;
-    FPython4LazarusLibDir: string;
     FOnStream: TOnStreamOutput;
     FOnDisplay: TOnDisplayData;
     FOnReply: TOnExecuteReply;
@@ -40,6 +38,7 @@ type
     function ComputeSourceHash(const ASource: string): string;
     procedure DiscoverPackageDirs(ADirs: TStrings);
     function ExtractUserUses(var ASource: string; out AUserUnits: string): Boolean;
+    function FindFPCExe: string;
     function FindPythonExe: string;
     function IsPipCommand(const ASource: string; out APipArgs: string): Boolean;
     procedure ExecutePip(const ACellId: string; AExecCount: Integer; const APipArgs: string; AStartTick: Int64);
@@ -97,10 +96,6 @@ begin
       FindClose(SR);
     end;
   end;
-
-  // Locate Python4Lazarus package directories
-  FPython4LazarusDir := 'C:\Users\Pichau\AppData\Local\lazarus\onlinepackagemanager\packages\PythonForLazarus\python4lazarus';
-  FPython4LazarusLibDir := FPython4LazarusDir + DirectorySeparator + 'lib' + DirectorySeparator + 'x86_64-win64';
 
   FDaemonPort := 9099;
   FDaemonProcess := nil;
@@ -497,13 +492,13 @@ begin
       FinalCode.Add('uses');
       if HasUserUses then
       begin
-        FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput, PythonEngine,');
+        FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput,');
         FinalCode.Add('  ' + UserUnits + ';');
       end
       else
       begin
         FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput, BlaiseMathKernel,');
-        FinalCode.Add('  PythonEngine, BlaisePyKernel, BlaiseDataScience, BlaisePandas, BlaiseSklearn;');
+        FinalCode.Add('  BlaisePyKernel, BlaiseDataScience, BlaisePandas, BlaiseSklearn;');
       end;
       FinalCode.Add('');
       FinalCode.Add(CleanSource);
@@ -535,7 +530,7 @@ begin
   OutStream := TMemoryStream.Create;
   PackageDirs := TStringList.Create;
   try
-    Proc.Executable := 'fpc';
+    Proc.Executable := FindFPCExe;
     Proc.Parameters.Add('-Mobjfpc');
     Proc.Parameters.Add('-Sh');
     Proc.Parameters.Add('-O2');
@@ -544,10 +539,6 @@ begin
     DiscoverPackageDirs(PackageDirs);
     for i := 0 to PackageDirs.Count - 1 do
       Proc.Parameters.Add('-Fu' + PackageDirs[i]);
-    if DirectoryExists(FPython4LazarusLibDir) then
-      Proc.Parameters.Add('-Fu' + FPython4LazarusLibDir);
-    if DirectoryExists(FPython4LazarusDir) then
-      Proc.Parameters.Add('-Fu' + FPython4LazarusDir);
 
     Proc.Parameters.Add(APrgPath);
 
@@ -725,28 +716,94 @@ begin
   end;
 end;
 
+function TCodeRunner.FindFPCExe: string;
+var
+  EnvFpc, FoundPath: string;
+begin
+  EnvFpc := Trim(GetEnvironmentVariable('BLAISE_FPC_EXE'));
+  if (EnvFpc <> '') and FileExists(EnvFpc) then
+    Exit(EnvFpc);
+
+  FoundPath := ExeSearch({$IFDEF WINDOWS}'fpc.exe'{$ELSE}'fpc'{$ENDIF}, GetEnvironmentVariable('PATH'));
+  if (FoundPath <> '') and FileExists(FoundPath) then
+    Exit(FoundPath);
+
+  {$IFDEF WINDOWS}
+  if FileExists('C:\lazarus\fpc\3.2.2\bin\x86_64-win64\fpc.exe') then
+    Exit('C:\lazarus\fpc\3.2.2\bin\x86_64-win64\fpc.exe');
+  if FileExists('C:\lazarus\fpc\3.2.0\bin\x86_64-win64\fpc.exe') then
+    Exit('C:\lazarus\fpc\3.2.0\bin\x86_64-win64\fpc.exe');
+  if FileExists('D:\lazarus\fpc\3.2.2\bin\x86_64-win64\fpc.exe') then
+    Exit('D:\lazarus\fpc\3.2.2\bin\x86_64-win64\fpc.exe');
+  if FileExists('C:\FPC\3.2.2\bin\i386-win32\fpc.exe') then
+    Exit('C:\FPC\3.2.2\bin\i386-win32\fpc.exe');
+  {$ELSE}
+  if FileExists('/usr/bin/fpc') then
+    Exit('/usr/bin/fpc');
+  if FileExists('/usr/local/bin/fpc') then
+    Exit('/usr/local/bin/fpc');
+  if FileExists('/opt/homebrew/bin/fpc') then
+    Exit('/opt/homebrew/bin/fpc');
+  {$ENDIF}
+
+  Result := 'fpc';
+end;
+
 function TCodeRunner.FindPythonExe: string;
 const
-  CANDIDATE_PATHS: array[1..5] of string = (
-    'C:\Users\Pichau\AppData\Local\Programs\Python\Python313\python.exe',
-    'C:\Users\Pichau\AppData\Local\Programs\Python\Python312\python.exe',
-    'C:\Users\Pichau\AppData\Local\Programs\Python\Python311\python.exe',
-    'C:\Program Files\Python313\python.exe',
-    'python.exe'
-  );
+  PY_VERSIONS: array[1..5] of string = ('Python313', 'Python312', 'Python311', 'Python310', 'Python39');
 var
+  EnvPy, LocalAppData, ProgFiles, Cand, FoundPath: string;
   i: Integer;
 begin
   Result := '';
-  for i := 1 to High(CANDIDATE_PATHS) - 1 do
+
+  // 1. Explicit environment variable override
+  EnvPy := Trim(GetEnvironmentVariable('BLAISE_PYTHON_EXE'));
+  if (EnvPy <> '') and FileExists(EnvPy) then
+    Exit(EnvPy);
+
+  {$IFDEF WINDOWS}
+  // 2. Dynamic user LocalAppData & ProgramFiles discovery on Windows (no hardcoded username!)
+  LocalAppData := ExcludeTrailingPathDelimiter(GetEnvironmentVariable('LOCALAPPDATA'));
+  ProgFiles := ExcludeTrailingPathDelimiter(GetEnvironmentVariable('ProgramFiles'));
+  for i := Low(PY_VERSIONS) to High(PY_VERSIONS) do
   begin
-    if FileExists(CANDIDATE_PATHS[i]) then
+    if LocalAppData <> '' then
     begin
-      Result := CANDIDATE_PATHS[i];
-      Exit;
+      Cand := LocalAppData + '\Programs\Python\' + PY_VERSIONS[i] + '\python.exe';
+      if FileExists(Cand) then Exit(Cand);
     end;
+    if ProgFiles <> '' then
+    begin
+      Cand := ProgFiles + '\' + PY_VERSIONS[i] + '\python.exe';
+      if FileExists(Cand) then Exit(Cand);
+    end;
+    Cand := 'C:\' + PY_VERSIONS[i] + '\python.exe';
+    if FileExists(Cand) then Exit(Cand);
   end;
-  Result := CANDIDATE_PATHS[High(CANDIDATE_PATHS)];
+
+  FoundPath := ExeSearch('python.exe', GetEnvironmentVariable('PATH'));
+  if (FoundPath <> '') and FileExists(FoundPath) and (Pos('WindowsApps', FoundPath) = 0) then
+    Exit(FoundPath);
+
+  Result := 'python';
+  {$ELSE}
+  // 2. Standard Linux / macOS PATH discovery
+  FoundPath := ExeSearch('python3', GetEnvironmentVariable('PATH'));
+  if (FoundPath <> '') and FileExists(FoundPath) then
+    Exit(FoundPath);
+
+  FoundPath := ExeSearch('python', GetEnvironmentVariable('PATH'));
+  if (FoundPath <> '') and FileExists(FoundPath) then
+    Exit(FoundPath);
+
+  if FileExists('/usr/bin/python3') then Exit('/usr/bin/python3');
+  if FileExists('/usr/local/bin/python3') then Exit('/usr/local/bin/python3');
+  if FileExists('/opt/homebrew/bin/python3') then Exit('/opt/homebrew/bin/python3');
+
+  Result := 'python3';
+  {$ENDIF}
 end;
 
 function TCodeRunner.IsPipCommand(const ASource: string; out APipArgs: string): Boolean;

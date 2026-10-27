@@ -1,26 +1,79 @@
 # 🚀 Getting Started with BlaiseNotebook
 
-Welcome to BlaiseNotebook! This friendly guide walks you through launching the tool, navigating the interface, writing code with intelligent autocompletion, exploring tables with DataGrid Pro, drawing charts, and presenting in Dashboard View.
+Welcome to BlaiseNotebook! This guide walks you through installing prerequisites on **Windows** or **Linux**, compiling and diagnosing your environment with the official **`bvnb` CLI**, launching the server, and exploring all interactive features.
 
 ---
 
-## 🏁 Step 1: Starting the Application
+## 🛠️ Step 1: Prerequisites & Cross-Platform Setup (Windows & Linux)
 
-Starting BlaiseNotebook is as simple as running a single command:
+BlaiseNotebook is **100% cross-platform and portable**. It does **not** require any external Lazarus packages (`Python4Lazarus` is no longer needed) or hardcoded paths.
+
+### Required Tools:
+1. **Free Pascal Compiler (`fpc` 3.2.2+)** (or Lazarus IDE)
+   - **Windows**: Install [Lazarus IDE](https://www.lazarus-ide.org/) or standalone Free Pascal.
+   - **Linux (Ubuntu / Debian)**: `sudo apt update && sudo apt install fpc python3 python3-pip git`
+2. **Python 3.9+** with `numpy`, `pandas`, and `scikit-learn`
+3. **BlaiseVue CLI (`bv`)** available in your system `PATH` (or in a sibling `../BlaiseVue` directory).
+
+---
+
+## ⚡ Step 2: Cloning with `git clone` & Compiling the `bvnb` CLI
+
+> **⚠️ Important:** Always download the project using **`git clone`** (instead of downloading a `.zip` file). This preserves the `.git` repository metadata required by the **`bvnb self-update`** and **`bvnb channel`** auto-updater commands!
 
 ```bash
-cd frontend
-bv mormot run
+git clone https://github.com/affonsoelias/BlaiseNotebook.git
+cd BlaiseNotebook
 ```
 
-Then open your favorite web browser and go to:
+Next, compile the official **`bvnb`** CLI utility once using Free Pascal:
+
+**On Windows (PowerShell / CMD):**
+```powershell
+fpc -MObjFPC -Sh bin\bvnb.pas
+```
+
+**On Linux / macOS:**
+```bash
+fpc -MObjFPC -Sh bin/bvnb.pas
+```
+
+Now you can diagnose, configure, compile, update, and run BlaiseNotebook with simple commands:
+
+```bash
+# 1. Verify your environment (FPC, Python 3, NumPy, Pandas, Scikit-Learn, BlaiseVue)
+./bin/bvnb doctor
+
+# 2. Install scientific Python dependencies automatically (if needed)
+./bin/bvnb setup-python
+
+# 3. Build the Frontend SPA and Native mORMot 2 Server
+./bin/bvnb build
+
+# 4. Start the server on http://localhost:8090/
+./bin/bvnb run
+```
+
+> **💡 Keeping BlaiseNotebook Updated via Git:**
+> Just like BlaiseVue's `bv self-update`, you can check for updates or upgrade BlaiseNotebook directly from GitHub anytime:
+> - `./bin/bvnb self-update --check` — Check if new commits are available on GitHub.
+> - `./bin/bvnb self-update` — Pull the latest changes and automatically recompile `bvnb`, the frontend, and the native server.
+> - `./bin/bvnb channel use main` or `./bin/bvnb channel use develop` — Switch between the stable release channel and the development channel.
+
+*(Alternatively, you can also run `cd frontend && bv mormot build && bv mormot run` directly).*
+
+---
+
+## 🏁 Step 3: Opening the Notebook Interface
+
+Once `./bin/bvnb run` is running, open your browser and navigate to:
 👉 **`http://localhost:8090/`**
 
 > **💡 Status Check:** Look at the pill in the top-right corner of the screen. When it shows a green dot **`● Kernel Connected`**, your notebook is connected to the native Pascal engine!
 
 ---
 
-## 🖥️ Step 2: Getting to Know the Interface
+## 🖥️ Step 4: Getting to Know the Interface
 
 BlaiseNotebook is designed to be clean, intuitive, and distraction-free:
 
@@ -29,18 +82,18 @@ BlaiseNotebook is designed to be clean, intuitive, and distraction-free:
 | ▶▶ Run All | ⏹ Interrupt | 🔄 Restart Kernel | ➕ Code | ➕ Markdown | 🧹 Clear | 📊 Dashboard |
 +-----------------------------------------------------------------------------------------------+
 |                                                                                               |
-| [1] In: [ Pascal Code Cell ]                                                                  |
-|     uses BlaiseDataScience;                                                                   |
-|     var DF: TPyDataFrame;                                                                     |
-|     begin                                                                                     |
-|       DF := TPyDataFrame.Create('sales');                                                     |
-|       DF.AddColumn('Month', ['Jan', 'Feb', 'Mar']);                                           |
-|       DF.AddColumn('Revenue', [12000, 18500, 24000]);                                         |
-|       DF.ShowTable('Q1 Revenue', 10);                                                         |
-|     end.                                                                                      |
+| ⠿ [1] In: [ Pascal Code Cell ]                                                                |
+|       uses BlaiseDataScience;                                                                 |
+|       var DF: TPyDataFrame;                                                                   |
+|       begin                                                                                   |
+|         DF := TPyDataFrame.Create('sales');                                                   |
+|         DF.AddColumn('Month', ['Jan', 'Feb', 'Mar']);                                         |
+|         DF.AddColumn('Revenue', [12000, 18500, 24000]);                                       |
+|         DF.ShowTable('Q1 Revenue', 10);                                                       |
+|       end.                                                                                    |
 |                                                                                               |
-|     Out:                                                                                      |
-|     [ 📋 Interactive DataGrid Pro with Sorting, Live Search, Pagination & CSV Export ]       |
+|       Out:                                                                                    |
+|       [ 📋 Interactive DataGrid Pro with Sorting, Live Search, Pagination & CSV Export ]     |
 |                                                                                               |
 +-----------------------------------------------------------------------------------------------+
 ```
@@ -55,10 +108,11 @@ BlaiseNotebook is designed to be clean, intuitive, and distraction-free:
 - **📊 Dashboard View:** Alternates between Code Development mode and Executive Presentation mode with a single click.
 - **💾 Save (.bynb):** Downloads your current notebook state as a portable `.bynb` JSON file.
 - **📂 Open:** Loads an existing `.bynb` file from your computer.
+- **⠿ Drag Handle:** Grab the `⠿` icon on the left of any cell header to smoothly drag and reorder cells with live animated slot previews.
 
 ---
 
-## ✍️ Step 3: Writing & Running Code with Autocompletion
+## ✍️ Step 5: Writing & Running Code with Autocompletion
 
 1. Click on any code cell.
 2. Notice the **Real-Time Syntax Highlighting**: Pascal keywords (`begin`, `end`, `var`, `procedure`), scientific types (`TPyDataFrame`, `TPySeries`, `TVector`), strings, and comments are colorized instantly.
@@ -78,7 +132,7 @@ BlaiseNotebook is designed to be clean, intuitive, and distraction-free:
 
 ---
 
-## 📋 Step 4: Exploring Tables with DataGrid Pro
+## 📋 Step 6: Exploring Tables with DataGrid Pro
 
 When a cell calls `DF.ShowTable(...)`, it renders an interactive **DataGrid Pro** card:
 
@@ -91,7 +145,7 @@ When a cell calls `DF.ShowTable(...)`, it renders an interactive **DataGrid Pro*
 
 ---
 
-## 📊 Step 5: Executive Presentation with Dashboard View
+## 📊 Step 7: Executive Presentation with Dashboard View
 
 Want to present your findings to clients, colleagues, or stakeholders without showing lines of Pascal code?
 
@@ -105,7 +159,7 @@ Want to present your findings to clients, colleagues, or stakeholders without sh
 
 ---
 
-## 🔄 Step 6: Stateful Kernel & Cross-Cell Variables
+## 🔄 Step 8: Stateful Kernel & Cross-Cell Variables
 
 Variables created in previous cells persist throughout your entire session!
 

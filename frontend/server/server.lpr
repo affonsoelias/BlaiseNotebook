@@ -158,12 +158,8 @@ begin
   try
     App := TBlaiseServerApp.Create(Port, DistPath);
     try
-      try
-        ReadLn;
-      except
-        while True do
-          Sleep(1000);
-      end;
+      while True do
+        Sleep(1000);
     finally
       WriteLn(#10'[+] Shutting down mORMot 2 server...');
       App.Free;

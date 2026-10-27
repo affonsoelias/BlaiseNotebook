@@ -26,6 +26,8 @@ temp_lib.zip
 # Server build outputs
 server/bin/
 frontend/server/bin/
+bin/bvnb
+frontend/.env
 
 # Lazarus IDE internal files
 *.lps

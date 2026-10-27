@@ -135,11 +135,21 @@ flowchart LR
 - [x] **Alça Visual de Arrasto (`⠿`)**: Handle visual na lateral esquerda de cada célula permitindo arrastar e soltar para reposicionar células na ordem desejada.
 - [x] **Feedback Visual de Posicionamento**: Linha indicadora animada mostrando exatamente onde a célula será solta.
 
-#### 6.3 Tabela de Conteúdos Automática (Outline / TOC)
+#### 6.3 Portabilidade Multiplataforma (Windows/Linux) & CLI Oficial (`bvnb`) ✅ CONCLUÍDO
+- [x] **Remoção do `Python4Lazarus` (`PythonEngine`) e Caminhos Fixos**: Eliminar caminhos hardcoded (`C:\Users\Pichau\...`) e a dependência do pacote `Python4Lazarus` em `BlaisePyKernel.pas` e `uCodeRunner.pas`, mantendo 100% da comunicação Python via daemon HTTP JSON nativo (`TFPHttpClient`).
+- [x] **Auto-Descoberta Multiplataforma de FPC e Python (Windows, Linux e macOS)**: Detecção dinâmica de `fpc` e `python3`/`python` via `PATH` do sistema e variáveis de ambiente (`LOCALAPPDATA`, `/usr/bin`, `/usr/local/bin`), permitindo que qualquer usuário clone e compile sem configuração manual.
+- [x] **CLI Oficial `bvnb` — Diagnostics & Git Auto-Updater (`bin/bvnb.pas`)**:
+  - `bvnb doctor`: Diagnóstico completo de ferramentas (`Git`, `FPC`, `Lazarus`, `bv`, `Python 3` e verificação individual de versões do `numpy`, `pandas` e `scikit-learn`).
+  - `bvnb self-update [--check] [--channel=main|develop]`: Auto-atualizador via Git que sincroniza o repositório oficial do GitHub, recompila o `bvnb`, reconstrói o frontend (`bv run build`) e o servidor (`bv mormot build`).
+  - `bvnb channel [use <main|develop>]`: Inspeção e troca rápida entre os canais estável (`main`) e desenvolvimento (`develop`).
+  - `bvnb build`, `bvnb run` e `bvnb setup-python`: Comandos de produtividade para compilar tudo, iniciar o servidor e instalar dependências científicas Python com um único comando.
+- [x] **Atualização da Documentação Oficial (`README.md` e `docs/GETTING_STARTED.md`)**: Guia passo a passo de compilação para Windows e Linux e documentação completa dos comandos da CLI `bvnb`.
+
+#### 6.4 Tabela de Conteúdos Automática (Outline / TOC)
 - [ ] **Painel Lateral Recolhível**: Drawer lateral que extrai automaticamente títulos Markdown (`#`, `##`, `###`) do notebook.
 - [ ] **Navegação com Rolagem Suave**: Clicar em um item do outline rola a página suavemente até a célula correspondente.
 
-#### 6.4 Snippets & Catálogo de Receitas de Código
+#### 6.5 Snippets & Catálogo de Receitas de Código
 - [ ] **Menu de Inserção Rápida de Templates**: Modal ou submenu na toolbar para inserir receitas prontas (ex: *Carregar CSV & Resumo*, *Split Treino/Teste com Random Forest*, *Histograma + BoxPlot*).
 
 ---
@@ -198,7 +208,7 @@ flowchart LR
 3. **Fase 3 (Velocidade e Continuidade - CONCLUÍDO)**: Milestone 3 (Cache de compilação, múltiplas saídas e sessão persistente).
 4. **Fase 4 (Interface Avançada - CONCLUÍDO)**: Milestone 4 (Autocompletion de Pascal e DataGrid Pro com paginação/ordenação).
 5. **Fase 5 (Apresentação Final - CONCLUÍDO)**: Milestone 5 (Dashboard View executivo).
-6. **Fase 6 (Produtividade e Navegação - PRÓXIMO)**: Milestone 6 (Undo/Redo global, Drag & Drop de células, Outline/TOC e catálogo de snippets).
+6. **Fase 6 (Produtividade, Portabilidade & CLI `bvnb` - EM ANDAMENTO)**: Milestone 6 (Undo/Redo global, Drag & Drop de células, Portabilidade Windows/Linux + CLI `bvnb` Auto-Updater, Outline/TOC e catálogo de snippets).
 7. **Fase 7 (Widgets e 3D - PLANEJADO)**: Milestone 7 (Widgets interativos inline, gráficos 3D/mapas e Data Profiler).
 8. **Fase 8 (Robustez e Produção - PLANEJADO)**: Milestone 8 (Interrupt de execução, telemetria de recursos e exportação HTML/script standalone).
 

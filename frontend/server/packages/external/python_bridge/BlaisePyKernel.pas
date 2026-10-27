@@ -1,12 +1,12 @@
 unit BlaisePyKernel;
 
 {
-  BlaisePyKernel - Python4Delphi / Python4Lazarus Bridge for BlaiseNotebook
+  BlaisePyKernel - Cross-Platform Native Python Bridge for BlaiseNotebook
   Part of BlaiseNotebook Suite (Modified LGPL v2.1 with Linking Exception)
 
-  Provides seamless interoperability between Object Pascal and Python:
-  - Persistent Session Daemon (CPython 3.13) with inter-cell continuity
-  - Automatic fallback to in-process PythonEngine if daemon is offline
+  Provides zero-dependency interoperability between Object Pascal and Python:
+  - Persistent Session Daemon (CPython 3.10+) via native HTTP/JSON (TFPHttpClient)
+  - 100% Cross-Platform (Windows, Linux, macOS) — no Python4Lazarus / DLL required
   - Bridges NumPy, Pandas, and Scikit-learn into BlaiseNotebook cells
   - Exclusively emits interactive Chart.js (<bv-chart>) configurations and responsive tables
 }
@@ -19,24 +19,20 @@ interface
 uses
   SysUtils, Classes, Math,
   fphttpclient, fpjson, jsonparser,
-  PythonEngine, BlaiseOutput;
+  BlaiseOutput;
 
 type
-  { TBlaisePy - Static manager for the Python environment }
+  { TBlaisePy - Static manager for the Python persistent session daemon }
   TBlaisePy = class
   private
-    class var FEngine: TPythonEngine;
-    class var FInitialized: Boolean;
     class var FUseDaemon: Boolean;
     class var FDaemonChecked: Boolean;
     class var FDaemonUrl: string;
-    class procedure EnsureEngine;
     class function CheckDaemon: Boolean;
     class function PostDaemonJson(const AEndpoint, AJson: string): string;
   public
     class procedure Init(const ADllPath: string = ''; const ADllName: string = '');
     class procedure Finalize;
-    class function Engine: TPythonEngine;
     class function Exec(const ACode: string): Boolean;
     class function EvalStr(const AExpr: string): string;
     class procedure ResetSession;
@@ -60,14 +56,6 @@ procedure ShowPySeriesChart(const AVarName: string; const ATitle: string = 'Grá
 procedure ShowPyDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
 
 implementation
-
-const
-  DEFAULT_PY_PATHS: array[1..4] of string = (
-    'C:\Users\Pichau\AppData\Local\Programs\Python\Python313',
-    'C:\Users\Pichau\AppData\Local\Programs\Python\Python312',
-    'C:\Users\Pichau\AppData\Local\Programs\Python\Python311',
-    'C:\Program Files\Python313'
-  );
 
 function EscapeJson(const S: string): string;
 var
@@ -97,21 +85,25 @@ var
   Client: TFPHttpClient;
   Resp: string;
 begin
-  if FDaemonChecked then
+  if FDaemonChecked and FUseDaemon then
   begin
-    Result := FUseDaemon;
+    Result := True;
     Exit;
   end;
 
   FDaemonChecked := True;
   FUseDaemon := False;
   if FDaemonUrl = '' then
-    FDaemonUrl := 'http://127.0.0.1:9099';
+  begin
+    FDaemonUrl := GetEnvironmentVariable('BLAISE_PY_DAEMON_URL');
+    if FDaemonUrl = '' then
+      FDaemonUrl := 'http://127.0.0.1:9099';
+  end;
 
   Client := TFPHttpClient.Create(nil);
   try
     try
-      Client.IOTimeout := 800;
+      Client.IOTimeout := 1200;
       Resp := Client.Get(FDaemonUrl + '/ping');
       if Pos('"status": "ok"', Resp) > 0 then
         FUseDaemon := True;
@@ -154,95 +146,15 @@ begin
   end;
 end;
 
-class procedure TBlaisePy.EnsureEngine;
-var
-  i: Integer;
-  CandidatePath: string;
-begin
-  SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
-  if FInitialized and Assigned(FEngine) and FEngine.Initialized then
-    Exit;
-
-  if not Assigned(FEngine) then
-    FEngine := TPythonEngine.Create(nil);
-
-  FEngine.AutoLoad := False;
-  FEngine.UseLastKnownVersion := False;
-
-  // Auto-detect Python 3.13 / 3.12 DLL
-  for i := Low(DEFAULT_PY_PATHS) to High(DEFAULT_PY_PATHS) do
-  begin
-    CandidatePath := DEFAULT_PY_PATHS[i];
-    if DirectoryExists(CandidatePath) then
-    begin
-      if FileExists(CandidatePath + DirectorySeparator + 'python313.dll') then
-      begin
-        FEngine.DllPath := CandidatePath;
-        FEngine.DllName := 'python313.dll';
-        FEngine.RegVersion := '3.13';
-        FEngine.APIVersion := 1013;
-        Break;
-      end
-      else if FileExists(CandidatePath + DirectorySeparator + 'python312.dll') then
-      begin
-        FEngine.DllPath := CandidatePath;
-        FEngine.DllName := 'python312.dll';
-        FEngine.RegVersion := '3.12';
-        FEngine.APIVersion := 1013;
-        Break;
-      end;
-    end;
-  end;
-
-  if FEngine.DllName = '' then
-  begin
-    FEngine.DllName := 'python313.dll';
-    FEngine.APIVersion := 1013;
-    FEngine.RegVersion := '3.13';
-  end;
-
-  try
-    FEngine.LoadDll;
-    FInitialized := FEngine.Initialized;
-  except
-    on E: Exception do
-      WriteLn('[BlaisePyKernel] Aviso ao carregar Python DLL: ' + E.Message);
-  end;
-end;
-
 class procedure TBlaisePy.Init(const ADllPath: string; const ADllName: string);
 begin
-  if not Assigned(FEngine) then
-    FEngine := TPythonEngine.Create(nil);
-
-  if ADllPath <> '' then
-    FEngine.DllPath := ADllPath;
-  if ADllName <> '' then
-    FEngine.DllName := ADllName;
-
-  FEngine.AutoLoad := False;
-  FEngine.UseLastKnownVersion := False;
-  FEngine.LoadDll;
-  FInitialized := FEngine.Initialized;
+  // Maintained for backward compatibility; checks daemon readiness
+  CheckDaemon;
 end;
 
 class procedure TBlaisePy.Finalize;
 begin
-  if Assigned(FEngine) then
-  begin
-    try
-      FEngine.UnloadDll;
-    except
-    end;
-    FreeAndNil(FEngine);
-  end;
-  FInitialized := False;
-end;
-
-class function TBlaisePy.Engine: TPythonEngine;
-begin
-  EnsureEngine;
-  Result := FEngine;
+  // Session state persists in the external Python daemon
 end;
 
 class function TBlaisePy.Exec(const ACode: string): Boolean;
@@ -253,71 +165,56 @@ var
 begin
   Result := False;
 
-  // 1. Try Persistent Session Daemon first for zero-overhead continuity
-  if CheckDaemon then
+  if not CheckDaemon then
   begin
-    try
-      Resp := PostDaemonJson('/exec', '{"code":"' + EscapeJson(ACode) + '"}');
-      if Resp <> '' then
-      begin
-        Data := GetJSON(Resp);
-        try
-          if Data is TJSONObject then
-          begin
-            Obj := TJSONObject(Data);
-            StdOutText := Obj.Get('stdout', '');
-            StdErrText := Obj.Get('stderr', '');
-            ErrText := Obj.Get('error', '');
-
-            if StdOutText <> '' then
-            begin
-              Write(StdOutText);
-              Flush(Output);
-            end;
-
-            if StdErrText <> '' then
-            begin
-              Write(StdErrText);
-              Flush(StdErr);
-            end;
-
-            if ErrText <> '' then
-            begin
-              WriteLn('[Python Error] ' + ErrText);
-              Flush(Output);
-              Result := False;
-            end
-            else
-              Result := (Obj.Get('status', '') = 'ok');
-          end;
-        finally
-          Data.Free;
-        end;
-        Exit;
-      end;
-    except
-      on E: Exception do
-      begin
-        // Fall back to in-process engine
-      end;
-    end;
-  end;
-
-  // 2. In-process PythonEngine fallback
-  EnsureEngine;
-  if not FInitialized then
-  begin
-    WriteLn('[BlaisePyKernel] Erro: Python Engine nao esta inicializado.');
+    WriteLn('[BlaisePyKernel] Erro: Daemon Python (porta 9099) nao respondeu. Verifique se o Python 3 esta instalado (rode "bvnb doctor").');
+    Flush(Output);
     Exit;
   end;
 
   try
-    FEngine.ExecString(AnsiString(ACode));
-    Result := True;
+    Resp := PostDaemonJson('/exec', '{"code":"' + EscapeJson(ACode) + '"}');
+    if Resp <> '' then
+    begin
+      Data := GetJSON(Resp);
+      try
+        if Data is TJSONObject then
+        begin
+          Obj := TJSONObject(Data);
+          StdOutText := Obj.Get('stdout', '');
+          StdErrText := Obj.Get('stderr', '');
+          ErrText := Obj.Get('error', '');
+
+          if StdOutText <> '' then
+          begin
+            Write(StdOutText);
+            Flush(Output);
+          end;
+
+          if StdErrText <> '' then
+          begin
+            Write(StdErrText);
+            Flush(StdErr);
+          end;
+
+          if ErrText <> '' then
+          begin
+            WriteLn('[Python Error] ' + ErrText);
+            Flush(Output);
+            Result := False;
+          end
+          else
+            Result := (Obj.Get('status', '') = 'ok');
+        end;
+      finally
+        Data.Free;
+      end;
+    end;
   except
     on E: Exception do
     begin
-      WriteLn('[Python Error] ' + E.Message);
+      WriteLn('[BlaisePyKernel] Erro de comunicacao com o Daemon Python: ' + E.Message);
+      Flush(Output);
       Result := False;
     end;
   end;
@@ -331,39 +228,23 @@ var
 begin
   Result := '';
 
-  // 1. Try Persistent Session Daemon first
-  if CheckDaemon then
-  begin
-    try
-      Resp := PostDaemonJson('/eval', '{"expr":"' + EscapeJson(AExpr) + '"}');
-      if Resp <> '' then
-      begin
-        Data := GetJSON(Resp);
-        try
-          if Data is TJSONObject then
-          begin
-            Obj := TJSONObject(Data);
-            Result := Obj.Get('value', '');
-          end;
-        finally
-          Data.Free;
-        end;
-        Exit;
-      end;
-    except
-      on E: Exception do
-      begin
-        // Fallback to in-process
-      end;
-    end;
-  end;
-
-  // 2. In-process PythonEngine fallback
-  EnsureEngine;
-  if not FInitialized then Exit;
+  if not CheckDaemon then Exit;
 
   try
-    Result := FEngine.EvalStringAsStr(AnsiString(AExpr));
+    Resp := PostDaemonJson('/eval', '{"expr":"' + EscapeJson(AExpr) + '"}');
+    if Resp <> '' then
+    begin
+      Data := GetJSON(Resp);
+      try
+        if Data is TJSONObject then
+        begin
+          Obj := TJSONObject(Data);
+          Result := Obj.Get('value', '');
+        end;
+      finally
+        Data.Free;
+      end;
+    end;
   except
     on E: Exception do
       WriteLn('[Python Eval Error] ' + E.Message);
@@ -376,7 +257,6 @@ var
   ColsJson, RowsJson: string;
   Payload: string;
 begin
-  // Convert DataFrame to JSON columns and records
   PyHelper :=
     Format(
       'import json'#10 +
