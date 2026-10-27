@@ -209,11 +209,21 @@
     begin
       asm
         const evt = e || window.event;
-        window._bvDraggedCellIndex = this.index;
+        const wrapper = evt && evt.currentTarget && evt.currentTarget.closest
+          ? evt.currentTarget.closest('.cell-wrapper-outer')
+          : null;
+        let domIdx = this.index;
+        if (wrapper) {
+          const allWrappers = Array.from(document.querySelectorAll('.cell-wrapper-outer'));
+          const foundIdx = allWrappers.indexOf(wrapper);
+          if (foundIdx >= 0) domIdx = foundIdx;
+        }
+        window._bvDraggedCellIndex = domIdx;
+        document.body.classList.add('bv-is-dragging-cell');
         if (evt && evt.dataTransfer) {
           evt.dataTransfer.effectAllowed = 'move';
           try {
-            evt.dataTransfer.setData('text/plain', String(this.index));
+            evt.dataTransfer.setData('application/x-blaise-cell', String(domIdx));
           } catch (err) {}
           const card = evt.currentTarget && evt.currentTarget.closest
             ? evt.currentTarget.closest('.bv-cell-container')
@@ -226,7 +236,7 @@
           }
         }
         if (this.$emit) {
-          this.$emit('cell-drag-start', { index: this.index, cell: this.cell });
+          this.$emit('cell-drag-start', { index: domIdx, cell: this.cell });
         }
       end;
     end;
@@ -235,6 +245,8 @@
     begin
       asm
         window._bvDraggedCellIndex = -1;
+        window._bvPendingDropInsertIdx = -1;
+        document.body.classList.remove('bv-is-dragging-cell');
         const draggingEls = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
         for (let i = 0; i < draggingEls.length; i++) {
           draggingEls[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');

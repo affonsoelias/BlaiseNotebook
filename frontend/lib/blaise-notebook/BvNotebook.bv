@@ -809,6 +809,7 @@
         this._draggedCellIndex = (typeof idx === 'number') ? idx : -1;
         window._bvDraggedCellIndex = this._draggedCellIndex;
         window._bvPendingDropInsertIdx = -1;
+        document.body.classList.add('bv-is-dragging-cell');
       end;
     end;
 
@@ -818,6 +819,7 @@
         this._draggedCellIndex = -1;
         window._bvDraggedCellIndex = -1;
         window._bvPendingDropInsertIdx = -1;
+        document.body.classList.remove('bv-is-dragging-cell');
         const els = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
         for (let i = 0; i < els.length; i++) {
           els[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');
@@ -853,7 +855,6 @@
         }
 
         if (insertBeforeIdx < total) {
-          // If the cell at insertBeforeIdx is immediately below fromIdx, prefer showing bottom slot on previous or top slot on target
           wrappers[insertBeforeIdx].classList.add('show-drop-top');
         } else if (total > 0) {
           wrappers[total - 1].classList.add('show-drop-bottom');
@@ -894,9 +895,6 @@
         const rect = cellCard.getBoundingClientRect();
         const clientY = evt ? evt.clientY : 0;
 
-        // Directional adaptive threshold:
-        // When dragging DOWN (idx > fromIdx), entering the top 22% (or 55px) of a tall cell already opens the slot BELOW it!
-        // When dragging UP (idx < fromIdx), entering the bottom 78% of the cell above already opens the slot ABOVE it!
         let thresholdY = rect.top + (rect.height * 0.5);
         if (idx > fromIdx) {
           thresholdY = rect.top + Math.min(rect.height * 0.22, 60);
@@ -925,20 +923,23 @@
           evt.dataTransfer.dropEffect = 'move';
         }
 
-        // If cursor is inside a specific cell-wrapper-outer, onCellDragOver already handled it
-        if (evt && evt.target && evt.target.closest && evt.target.closest('.cell-wrapper-outer')) {
-          return;
-        }
-
-        // Otherwise cursor is in the gap between cells or above/below the list: find nearest cell
         const wrappers = document.querySelectorAll('.cell-wrapper-outer');
         if (!wrappers || wrappers.length === 0) return;
         const clientY = evt ? evt.clientY : 0;
 
+        // Find which cell or gap the cursor is currently over by vertical coordinate
         for (let i = 0; i < wrappers.length; i++) {
-          const r = wrappers[i].getBoundingClientRect();
-          if (clientY < r.top + (r.height / 2)) {
-            this.updateDropSlotAt(i, false, fromIdx);
+          const card = wrappers[i].querySelector('.bv-cell-container') || wrappers[i];
+          const rect = card.getBoundingClientRect();
+          if (clientY <= rect.bottom) {
+            let thresholdY = rect.top + (rect.height * 0.5);
+            if (i > fromIdx) {
+              thresholdY = rect.top + Math.min(rect.height * 0.22, 60);
+            } else if (i < fromIdx) {
+              thresholdY = rect.bottom - Math.min(rect.height * 0.22, 60);
+            }
+            const isBottom = clientY >= thresholdY;
+            this.updateDropSlotAt(i, isBottom, fromIdx);
             return;
           }
         }
@@ -959,6 +960,7 @@
         this._draggedCellIndex = -1;
         window._bvDraggedCellIndex = -1;
         window._bvPendingDropInsertIdx = -1;
+        document.body.classList.remove('bv-is-dragging-cell');
         const els = document.querySelectorAll('.cell-is-dragging, .show-drop-top, .show-drop-bottom');
         for (let i = 0; i < els.length; i++) {
           els[i].classList.remove('cell-is-dragging', 'show-drop-top', 'show-drop-bottom');
@@ -1056,9 +1058,26 @@
           } catch (err) {}
         }
 
-        const insertBeforeIdx = (typeof window._bvPendingDropInsertIdx === 'number')
+        let insertBeforeIdx = (typeof window._bvPendingDropInsertIdx === 'number')
           ? window._bvPendingDropInsertIdx
           : -1;
+
+        if (insertBeforeIdx < 0) {
+          const wrappers = document.querySelectorAll('.cell-wrapper-outer');
+          const clientY = evt ? evt.clientY : 0;
+          for (let i = 0; i < wrappers.length; i++) {
+            const card = wrappers[i].querySelector('.bv-cell-container') || wrappers[i];
+            const rect = card.getBoundingClientRect();
+            if (clientY <= rect.bottom) {
+              let thresholdY = rect.top + (rect.height * 0.5);
+              if (i > fromIdx) thresholdY = rect.top + Math.min(rect.height * 0.22, 60);
+              else if (i < fromIdx) thresholdY = rect.bottom - Math.min(rect.height * 0.22, 60);
+              insertBeforeIdx = (clientY >= thresholdY) ? (i + 1) : i;
+              break;
+            }
+          }
+          if (insertBeforeIdx < 0 && wrappers.length > 0) insertBeforeIdx = wrappers.length;
+        }
 
         this.commitPendingDrop(fromIdx, insertBeforeIdx);
       end;
@@ -1944,6 +1963,39 @@
         }
         window._bvNotebookKeyHandler = handleNotebookKeyDown;
         window.addEventListener('keydown', handleNotebookKeyDown);
+
+        const handleGlobalDragOver = function(e) {
+          const fromIdx = (typeof self._draggedCellIndex === 'number' && self._draggedCellIndex >= 0)
+            ? self._draggedCellIndex
+            : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
+          if (fromIdx < 0) return;
+          e.preventDefault();
+          if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'move';
+          }
+          self.onCanvasDragOver(e);
+        };
+
+        const handleGlobalDrop = function(e) {
+          const fromIdx = (typeof self._draggedCellIndex === 'number' && self._draggedCellIndex >= 0)
+            ? self._draggedCellIndex
+            : (typeof window._bvDraggedCellIndex === 'number' ? window._bvDraggedCellIndex : -1);
+          if (fromIdx < 0) return;
+          e.preventDefault();
+          e.stopPropagation();
+          self.onCanvasDrop(e);
+        };
+
+        if (window._bvGlobalDragOverHandler) {
+          window.removeEventListener('dragover', window._bvGlobalDragOverHandler, true);
+        }
+        if (window._bvGlobalDropHandler) {
+          window.removeEventListener('drop', window._bvGlobalDropHandler, true);
+        }
+        window._bvGlobalDragOverHandler = handleGlobalDragOver;
+        window._bvGlobalDropHandler = handleGlobalDrop;
+        window.addEventListener('dragover', handleGlobalDragOver, true);
+        window.addEventListener('drop', handleGlobalDrop, true);
       end;
     end;
 </script>
@@ -2190,6 +2242,15 @@
 
   .cell-wrapper-outer {
     position: relative;
+  }
+
+  /* PREVENT INNER EDITORS FROM INTERCEPTING DRAG & DROP WHILE REORDERING A CELL */
+  body.bv-is-dragging-cell .cell-main-content,
+  body.bv-is-dragging-cell .cell-inserter-divider,
+  body.bv-is-dragging-cell .bv-code-textarea,
+  body.bv-is-dragging-cell .bv-md-textarea,
+  body.bv-is-dragging-cell .bv-md-rendered {
+    pointer-events: none !important;
   }
 
   /* DRAG & DROP LIVE ANIMATED SLOT (CELLS SHIFT SMOOTHLY APART) */
