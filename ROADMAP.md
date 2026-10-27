@@ -145,9 +145,9 @@ flowchart LR
   - `bvnb build`, `bvnb run` e `bvnb setup-python`: Comandos de produtividade para compilar tudo, iniciar o servidor e instalar dependências científicas Python com um único comando.
 - [x] **Atualização da Documentação Oficial (`README.md` e `docs/GETTING_STARTED.md`)**: Guia passo a passo de compilação para Windows e Linux e documentação completa dos comandos da CLI `bvnb`.
 
-#### 6.4 Tabela de Conteúdos Automática (Outline / TOC)
-- [ ] **Painel Lateral Recolhível**: Drawer lateral que extrai automaticamente títulos Markdown (`#`, `##`, `###`) do notebook.
-- [ ] **Navegação com Rolagem Suave**: Clicar em um item do outline rola a página suavemente até a célula correspondente.
+#### 6.4 Tabela de Conteúdos Automática (Outline / TOC) ✅ CONCLUÍDO
+- [x] **Painel Lateral Recolhível**: Drawer lateral que extrai automaticamente títulos Markdown (`#`, `##`, `###`) do notebook.
+- [x] **Navegação com Rolagem Suave**: Clicar em um item do outline rola a página suavemente até a célula correspondente.
 
 #### 6.5 Snippets & Catálogo de Receitas de Código
 - [ ] **Menu de Inserção Rápida de Templates**: Modal ou submenu na toolbar para inserir receitas prontas (ex: *Carregar CSV & Resumo*, *Split Treino/Teste com Random Forest*, *Histograma + BoxPlot*).

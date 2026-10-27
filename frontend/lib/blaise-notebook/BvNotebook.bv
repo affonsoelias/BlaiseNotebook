@@ -1,5 +1,5 @@
 <template>
-  <div class="bv-notebook-workspace" :class="{ 'is-dashboard-mode': isDashboardMode }">
+  <div class="bv-notebook-workspace" :class="{ 'is-dashboard-mode': isDashboardMode, 'is-outline-open': showOutlineDrawer }">
     <!-- NOTEBOOK TOP HEADER (BRAND & METADATA) -->
     <header class="notebook-header">
       <div class="header-left">
@@ -79,6 +79,14 @@
           🗑️ Lixeira ({{ trashCount }})
         </button>
         <button
+          class="tb-btn tb-btn-outline"
+          :class="{ 'btn-outline-active': showOutlineDrawer }"
+          @click="toggleOutlineDrawer"
+          title="Tabela de Conteúdos Automática / Sumário (Outline / TOC)"
+        >
+          📑 Sumário ({{ outlineCount }})
+        </button>
+        <button
           class="tb-btn tb-btn-dashboard"
           :class="{ 'btn-dashboard-active': isDashboardMode }"
           @click="toggleDashboardMode"
@@ -110,12 +118,53 @@
       </div>
     </div>
 
-    <!-- REACTIVE CANVAS OF CELLS -->
-    <main
-      class="notebook-cells-canvas"
-      @dragover="onCanvasDragOver($event)"
-      @drop="onCanvasDrop($event)"
-    >
+    <!-- MAIN WORKSPACE BODY (COLLAPSIBLE OUTLINE DRAWER + CELLS CANVAS) -->
+    <div class="notebook-body-layout">
+      <!-- COLLAPSIBLE AUTOMATIC TABLE OF CONTENTS (OUTLINE / TOC) -->
+      <aside class="notebook-outline-drawer" :class="{ 'outline-open': showOutlineDrawer }">
+        <div class="outline-drawer-header">
+          <div class="outline-header-title">
+            <span class="outline-icon">📑</span>
+            <span>Sumário (Outline)</span>
+            <span class="outline-count-pill">{{ outlineCount }}</span>
+          </div>
+          <button class="outline-close-btn" @click="toggleOutlineDrawer" title="Recolher Sumário">
+            ✕
+          </button>
+        </div>
+
+        <div class="outline-drawer-body">
+          <div b-if="outlineCount === 0" class="outline-empty-state">
+            <div class="outline-empty-icon">📝</div>
+            <p class="outline-empty-title">Nenhum título encontrado</p>
+            <p class="outline-empty-desc">
+              Adicione títulos Markdown com <code>#</code>, <code>##</code> ou <code>###</code> nas células de documentação para gerar o sumário automaticamente.
+            </p>
+          </div>
+
+          <ul class="outline-nav-list">
+            <li
+              b-for="entry in outlineItems"
+              :key="entry.id"
+              class="outline-nav-item"
+              :class="'outline-level-' + entry.level"
+              @click="scrollToOutlineItem(entry)"
+              :title="'Ir para Célula #' + (entry.cellIndex + 1) + ': ' + entry.text"
+            >
+              <span class="outline-item-marker">{{ entry.badge }}</span>
+              <span class="outline-item-text">{{ entry.text }}</span>
+              <span class="outline-item-cell">#{{ entry.cellIndex + 1 }}</span>
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      <!-- REACTIVE CANVAS OF CELLS -->
+      <main
+        class="notebook-cells-canvas"
+        @dragover="onCanvasDragOver($event)"
+        @drop="onCanvasDrop($event)"
+      >
       <div
         b-for="cell in cells"
         :key="cell.id"
@@ -178,7 +227,8 @@
         <button class="btn-large-add" @click="addCodeCell">➕ Add Code Cell</button>
         <button class="btn-large-add" @click="addMarkdownCell">📝 Add Markdown Cell</button>
       </div>
-    </main>
+      </main>
+    </div>
 
     <!-- QUICK RESTORE / UNDO FLOATING TOAST -->
     <div b-if="undoToastVisible" class="notebook-undo-toast">
@@ -262,6 +312,9 @@
     trashCount: integer = 0;
     trashList: JSValue = [];
     showTrashModal: boolean = false;
+    showOutlineDrawer: boolean = false;
+    outlineItems: JSValue = [];
+    outlineCount: integer = 0;
     undoToastVisible: boolean = false;
     undoToastMessage: string = '';
     cells: JSValue = [];
@@ -347,6 +400,7 @@
           this._redoStack = [];
           this.canUndo = this._undoStack.length > 0;
           this.canRedo = false;
+          setTimeout(() => { this.refreshOutline(); }, 10);
         } catch(err) {
           console.error('[BlaiseNotebook] pushHistory error:', err);
         }
@@ -399,6 +453,7 @@
         }
 
         rawCell.source = newVal;
+        this.refreshOutline();
 
         // Enable Undo and disable Redo for this new modification
         this.canUndo = true;
@@ -469,6 +524,7 @@
           this.cells = targetPreviousCells;
           this.canUndo = (this._undoStack && this._undoStack.length > 0) || false;
           this.canRedo = (this._redoStack && this._redoStack.length > 0) || false;
+          this.refreshOutline();
           if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
         } catch(err) {
           console.error('[BlaiseNotebook] undoAction error:', err);
@@ -512,6 +568,7 @@
           this.canRedo = this._redoStack.length > 0;
           this._editSnapshotPending = false;
           this._beforeEditSnapshot = null;
+          this.refreshOutline();
           if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
         } catch(err) {
           console.error('[BlaiseNotebook] redoAction error:', err);
@@ -624,6 +681,92 @@
         }
       end;
     end;
+    procedure refreshOutline;
+    begin
+      asm
+        const items = [];
+        const list = this.cells || [];
+        for (let i = 0; i < list.length; i++) {
+          const c = list[i];
+          if (!c) continue;
+          const rawC = c.__bv_raw__ ? c.__bv_raw__ : c;
+          if (rawC.type !== 'markdown') continue;
+          const src = rawC.source || '';
+          const lines = src.split('\n');
+          let inCodeBlock = false;
+          for (let l = 0; l < lines.length; l++) {
+            const line = lines[l].trim();
+            if (line.indexOf('```') === 0) {
+              inCodeBlock = !inCodeBlock;
+              continue;
+            }
+            if (inCodeBlock) continue;
+            const m = line.match(/^(#{1,3})\s+(.+)$/);
+            if (m) {
+              const level = m[1].length;
+              let titleText = m[2].trim()
+                .replace(/\*\*([^*]+)\*\*/g, '$1')
+                .replace(/\*([^*]+)\*/g, '$1')
+                .replace(/`([^`]+)`/g, '$1');
+              if (titleText) {
+                items.push({
+                  id: rawC.id + '_h_' + i + '_' + l,
+                  cellId: rawC.id,
+                  cellIndex: i,
+                  lineIndex: l,
+                  level: level,
+                  badge: 'H' + level,
+                  text: titleText
+                });
+              }
+            }
+          }
+        }
+        this.outlineItems = items;
+        this.outlineCount = items.length;
+      end;
+    end;
+
+    procedure toggleOutlineDrawer;
+    begin
+      asm
+        this.showOutlineDrawer = !this.showOutlineDrawer;
+        this.refreshOutline();
+        if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+      end;
+    end;
+
+    procedure scrollToOutlineItem(entry: JSValue);
+    begin
+      asm
+        if (!entry) return;
+        const rawEntry = entry.__bv_raw__ ? entry.__bv_raw__ : entry;
+        const cellId = rawEntry.cellId;
+        const idx = rawEntry.cellIndex;
+
+        let targetEl = null;
+        if (cellId) {
+          targetEl = document.querySelector('[data-cell-id="' + cellId + '"]');
+        }
+        if (!targetEl && typeof idx === 'number') {
+          targetEl = document.querySelector('[data-cell-index="' + idx + '"]');
+        }
+
+        if (targetEl && typeof targetEl.scrollIntoView === 'function') {
+          targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const cellCard = targetEl.classList.contains('bv-cell-container')
+            ? targetEl
+            : (targetEl.querySelector('.bv-cell-container') || targetEl);
+          cellCard.classList.remove('cell-outline-highlight');
+          void cellCard.offsetWidth;
+          cellCard.classList.add('cell-outline-highlight');
+          setTimeout(() => {
+            cellCard.classList.remove('cell-outline-highlight');
+          }, 1500);
+        }
+      end;
+    end;
+
     procedure toggleDashboardMode;
     begin
       asm
@@ -1665,6 +1808,7 @@
           }
         ];
         this.cells = demoCells;
+        this.refreshOutline();
       end;
     end;
 
@@ -1714,6 +1858,7 @@
               if (data.metadata && data.metadata.name) {
                 self.notebookName = data.metadata.name;
               }
+              self.refreshOutline();
               if (typeof self.$forceUpdate === 'function') self.$forceUpdate();
             }
             if (target) target.value = '';
@@ -3085,5 +3230,304 @@
     background: #161b22;
     border-color: #30363d;
     color: #c9d1d9;
+  }
+<
+  /* ========================================================
+     AUTOMATIC TABLE OF CONTENTS (OUTLINE / TOC DRAWER)
+     ======================================================== */
+  .tb-btn-outline {
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #1d4ed8 !important;
+    font-weight: 600 !important;
+  }
+
+  .tb-btn-outline:hover:not(:disabled) {
+    background: #dbeafe !important;
+    border-color: #93c5fd !important;
+  }
+
+  .tb-btn-outline.btn-outline-active {
+    background: #2563eb !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+  }
+
+  .notebook-body-layout {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    flex: 1;
+    width: 100%;
+    position: relative;
+  }
+
+  .notebook-outline-drawer {
+    width: 0;
+    min-width: 0;
+    max-width: 0;
+    opacity: 0;
+    overflow: hidden;
+    background: #ffffff;
+    border-right: 0 solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 110px);
+    display: flex;
+    flex-direction: column;
+    transition: width 0.24s cubic-bezier(0.2, 0, 0, 1),
+                min-width 0.24s cubic-bezier(0.2, 0, 0, 1),
+                max-width 0.24s cubic-bezier(0.2, 0, 0, 1),
+                opacity 0.18s ease,
+                border-right-width 0.2s ease;
+    z-index: 25;
+    flex-shrink: 0;
+  }
+
+  .notebook-outline-drawer.outline-open {
+    width: 290px;
+    min-width: 290px;
+    max-width: 290px;
+    opacity: 1;
+    border-right-width: 1px;
+    box-shadow: 4px 0 16px rgba(15, 23, 42, 0.04);
+  }
+
+  .outline-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    flex-shrink: 0;
+  }
+
+  .outline-header-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    white-space: nowrap;
+  }
+
+  .outline-icon {
+    font-size: 15px;
+  }
+
+  .outline-count-pill {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 999px;
+  }
+
+  .outline-close-btn {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 14px;
+    cursor: pointer;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .outline-close-btn:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .outline-drawer-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 10px;
+  }
+
+  .outline-empty-state {
+    padding: 24px 14px;
+    text-align: center;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    margin: 4px;
+  }
+
+  .outline-empty-icon {
+    font-size: 24px;
+    margin-bottom: 6px;
+  }
+
+  .outline-empty-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    margin: 0 0 6px 0;
+  }
+
+  .outline-empty-desc {
+    font-size: 11.5px;
+    line-height: 1.45;
+    margin: 0;
+    color: #64748b;
+  }
+
+  .outline-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .outline-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    color: #334155;
+    border-left: 3px solid transparent;
+    user-select: none;
+  }
+
+  .outline-nav-item:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-left-color: #3b82f6;
+  }
+
+  .outline-nav-item.outline-level-1 {
+    font-weight: 700;
+    font-size: 13px;
+    padding-left: 10px;
+  }
+
+  .outline-nav-item.outline-level-2 {
+    font-weight: 600;
+    font-size: 12.5px;
+    padding-left: 22px;
+    color: #475569;
+  }
+
+  .outline-nav-item.outline-level-3 {
+    font-weight: 500;
+    font-size: 12px;
+    padding-left: 34px;
+    color: #64748b;
+  }
+
+  .outline-item-marker {
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #64748b;
+    flex-shrink: 0;
+  }
+
+  .outline-level-1 .outline-item-marker {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .outline-level-2 .outline-item-marker {
+    background: #e0e7ff;
+    color: #3730a3;
+  }
+
+  .outline-item-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .outline-item-cell {
+    font-size: 10.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: #94a3b8;
+    flex-shrink: 0;
+  }
+
+  @keyframes outlineTargetPulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.55);
+      border-color: #2563eb;
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.2);
+      border-color: #3b82f6;
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+    }
+  }
+
+  .bv-cell-container.cell-outline-highlight {
+    animation: outlineTargetPulse 1.3s ease-out;
+    border-color: #3b82f6 !important;
+  }
+
+  html[data-bs-theme="dark"] .notebook-outline-drawer,
+  html.theme-dark .notebook-outline-drawer {
+    background: #0f172a !important;
+    border-right-color: #1e293b !important;
+  }
+
+  html[data-bs-theme="dark"] .outline-drawer-header,
+  html.theme-dark .outline-drawer-header {
+    background: #090d16 !important;
+    border-bottom-color: #1e293b !important;
+  }
+
+  html[data-bs-theme="dark"] .outline-header-title,
+  html.theme-dark .outline-header-title {
+    color: #f8fafc !important;
+  }
+
+  html[data-bs-theme="dark"] .outline-empty-state,
+  html.theme-dark .outline-empty-state {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+
+  html[data-bs-theme="dark"] .outline-empty-title,
+  html.theme-dark .outline-empty-title {
+    color: #e2e8f0 !important;
+  }
+
+  html[data-bs-theme="dark"] .outline-nav-item,
+  html.theme-dark .outline-nav-item {
+    color: #cbd5e1 !important;
+  }
+
+  html[data-bs-theme="dark"] .outline-nav-item:hover,
+  html.theme-dark .outline-nav-item:hover {
+    background: #1e293b !important;
+    color: #60a5fa !important;
+    border-left-color: #3b82f6 !important;
+  }
+
+  html[data-bs-theme="dark"] .outline-item-marker,
+  html.theme-dark .outline-item-marker {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
   }
 </style>
