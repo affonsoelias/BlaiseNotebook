@@ -57,7 +57,7 @@ When you call `ShowTable` or `DF.ShowTable`, BlaiseNotebook renders a rich clien
 - **Instant Sorting**: Click column headers to sort numerically or alphabetically ascending (`▲`) or descending (`▼`).
 - **Real-Time Search**: Filter thousands of records instantly using the live search box.
 - **Pagination**: Navigate pages cleanly with dropdown controls (`10`, `25`, `50`, `100` rows per page).
-- **One-Click Export**: Click **📋 Copiar CSV** to copy to clipboard, or **💾 Download CSV** to save directly to disk.
+- **One-Click Export**: Click **📋 Copy CSV** to copy to clipboard, or **💾 Download CSV** to save directly to disk.
 
 ---
 
@@ -316,7 +316,7 @@ end;
 
 ---
 
-## 10. Executive Dashboard View (Modo Apresentação)
+## 10. Executive Dashboard View (Presentation Mode)
 
 Need to present results to managers, executives, or clients without showing raw Pascal code?
 
@@ -324,4 +324,4 @@ Need to present results to managers, executives, or clients without showing raw 
 - BlaiseNotebook instantly hides code cells and code editors, transforming your notebook into a clean, executive presentation canvas.
 - All interactive Chart.js graphs and DataGrid Pro tables remain fully interactive.
 - Ready for high-quality PDF reports and physical printing (`Ctrl + P`).
-- Click **✏️ Modo Edição** or press `Ctrl + Shift + D` again to return to developer mode anytime.
+- Click **✏️ Edit Mode** or press `Ctrl + Shift + D` again to return to developer mode anytime.

@@ -168,10 +168,10 @@ BlaiseNotebook is designed to be clean, intuitive, and distraction-free:
 When a cell calls `DF.ShowTable(...)`, it renders an interactive **DataGrid Pro** card:
 
 - 🔼 **Column Sorting:** Click any column header to sort ascending (`▲`), descending (`▼`), or reset (`⇅`). Numbers and text sort accurately.
-- 🔍 **Live Search:** Type in the `🔍 Buscar...` input to filter rows in real-time across all columns.
+- 🔍 **Live Search:** Type in the `🔍 Search...` input to filter rows in real-time across all columns.
 - 📄 **Pagination:** Select between 10, 25, 50, or 100 rows per page, and navigate smoothly with `⏮`, `◀`, `▶`, `⏭`.
 - 📋 **One-Click CSV Export:**
-  - Click **`📋 Copiar CSV`** to copy the table directly to your clipboard.
+  - Click **`📋 Copy CSV`** to copy the table directly to your clipboard.
   - Click **`💾 Download CSV`** to download a formatted `.csv` file.
 
 ---
@@ -186,7 +186,7 @@ Want to present your findings to clients, colleagues, or stakeholders without sh
    - Cells with purely internal code (like imports and variable assignments) are automatically hidden.
    - Markdown cells render as clean executive section headers and analytical reports.
    - Charts and DataGrid Pro tables expand into full-width responsive presentation cards.
-3. Click **`✏️ Modo Edição`** (or the exit button on the purple dashboard banner) whenever you want to return to editing code.
+3. Click **`✏️ Edit Mode`** (or the exit button on the purple dashboard banner) whenever you want to return to editing code.
 
 ---
 
@@ -200,10 +200,10 @@ uses BlaiseDataScience;
 var
   DF: TPyDataFrame;
 begin
-  DF := TPyDataFrame.Create('dados_vendas');
-  DF.AddColumn('Produto', ['Teclado', 'Mouse', 'Monitor']);
-  DF.AddColumn('Preco',   [250.0, 85.0, 1400.0]);
-  Writeln('DataFrame inicializado na memória!');
+  DF := TPyDataFrame.Create('sales_data');
+  DF.AddColumn('Product', ['Keyboard', 'Mouse', 'Monitor']);
+  DF.AddColumn('Price',   [50.0, 17.0, 280.0]);
+  Writeln('DataFrame initialized in memory!');
 end.
 ```
 
@@ -213,9 +213,9 @@ uses BlaiseDataScience;
 var
   DF: TPyDataFrame;
 begin
-  DF := TPyDataFrame.Create('dados_vendas');
-  DF.ShowTable('Produtos Carregados da Célula 1', 10);
-  DF.PlotBar('Preços por Produto', 'Produto', 'Preco');
+  DF := TPyDataFrame.Create('sales_data');
+  DF.ShowTable('Products Loaded from Cell 1', 10);
+  DF.PlotBar('Prices by Product', 'Product', 'Price');
 end.
 ```
 

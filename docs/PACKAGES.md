@@ -220,7 +220,7 @@ If you want to wrap a Python library into typed Pascal methods:
      df: TPyDataFrame;
    begin
      df := TStockService.DownloadHistory('PETR4.SA');
-     df.ShowTable('Histórico de Preços');
+     df.ShowTable('Price History');
    end;
    ```
 

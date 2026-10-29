@@ -89,30 +89,30 @@ end;
 BlaiseNotebook maintains an active, stateful Python daemon (`localhost:9099`). Variables and datasets created in one cell remain alive and available in subsequent cells!
 
 ```pascal
-// --- Célula 1: Carrega e nomeia a variável persistente ---
+// --- Cell 1: Load and name the persistent variable ---
 var
   RawDF: TPyDataFrame;
 begin
   RawDF := TPyDataFrame.FromCSV('sales.csv');
-  RawDF.SaveAs('persisted_sales'); // Fica registrado no daemon Python
-  Writeln('Dados salvos na memória persistente!');
+  RawDF.SaveAs('persisted_sales'); // Registered in the Python daemon
+  Writeln('Data saved to persistent memory!');
 end;
 
-// --- Célula 2: Vincula e continua sem reabrir o arquivo ---
+// --- Cell 2: Attach and continue without reopening the file ---
 var
   SalesDF: TPyDataFrame;
 begin
   SalesDF := TPyDataFrame.Create;
-  SalesDF.Attach('persisted_sales'); // Conecta diretamente à variável viva
-  SalesDF.PlotBar('Vendas por Região', 'Region', 'Revenue');
+  SalesDF.Attach('persisted_sales'); // Attaches directly to the live variable
+  SalesDF.PlotBar('Sales by Region', 'Region', 'Revenue');
 end;
 
-// --- Executando Python puro e recuperando resultados ---
+// --- Running plain Python and retrieving results ---
 PyRun('import math; custom_metric = math.sqrt(256) * 4');
-Writeln('Resultado avaliado: ', PyEval('str(custom_metric)'));
+Writeln('Evaluated result: ', PyEval('str(custom_metric)'));
 
-// --- Limpeza da sessão persistente (Reset de memória) ---
-PyReset; // Limpa variáveis de usuário no daemon
+// --- Clearing the persistent session (memory reset) ---
+PyReset; // Clears user variables in the daemon
 ```
 
 ---
@@ -310,9 +310,9 @@ Every `ShowTable(...)` and `DF.ShowTable(...)` renders an interactive DataGrid P
 
 - **Sortable Columns**: Click any column header to sort ascending (`▲`) or descending (`▼`). Numeric columns are sorted numerically, text alphabetically.
 - **Instant Search / Filter**: Type in the search input to filter rows in real time across all visible columns.
-- **Configurable Pagination**: Switch page sizes between `10`, `25`, `50`, and `100` rows per page with page navigation controls (`Anterior` / `Próxima`).
+- **Configurable Pagination**: Switch page sizes between `10`, `25`, `50`, and `100` rows per page with page navigation controls (`Previous` / `Next`).
 - **RFC 4180 CSV Export**:
-  - Click **📋 Copiar CSV** to copy the current filtered table to your system clipboard.
+  - Click **📋 Copy CSV** to copy the current filtered table to your system clipboard.
   - Click **💾 Download CSV** to trigger an automatic download of `tabela_<timestamp>.csv`.
 
 ---
@@ -324,9 +324,9 @@ Every `ShowTable(...)` and `DF.ShowTable(...)` renders an interactive DataGrid P
 | `Ctrl + Space` | **IntelliSense Autocomplete** | Opens completion popup with Pascal keywords, data science classes, and standard methods. |
 | Type `.` (dot) | **Member Autocomplete** | Trigger completion list for methods on known objects (e.g. `DF.`, `S.`, `RF.`, `LR.`). |
 | `↑` / `↓` + `Enter` or `Tab` | **Select Suggestion** | Inserts selected method or snippet with automatic cursor positioning (`$0`). |
-| `Ctrl + Z` | **Undo / Desfazer** | Desfaz a última ação estrutural (adição, exclusão, reordenação de células ou limpeza). |
-| `Ctrl + Y` ou `Ctrl + Shift + Z` | **Redo / Refazer** | Refaz a ação estrutural desfeita anteriormente. |
-| `Z` (no modo comando) | **Restaurar Célula** | Restaura instantaneamente a última célula deletada diretamente na sua posição original. |
+| `Ctrl + Z` | **Undo** | Undoes the last structural action (adding, deleting, reordering cells or clearing outputs). |
+| `Ctrl + Y` or `Ctrl + Shift + Z` | **Redo** | Redoes the previously undone structural action. |
+| `Z` (command mode) | **Restore Cell** | Instantly restores the last deleted cell to its original position. |
 | `Ctrl + Shift + D` | **Dashboard View** | Toggles clean executive presentation mode (hides code cells, expands visual outputs). |
 | `Shift + Enter` | **Run Cell & Next** | Compiles and executes current cell, advancing to the next cell. |
 | `Ctrl + Enter` | **Run Cell in Place** | Compiles and executes the current cell while keeping focus. |

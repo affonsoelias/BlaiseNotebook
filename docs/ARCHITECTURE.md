@@ -95,9 +95,9 @@ frontend/src/
 - **Multi-Output Multiplexing & Stacking:** Sequentially stacks multiple outputs (stdout, tables, and multiple Chart.js cards) from a single cell run without overlapping.
 - **Interactive DataGrid Pro (`out.type === 'table'`):**
   - Numeric and alphabetical column sorting (`▲`, `▼`, `⇅`).
-  - Fast in-memory multi-column live search (`🔍 Buscar...`).
+  - Fast in-memory multi-column live search (`🔍 Search...`).
   - Pagination controls (10, 25, 50, 100 rows per page with `⏮`, `◀`, `▶`, `⏭`).
-  - One-click RFC 4180 CSV export ("📋 Copiar CSV" to clipboard and "💾 Download CSV").
+  - One-click RFC 4180 CSV export ("📋 Copy CSV" to clipboard and "💾 Download CSV").
 - **Reactive Visualization (`out.type === 'chart'`):** Interactive hardware-accelerated canvas charts via `<bv-chart>` powered by Chart.js (Line, Bar, Scatter, Pie).
 
 ---
