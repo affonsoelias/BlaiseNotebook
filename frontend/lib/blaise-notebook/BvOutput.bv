@@ -50,14 +50,14 @@
                 <input
                   type="text"
                   class="dg-search-input"
-                  placeholder="🔍 Buscar..."
+                  placeholder="🔍 Search..."
                   :value="out._grid ? out._grid.search : ''"
                   @input="handleSearch(out, $event)"
                 />
                 <button
                   b-if="out._grid && out._grid.search"
                   class="dg-btn-clear-search"
-                  title="Limpar busca"
+                  title="Clear search"
                   @click="clearSearch(out)"
                 >✕</button>
               </div>
@@ -66,14 +66,14 @@
               <div class="dg-export-group">
                 <button
                   class="dg-btn-action"
-                  title="Copiar dados da tabela como CSV"
+                  title="Copy table data as CSV"
                   @click="copyCSV(out)"
                 >
-                  📋 Copiar CSV
+                  📋 Copy CSV
                 </button>
                 <button
                   class="dg-btn-action"
-                  title="Baixar arquivo CSV formatado"
+                  title="Download formatted CSV file"
                   @click="downloadCSV(out)"
                 >
                   💾 Download CSV
@@ -92,7 +92,7 @@
                     class="dg-th-sortable"
                     :class="(out._grid && out._grid.sortCol === col) ? 'is-sorted' : ''"
                     @click="handleSort(out, col)"
-                    title="Clique para ordenar por esta coluna"
+                    title="Click to sort by this column"
                   >
                     <div class="th-content">
                       <span class="th-label">{{ col }}</span>
@@ -107,7 +107,7 @@
                 </tr>
                 <tr b-if="!getPagedRows(out) || getPagedRows(out).length === 0">
                   <td :colspan="out.columns ? out.columns.length : 1" class="dg-empty-td">
-                    Nenhum registro encontrado.
+                    No records found.
                   </td>
                 </tr>
               </tbody>
@@ -117,7 +117,7 @@
           <!-- BOTTOM PAGINATION & PAGE-SIZE BAR -->
           <div class="table-pagination-bar">
             <div class="pg-page-size-selector">
-              <span class="pg-label">Exibir por página:</span>
+              <span class="pg-label">Rows per page:</span>
               <button
                 class="pg-btn-size"
                 :class="(!out._grid || out._grid.pageSize === 10) ? 'is-active' : ''"
@@ -145,13 +145,13 @@
                 class="pg-btn-nav"
                 :disabled="!out._grid || out._grid.page <= 1"
                 @click="setPage(out, 1)"
-                title="Primeira página"
+                title="First page"
               >⏮</button>
               <button
                 class="pg-btn-nav"
                 :disabled="!out._grid || out._grid.page <= 1"
                 @click="prevPage(out)"
-                title="Página anterior"
+                title="Previous page"
               >◀</button>
               
               <span class="pg-current-page">
@@ -162,13 +162,13 @@
                 class="pg-btn-nav"
                 :disabled="isLastPage(out)"
                 @click="nextPage(out)"
-                title="Próxima página"
+                title="Next page"
               >▶</button>
               <button
                 class="pg-btn-nav"
                 :disabled="isLastPage(out)"
                 @click="setPage(out, 999999)"
-                title="Última página"
+                title="Last page"
               >⏭</button>
             </div>
           </div>
@@ -269,7 +269,7 @@
         }
         const g = out._grid;
 
-        // 1. Filtragem rápida em memória across all columns
+        // 1. Fast in-memory filtering across all columns
         let filtered = rows;
         const q = (g.search || '').trim().toLowerCase();
         if (q) {
@@ -290,7 +290,7 @@
           });
         }
 
-        // 2. Ordenação numérica e textual
+        // 2. Numeric and text sorting
         if (g.sortCol) {
           const colIdx = cols.indexOf(g.sortCol);
           const isAsc = g.sortAsc;
@@ -327,7 +327,7 @@
 
         g._filteredCount = filtered.length;
 
-        // 3. Paginação inteligente
+        // 3. Smart pagination
         const pageSize = (g.pageSize <= 0) ? filtered.length : g.pageSize;
         const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
         if (g.page > totalPages) g.page = totalPages;
@@ -461,16 +461,16 @@
         if (!out) return '';
         const total = (out.rows || []).length;
         if (!out._grid) {
-          return 'Total: ' + total + ' linhas';
+          return 'Total: ' + total + ' rows';
         }
         const filtered = out._grid._filteredCount !== undefined ? out._grid._filteredCount : total;
         const p = out._grid.page || 1;
         const pageSize = out._grid.pageSize || 10;
         const totalPages = Math.max(1, Math.ceil(filtered / (pageSize || 1)));
         if (filtered !== total) {
-          return 'Pág. ' + p + ' de ' + totalPages + ' (' + filtered + ' de ' + total + ' linhas)';
+          return 'Page ' + p + ' of ' + totalPages + ' (' + filtered + ' of ' + total + ' rows)';
         }
-        return 'Pág. ' + p + ' de ' + totalPages + ' (' + total + ' linhas)';
+        return 'Page ' + p + ' of ' + totalPages + ' (' + total + ' rows)';
       end;
     end;
 

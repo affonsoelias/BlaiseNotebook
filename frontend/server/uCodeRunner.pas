@@ -281,7 +281,7 @@ begin
 
   if Assigned(FOnStream) then
   begin
-    FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Memoria do workspace limpa e sessao reiniciada com sucesso.'#10);
+    FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Workspace memory cleared and session restarted successfully.'#10);
   end;
 end;
 
@@ -845,14 +845,14 @@ begin
   if PyExe = '' then
   begin
     if Assigned(FOnStream) then
-      FOnStream(RawUtf8(ACellId), 'stderr', '[Pip Error] Interpretador Python nao encontrado.'#10);
+      FOnStream(RawUtf8(ACellId), 'stderr', '[Pip Error] Python interpreter not found.'#10);
     if Assigned(FOnReply) then
       FOnReply(RawUtf8(ACellId), 'error', AExecCount, 0);
     Exit;
   end;
 
   if Assigned(FOnStream) then
-    FOnStream(RawUtf8(ACellId), 'stdout', RawUtf8('[Pip] Executando: python -m pip ' + APipArgs + sLineBreak));
+    FOnStream(RawUtf8(ACellId), 'stdout', RawUtf8('[Pip] Executing: python -m pip ' + APipArgs + sLineBreak));
 
   Proc := TProcess.Create(nil);
   ArgsList := TStringList.Create;
@@ -997,7 +997,7 @@ begin
   if CacheHit then
   begin
     if Assigned(FOnStream) then
-      FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Codigo inalterado. Executando binario em cache (0ms compilacao)...'#10);
+      FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Code unchanged. Executing cached binary (0ms compilation)...'#10);
 
     ExecuteBinary(ACellId, ExePath, AExecCount, StartTick);
     Exit;
@@ -1013,7 +1013,7 @@ begin
 
   // Stream notification: Compiling
   if Assigned(FOnStream) then
-    FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Compilando via Free Pascal (FPC 3.2.2)...'#10);
+    FOnStream(RawUtf8(ACellId), 'stdout', '[Kernel] Compiling with Free Pascal (FPC 3.2.2)...'#10);
 
   if not CompileSource(PrgPath, ExePath, Errors) then
   begin

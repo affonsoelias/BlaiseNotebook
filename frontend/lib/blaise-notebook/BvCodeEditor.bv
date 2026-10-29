@@ -7,10 +7,10 @@
         <span class="lang-name">Object Pascal</span>
       </div>
       <div class="bv-editor-shortcuts">
-        <button type="button" class="btn-format-code" @click="formatCode" title="Organizar e formatar código Pascal (Shift + Alt + F)">
-          🪄 Formatar
+        <button type="button" class="btn-format-code" @click="formatCode" title="Format and tidy Pascal code (Shift + Alt + F)">
+          🪄 Format
         </button>
-        <span class="shortcut-pill"><code>Shift + Alt + F</code> Formatar</span>
+        <span class="shortcut-pill"><code>Shift + Alt + F</code> Format</span>
         <span class="shortcut-pill"><code>Ctrl + Space</code> Autocomplete</span>
         <span class="shortcut-pill"><code>Shift + Enter</code> Run</span>
         <span class="shortcut-pill"><code>Tab</code> Indent</span>

@@ -43,8 +43,8 @@ type
 
     // Visualization bridges directly to BlaiseVue Chart.js (<bv-chart>) and data tables
     class procedure ShowDataFrame(const AVarName: string; const ATitle: string = 'Pandas DataFrame'; AMaxRows: Integer = 50);
-    class procedure ShowSeriesChart(const AVarName: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
-    class procedure ShowDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
+    class procedure ShowSeriesChart(const AVarName: string; const ATitle: string = 'Chart.js Plot'; const AChartType: string = 'line');
+    class procedure ShowDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string = 'Chart.js Plot'; const AChartType: string = 'line');
   end;
 
 // Convenience global routines for notebook cells
@@ -52,8 +52,8 @@ procedure PyRun(const ACode: string);
 function PyEval(const AExpr: string): string;
 procedure PyReset;
 procedure ShowPyDataFrame(const AVarName: string; const ATitle: string = 'Pandas DataFrame'; AMaxRows: Integer = 50);
-procedure ShowPySeriesChart(const AVarName: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
-procedure ShowPyDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string = 'Gráfico Chart.js'; const AChartType: string = 'line');
+procedure ShowPySeriesChart(const AVarName: string; const ATitle: string = 'Chart.js Plot'; const AChartType: string = 'line');
+procedure ShowPyDataFrameChart(const AVarName: string; const AXCol, AYCol: string; const ATitle: string = 'Chart.js Plot'; const AChartType: string = 'line');
 
 implementation
 
@@ -167,7 +167,7 @@ begin
 
   if not CheckDaemon then
   begin
-    WriteLn('[BlaisePyKernel] Erro: Daemon Python (porta 9099) nao respondeu. Verifique se o Python 3 esta instalado (rode "bvnb doctor").');
+    WriteLn('[BlaisePyKernel] Error: Python daemon (port 9099) did not respond. Verify Python 3 is installed (run "bvnb doctor").');
     Flush(Output);
     Exit;
   end;
@@ -213,7 +213,7 @@ begin
   except
     on E: Exception do
     begin
-      WriteLn('[BlaisePyKernel] Erro de comunicacao com o Daemon Python: ' + E.Message);
+      WriteLn('[BlaisePyKernel] Communication error with Python daemon: ' + E.Message);
       Flush(Output);
       Result := False;
     end;

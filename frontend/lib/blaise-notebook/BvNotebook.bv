@@ -48,8 +48,8 @@
         <button class="tb-btn" @click="addMarkdownCell" title="Add Markdown documentation cell">
           ➕ Documentation
         </button>
-        <button class="tb-btn tb-btn-snippets" @click="openSnippetsModal" title="Catálogo de Snippets e Receitas de Código Prontas">
-          📚 Receitas
+        <button class="tb-btn tb-btn-snippets" @click="openSnippetsModal" title="Snippets & ready-made code recipes catalog">
+          📚 Recipes
         </button>
         <button class="tb-btn" @click="clearAllOutputs" title="Clear all cell outputs">
           🧹 Clear Outputs
@@ -61,41 +61,41 @@
           class="tb-btn"
           :disabled="!canUndo"
           @click="undoAction"
-          title="Desfazer alteração estrutural de células (Ctrl+Z)"
+          title="Undo structural cell change (Ctrl+Z)"
         >
-          ↩️ Desfazer
+          ↩️ Undo
         </button>
         <button
           class="tb-btn"
           :disabled="!canRedo"
           @click="redoAction"
-          title="Refazer alteração estrutural de células (Ctrl+Y)"
+          title="Redo structural cell change (Ctrl+Y)"
         >
-          ↪️ Refazer
+          ↪️ Redo
         </button>
         <button
           b-if="trashCount > 0"
           class="tb-btn tb-btn-trash"
           @click="openTrashModal"
-          title="Ver lixeira de células deletadas"
+          title="View deleted cells trash"
         >
-          🗑️ Lixeira ({{ trashCount }})
+          🗑️ Trash ({{ trashCount }})
         </button>
         <button
           class="tb-btn tb-btn-outline"
           :class="{ 'btn-outline-active': showOutlineDrawer }"
           @click="toggleOutlineDrawer"
-          title="Tabela de Conteúdos Automática / Sumário (Outline / TOC)"
+          title="Automatic Table of Contents (Outline / TOC)"
         >
-          📑 Sumário ({{ outlineCount }})
+          📑 Outline ({{ outlineCount }})
         </button>
         <button
           class="tb-btn tb-btn-dashboard"
           :class="{ 'btn-dashboard-active': isDashboardMode }"
           @click="toggleDashboardMode"
-          title="Alternar Modo Dashboard (Apenas Saídas / Apresentação Executiva)"
+          title="Toggle Dashboard Mode (Outputs only / Executive presentation)"
         >
-          {{ isDashboardMode ? '✏️ Modo Edição' : '📊 Dashboard View' }}
+          {{ isDashboardMode ? '✏️ Edit Mode' : '📊 Dashboard View' }}
         </button>
         <button class="tb-btn" @click="exportNotebookJson" title="Save notebook (.bynb)">
           💾 Save (.bynb)
@@ -112,11 +112,11 @@
       <div class="dash-banner-left">
         <span class="dash-badge">📊 DASHBOARD VIEW</span>
         <span class="dash-title">{{ notebookName || 'Executive Dashboard' }}</span>
-        <span class="dash-sub">• Apresentação Executiva Interativa (Apenas Saídas)</span>
+        <span class="dash-sub">• Interactive Executive Presentation (Outputs only)</span>
       </div>
       <div class="dash-banner-right">
-        <button class="dash-btn-exit" @click="toggleDashboardMode" title="Retornar ao modo editor">
-          ✏️ Sair do Dashboard
+        <button class="dash-btn-exit" @click="toggleDashboardMode" title="Return to editor mode">
+          ✏️ Exit Dashboard
         </button>
       </div>
     </div>
@@ -128,10 +128,10 @@
         <div class="outline-drawer-header">
           <div class="outline-header-title">
             <span class="outline-icon">📑</span>
-            <span>Sumário (Outline)</span>
+            <span>Outline (Table of Contents)</span>
             <span class="outline-count-pill">{{ outlineCount }}</span>
           </div>
-          <button class="outline-close-btn" @click="toggleOutlineDrawer" title="Recolher Sumário">
+          <button class="outline-close-btn" @click="toggleOutlineDrawer" title="Collapse Outline">
             ✕
           </button>
         </div>
@@ -139,9 +139,9 @@
         <div class="outline-drawer-body">
           <div b-if="outlineCount === 0" class="outline-empty-state">
             <div class="outline-empty-icon">📝</div>
-            <p class="outline-empty-title">Nenhum título encontrado</p>
+            <p class="outline-empty-title">No headings found</p>
             <p class="outline-empty-desc">
-              Adicione títulos Markdown com <code>#</code>, <code>##</code> ou <code>###</code> nas células de documentação para gerar o sumário automaticamente.
+              Add Markdown headings with <code>#</code>, <code>##</code> or <code>###</code> in documentation cells to generate the outline automatically.
             </p>
           </div>
 
@@ -152,7 +152,7 @@
               class="outline-nav-item"
               :class="'outline-level-' + entry.level"
               @click="scrollToOutlineItem(entry)"
-              :title="'Ir para Célula #' + (entry.cellIndex + 1) + ': ' + entry.text"
+              :title="'Go to Cell #' + (entry.cellIndex + 1) + ': ' + entry.text"
             >
               <span class="outline-item-marker">{{ entry.badge }}</span>
               <span class="outline-item-text">{{ entry.text }}</span>
@@ -181,7 +181,7 @@
         <div class="cell-drop-indicator drop-indicator-line-top" aria-hidden="true">
           <div class="drop-slot-box">
             <span class="drop-indicator-dot"></span>
-            <span class="drop-indicator-badge">Soltar célula nesta posição</span>
+            <span class="drop-indicator-badge">Drop cell here</span>
             <span class="drop-indicator-line"></span>
           </div>
         </div>
@@ -192,7 +192,7 @@
           <div class="divider-buttons">
             <button class="btn-divider-add" @click="insertCodeAt($index)">+ Code</button>
             <button class="btn-divider-add" @click="insertMarkdownAt($index)">+ Markdown</button>
-            <button class="btn-divider-add btn-divider-snippet" @click="openSnippetsAt($index)">📚 + Receita</button>
+            <button class="btn-divider-add btn-divider-snippet" @click="openSnippetsAt($index)">📚 + Recipe</button>
           </div>
           <div class="divider-line"></div>
         </div>
@@ -220,7 +220,7 @@
         <div class="cell-drop-indicator drop-indicator-line-bottom" aria-hidden="true">
           <div class="drop-slot-box">
             <span class="drop-indicator-dot"></span>
-            <span class="drop-indicator-badge">Soltar célula nesta posição</span>
+            <span class="drop-indicator-badge">Drop cell here</span>
             <span class="drop-indicator-line"></span>
           </div>
         </div>
@@ -230,7 +230,7 @@
       <div class="canvas-bottom-inserter">
         <button class="btn-large-add" @click="addCodeCell">➕ Add Code Cell</button>
         <button class="btn-large-add" @click="addMarkdownCell">📝 Add Markdown Cell</button>
-        <button class="btn-large-add btn-large-snippet" @click="openSnippetsModal">📚 Inserir Receita de Código</button>
+        <button class="btn-large-add btn-large-snippet" @click="openSnippetsModal">📚 Insert Code Recipe</button>
       </div>
       </main>
     </div>
@@ -241,30 +241,30 @@
         <span class="undo-toast-icon">🗑️</span>
         <span class="undo-toast-text">{{ undoToastMessage }}</span>
         <button class="btn-toast-restore" @click="restoreLastDeletedCell">
-          ↩️ Restaurar Célula
+          ↩️ Restore Cell
         </button>
-        <button class="btn-toast-close" @click="closeUndoToast" title="Fechar notificação">
+        <button class="btn-toast-close" @click="closeUndoToast" title="Close notification">
           ✕
         </button>
       </div>
     </div>
 
-    <!-- TRASH MODAL (LIXEIRA DE CÉLULAS) -->
+    <!-- TRASH MODAL (DELETED CELLS) -->
     <div b-if="showTrashModal" class="trash-modal-backdrop" @click="closeTrashModal">
       <div class="trash-modal-card" @click="onModalCardClick">
         <div class="trash-modal-header">
           <div class="trash-modal-title">
-            <span>🗑️ Lixeira de Células</span>
-            <span class="trash-modal-count">({{ trashCount }} células)</span>
+            <span>🗑️ Cell Trash</span>
+            <span class="trash-modal-count">({{ trashCount }} cells)</span>
           </div>
           <button class="trash-modal-close" @click="closeTrashModal">✕</button>
         </div>
         <div class="trash-modal-body">
           <p class="trash-modal-desc">
-            Células excluídas durante esta sessão. Você pode restaurar qualquer célula de volta ao notebook com código e saídas preservados.
+            Cells deleted during this session. You can restore any cell back into the notebook with its code and outputs preserved.
           </p>
           <div b-if="trashCount === 0" class="trash-empty-state">
-            A lixeira está vazia. Nenhuma célula deletada nesta sessão.
+            The trash is empty. No cells deleted in this session.
           </div>
           <div class="trash-items-list">
             <div b-for="item in trashList" :key="item.id" class="trash-item-row">
@@ -272,21 +272,21 @@
                 <span class="trash-item-type-badge" :class="'badge-' + item.type">
                   {{ item.type === 'code' ? '⚡ Pascal' : '📝 Markdown' }}
                 </span>
-                <span class="trash-item-index">Posição original: #{{ item.originalIndex + 1 }}</span>
+                <span class="trash-item-index">Original position: #{{ item.originalIndex + 1 }}</span>
                 <span class="trash-item-time">{{ item.deletedTime }}</span>
               </div>
               <pre class="trash-item-snippet">{{ item.snippet }}</pre>
               <div class="trash-item-actions">
                 <button class="btn-restore-item" @click="restoreTrashItem(item.id)">
-                  ↩️ Restaurar
+                  ↩️ Restore
                 </button>
               </div>
             </div>
           </div>
         </div>
         <div class="trash-modal-footer">
-          <button class="tb-btn" @click="clearTrash">Esvaziar Lixeira</button>
-          <button class="tb-btn tb-btn-primary" @click="closeTrashModal">Fechar</button>
+          <button class="tb-btn" @click="clearTrash">Empty Trash</button>
+          <button class="tb-btn tb-btn-primary" @click="closeTrashModal">Close</button>
         </div>
       </div>
     </div>
@@ -298,11 +298,11 @@
           <div class="snippets-header-left">
             <span class="snippets-header-icon">📚</span>
             <div>
-              <div class="snippets-modal-title">Catálogo de Snippets & Receitas de Código</div>
-              <div class="snippets-modal-sub">Templates prontos de Data Science, Machine Learning, Gráficos e Matemática Nativa em Object Pascal</div>
+              <div class="snippets-modal-title">Snippets & Code Recipes Catalog</div>
+              <div class="snippets-modal-sub">Ready-made Data Science, Machine Learning, Charts and Native Math templates in Object Pascal</div>
             </div>
           </div>
-          <button class="trash-modal-close" @click="closeSnippetsModal" title="Fechar (Esc)">✕</button>
+          <button class="trash-modal-close" @click="closeSnippetsModal" title="Close (Esc)">✕</button>
         </div>
 
         <!-- SEARCH & CATEGORY FILTER BAR -->
@@ -312,7 +312,7 @@
             <input
               type="text"
               class="snippets-search-input"
-              placeholder="Buscar receita por nome, pacote ou método (ex: CSV, Random Forest, Histograma, K-Means)..."
+              placeholder="Search recipes by name, unit or method (e.g. CSV, Random Forest, Histogram, K-Means)..."
               :value="snippetSearchQuery"
               @input="onSnippetSearchInput($event)"
             />
@@ -323,21 +323,21 @@
               :class="{ 'cat-active': snippetCategory === 'all' }"
               @click="setSnippetCategory('all')"
             >
-              ✨ Todas
+              ✨ All
             </button>
             <button
               class="snippet-cat-pill"
               :class="{ 'cat-active': snippetCategory === 'pandas' }"
               @click="setSnippetCategory('pandas')"
             >
-              🐼 Pandas & Dados
+              🐼 Pandas & Data
             </button>
             <button
               class="snippet-cat-pill"
               :class="{ 'cat-active': snippetCategory === 'charts' }"
               @click="setSnippetCategory('charts')"
             >
-              📊 Gráficos & EDA
+              📊 Charts & EDA
             </button>
             <button
               class="snippet-cat-pill"
@@ -351,7 +351,7 @@
               :class="{ 'cat-active': snippetCategory === 'math' }"
               @click="setSnippetCategory('math')"
             >
-              🧮 Matemática & Sistema
+              🧮 Math & System
             </button>
           </div>
         </div>
@@ -359,7 +359,7 @@
         <!-- RECIPES GRID -->
         <div class="snippets-modal-body">
           <div b-if="filteredSnippetsCount === 0" class="trash-empty-state">
-            Nenhuma receita encontrada para o filtro atual. Tente buscar outro termo ou selecione "✨ Todas".
+            No recipes match the current filter. Try another search term or select "✨ All".
           </div>
 
           <div class="snippets-grid">
@@ -378,11 +378,11 @@
               <div class="snippet-card-footer">
                 <span class="snippet-unit-tag">📦 {{ recipe.unitTag }}</span>
                 <div class="snippet-card-actions">
-                  <button class="btn-snippet-insert" @click="insertSnippetRecipe(recipe, false)" title="Inserir como nova célula no notebook">
-                    ➕ Inserir Célula
+                  <button class="btn-snippet-insert" @click="insertSnippetRecipe(recipe, false)" title="Insert as a new cell in the notebook">
+                    ➕ Insert Cell
                   </button>
-                  <button class="btn-snippet-run" @click="insertSnippetRecipe(recipe, true)" title="Inserir célula e executar imediatamente no Kernel">
-                    ▶ Inserir & Executar
+                  <button class="btn-snippet-run" @click="insertSnippetRecipe(recipe, true)" title="Insert cell and run it immediately in the Kernel">
+                    ▶ Insert & Run
                   </button>
                 </div>
               </div>
@@ -391,8 +391,8 @@
         </div>
 
         <div class="trash-modal-footer">
-          <span class="snippets-footer-hint">💡 Dica: Todas as receitas inseridas suportam Desfazer (<code>Ctrl+Z</code>) e autocompletion.</span>
-          <button class="tb-btn tb-btn-primary" @click="closeSnippetsModal">Fechar</button>
+          <span class="snippets-footer-hint">💡 Tip: All inserted recipes support Undo (<code>Ctrl+Z</code>) and autocompletion.</span>
+          <button class="tb-btn tb-btn-primary" @click="closeSnippetsModal">Close</button>
         </div>
       </div>
     </div>
@@ -498,7 +498,7 @@
         // If there is an in-flight uncommitted edit session, push it first!
         if (this._editSnapshotPending && this._beforeEditSnapshot) {
           const editItem = new Object();
-          editItem.description = 'Edição de código/texto';
+          editItem.description = 'Code/text edit';
           editItem.cells = this._beforeEditSnapshot;
           this._undoStack.push(editItem);
           this._editSnapshotPending = false;
@@ -508,7 +508,7 @@
         try {
           const snapshot = JSON.parse(JSON.stringify(this.cells || []));
           const histItem = new Object();
-          histItem.description = ADesc || 'Alteração';
+          histItem.description = ADesc || 'Change';
           histItem.cells = snapshot;
           this._undoStack.push(histItem);
           if (this._undoStack.length > 50) {
@@ -582,7 +582,7 @@
           if (self._editSnapshotPending && self._beforeEditSnapshot) {
             if (!self._undoStack) self._undoStack = [];
             const histItem = new Object();
-            histItem.description = 'Edição de código/texto';
+            histItem.description = 'Code/text edit';
             histItem.cells = self._beforeEditSnapshot;
             self._undoStack.push(histItem);
             if (self._undoStack.length > 50) self._undoStack.shift();
@@ -697,7 +697,7 @@
     begin
       asm
         if (!this._trashList || this._trashList.length === 0) return;
-        this.pushHistory('Restaurar célula');
+        this.pushHistory('Restore cell');
         const item = this._trashList.shift();
         this.trashList = this._trashList.slice();
         this.trashCount = this._trashList.length;
@@ -727,7 +727,7 @@
         if (!this._trashList || this._trashList.length === 0) return;
         const idx = this._trashList.findIndex(x => x && x.id === AId);
         if (idx < 0) return;
-        this.pushHistory('Restaurar célula da lixeira');
+        this.pushHistory('Restore cell from trash');
         const item = this._trashList.splice(idx, 1)[0];
         this.trashList = this._trashList.slice();
         this.trashCount = this._trashList.length;
@@ -892,129 +892,129 @@
           {
             id: 'snip_csv_summary',
             icon: '🐼',
-            title: 'Criar DataFrame, Resumo & DataGrid Pro',
+            title: 'Create DataFrame, Summary & DataGrid Pro',
             category: 'pandas',
-            categoryLabel: 'Pandas & Dados',
+            categoryLabel: 'Pandas & Data',
             unitTag: 'BlaisePandas',
             cellType: 'code',
-            description: 'Cria um DataFrame estruturado, exibe estatísticas descritivas e renderiza a tabela interativa DataGrid Pro com ordenação e busca.',
+            description: 'Builds a structured DataFrame, prints descriptive statistics and renders the interactive DataGrid Pro table with sorting and search.',
             code:
               'uses BlaisePandas;\n' +
               'var\n' +
               '  DF: TPyDataFrame;\n' +
               'begin\n' +
-              '  DF := TPyDataFrame.Create(\'vendas_trimestre\');\n' +
-              '  DF.AddColumn(\'Produto\', [\'Notebook Pro\', \'Monitor 4K\', \'Teclado Mecânico\', \'Mouse Sem Fio\', \'Dock Station\', \'SSD NVMe 2TB\']);\n' +
-              '  DF.AddColumn(\'Categoria\', [\'Computadores\', \'Monitores\', \'Periféricos\', \'Periféricos\', \'Acessórios\', \'Armazenamento\']);\n' +
-              '  DF.AddColumn(\'Preco\', [6400.0, 2350.0, 580.0, 290.0, 890.0, 1150.0]);\n' +
-              '  DF.AddColumn(\'Unidades\', [42, 78, 165, 210, 64, 130]);\n\n' +
-              '  Writeln(\'Total de registros: \', DF.RowCount, \' | Colunas: \', DF.ColumnCount);\n' +
+              '  DF := TPyDataFrame.Create(\'quarterly_sales\');\n' +
+              '  DF.AddColumn(\'Product\', [\'Notebook Pro\', \'4K Monitor\', \'Mechanical Keyboard\', \'Wireless Mouse\', \'Dock Station\', \'NVMe SSD 2TB\']);\n' +
+              '  DF.AddColumn(\'Category\', [\'Computers\', \'Monitors\', \'Peripherals\', \'Peripherals\', \'Accessories\', \'Storage\']);\n' +
+              '  DF.AddColumn(\'Price\', [1290.0, 470.0, 115.0, 58.0, 178.0, 230.0]);\n' +
+              '  DF.AddColumn(\'Units\', [42, 78, 165, 210, 64, 130]);\n\n' +
+              '  Writeln(\'Total rows: \', DF.RowCount, \' | Columns: \', DF.ColumnCount);\n' +
               '  Writeln(DF.Describe);\n' +
-              '  DF.ShowTable(\'Relatório de Vendas por Produto\', 25);\n' +
+              '  DF.ShowTable(\'Sales Report by Product\', 25);\n' +
               'end.'
           },
           {
             id: 'snip_load_csv',
             icon: '📂',
-            title: 'Carregar Arquivo CSV & Filtrar Dados',
+            title: 'Load CSV File & Filter Data',
             category: 'pandas',
-            categoryLabel: 'Pandas & Dados',
+            categoryLabel: 'Pandas & Data',
             unitTag: 'BlaisePandas',
             cellType: 'code',
-            description: 'Lê ou exporta um arquivo CSV com TPyDataFrame.FromCSV, remove valores nulos (DropNA), filtra linhas e ordena os resultados.',
+            description: 'Writes and reads a CSV file with TPyDataFrame.FromCSV, drops missing values (DropNA), filters rows and sorts the results.',
             code:
               'uses BlaisePandas;\n' +
               'var\n' +
-              '  DF, Filtrado: TPyDataFrame;\n' +
+              '  DF, Filtered: TPyDataFrame;\n' +
               'begin\n' +
-              '  // 1. Cria um dataset de exemplo e salva em CSV:\n' +
-              '  DF := TPyDataFrame.Create(\'clientes_csv\');\n' +
-              '  DF.AddColumn(\'Cliente\', [\'Alfa Tech\', \'Beta Corp\', \'Gamma Analytics\', \'Delta Systems\', \'Omega Labs\']);\n' +
-              '  DF.AddColumn(\'Receita_Anual\', [120000.0, 45000.0, 310000.0, 82000.0, 195000.0]);\n' +
-              '  DF.AddColumn(\'Score_Retencao\', [94.5, 71.0, 98.2, 83.4, 91.0]);\n' +
-              '  DF.ToCSV(\'clientes_demo.csv\');\n\n' +
-              '  // 2. Carrega do CSV, filtra Receita > 100.000 e ordena decrescente:\n' +
-              '  Filtrado := TPyDataFrame.FromCSV(\'clientes_demo.csv\')\n' +
+              '  // 1. Build a sample dataset and save it as CSV:\n' +
+              '  DF := TPyDataFrame.Create(\'customers_csv\');\n' +
+              '  DF.AddColumn(\'Customer\', [\'Alpha Tech\', \'Beta Corp\', \'Gamma Analytics\', \'Delta Systems\', \'Omega Labs\']);\n' +
+              '  DF.AddColumn(\'Annual_Revenue\', [120000.0, 45000.0, 310000.0, 82000.0, 195000.0]);\n' +
+              '  DF.AddColumn(\'Retention_Score\', [94.5, 71.0, 98.2, 83.4, 91.0]);\n' +
+              '  DF.ToCSV(\'customers_demo.csv\');\n\n' +
+              '  // 2. Load from CSV, keep Revenue > 100,000 and sort descending:\n' +
+              '  Filtered := TPyDataFrame.FromCSV(\'customers_demo.csv\')\n' +
               '                .DropNA\n' +
-              '                .Filter(\'Receita_Anual > 100000\')\n' +
-              '                .SortBy(\'Receita_Anual\', False);\n\n' +
-              '  Filtrado.ShowTable(\'Clientes Enterprise (Receita > R$ 100k)\', 20);\n' +
+              '                .Filter(\'Annual_Revenue > 100000\')\n' +
+              '                .SortBy(\'Annual_Revenue\', False);\n\n' +
+              '  Filtered.ShowTable(\'Enterprise Customers (Revenue > $100k)\', 20);\n' +
               'end.'
           },
           {
             id: 'snip_groupby',
             icon: '📑',
-            title: 'Agregação GroupBy & Gráfico Comparativo',
+            title: 'GroupBy Aggregation & Comparison Chart',
             category: 'pandas',
-            categoryLabel: 'Pandas & Dados',
+            categoryLabel: 'Pandas & Data',
             unitTag: 'BlaisePandas',
             cellType: 'code',
-            description: 'Agrupa dados por categoria (GroupBy) calculando soma ou média e plota imediatamente um gráfico de barras comparativo.',
+            description: 'Groups data by category (GroupBy) computing sums or means and immediately plots a comparison bar chart.',
             code:
               'uses BlaisePandas;\n' +
               'var\n' +
-              '  DF, Resumo: TPyDataFrame;\n' +
+              '  DF, Summary: TPyDataFrame;\n' +
               'begin\n' +
-              '  DF := TPyDataFrame.Create(\'vendas_regiao\');\n' +
-              '  DF.AddColumn(\'Regiao\', [\'Sudeste\', \'Sul\', \'Sudeste\', \'Nordeste\', \'Sul\', \'Nordeste\', \'Centro-Oeste\']);\n' +
-              '  DF.AddColumn(\'Faturamento\', [85000.0, 52000.0, 94000.0, 48000.0, 61000.0, 53000.0, 67000.0]);\n\n' +
-              '  Resumo := DF.GroupBy(\'Regiao\').Sum;\n' +
-              '  Resumo.ShowTable(\'Faturamento Acumulado por Região\', 10);\n' +
-              '  Resumo.PlotBar(\'Faturamento Total por Região (R$)\', \'Regiao\', \'Faturamento\');\n' +
+              '  DF := TPyDataFrame.Create(\'sales_by_region\');\n' +
+              '  DF.AddColumn(\'Region\', [\'East\', \'West\', \'East\', \'South\', \'West\', \'South\', \'North\']);\n' +
+              '  DF.AddColumn(\'Revenue\', [85000.0, 52000.0, 94000.0, 48000.0, 61000.0, 53000.0, 67000.0]);\n\n' +
+              '  Summary := DF.GroupBy(\'Region\').Sum;\n' +
+              '  Summary.ShowTable(\'Accumulated Revenue by Region\', 10);\n' +
+              '  Summary.PlotBar(\'Total Revenue by Region ($)\', \'Region\', \'Revenue\');\n' +
               'end.'
           },
           {
             id: 'snip_hist_boxplot',
             icon: '📊',
-            title: 'Análise Exploratória: Histograma + BoxPlot',
+            title: 'Exploratory Analysis: Histogram + BoxPlot',
             category: 'charts',
-            categoryLabel: 'Gráficos & EDA',
+            categoryLabel: 'Charts & EDA',
             unitTag: 'BlaisePandas',
             cellType: 'code',
-            description: 'Plota simultaneamente um Histograma de distribuição de frequências e um BoxPlot estratificado por categoria na mesma célula.',
+            description: 'Plots a frequency distribution Histogram and a BoxPlot stratified by category in the same cell.',
             code:
               'uses BlaisePandas;\n' +
               'var\n' +
               '  DF: TPyDataFrame;\n' +
               'begin\n' +
-              '  DF := TPyDataFrame.Create(\'eda_latencia\');\n' +
-              '  DF.AddColumn(\'Servidor\', [\'Cluster-A\', \'Cluster-A\', \'Cluster-A\', \'Cluster-A\', \'Cluster-B\', \'Cluster-B\', \'Cluster-B\', \'Cluster-B\', \'Cluster-C\', \'Cluster-C\', \'Cluster-C\', \'Cluster-C\']);\n' +
-              '  DF.AddColumn(\'Latencia_ms\', [18.2, 21.5, 19.8, 24.1, 32.0, 36.4, 29.5, 41.2, 12.4, 14.1, 13.8, 15.9]);\n\n' +
-              '  DF.PlotHistogram(\'Distribuição Global de Latência (ms)\', \'Latencia_ms\', 6);\n' +
-              '  DF.PlotBoxPlot(\'Dispersão e Quartis de Latência por Cluster\', \'Servidor\', \'Latencia_ms\');\n' +
+              '  DF := TPyDataFrame.Create(\'eda_latency\');\n' +
+              '  DF.AddColumn(\'Server\', [\'Cluster-A\', \'Cluster-A\', \'Cluster-A\', \'Cluster-A\', \'Cluster-B\', \'Cluster-B\', \'Cluster-B\', \'Cluster-B\', \'Cluster-C\', \'Cluster-C\', \'Cluster-C\', \'Cluster-C\']);\n' +
+              '  DF.AddColumn(\'Latency_ms\', [18.2, 21.5, 19.8, 24.1, 32.0, 36.4, 29.5, 41.2, 12.4, 14.1, 13.8, 15.9]);\n\n' +
+              '  DF.PlotHistogram(\'Global Latency Distribution (ms)\', \'Latency_ms\', 6);\n' +
+              '  DF.PlotBoxPlot(\'Latency Spread and Quartiles by Cluster\', \'Server\', \'Latency_ms\');\n' +
               'end.'
           },
           {
             id: 'snip_multi_charts',
             icon: '📈',
-            title: 'Painel de Séries Temporais (Linha + Rosca)',
+            title: 'Time Series Panel (Line + Doughnut)',
             category: 'charts',
-            categoryLabel: 'Gráficos & EDA',
+            categoryLabel: 'Charts & EDA',
             unitTag: 'BlaisePandas',
             cellType: 'code',
-            description: 'Gera múltiplos gráficos empilhados: evolução temporal de múltiplas métricas e distribuição percentual em gráfico Doughnut.',
+            description: 'Stacks multiple charts: the evolution of several metrics over time and a percentage breakdown as a Doughnut chart.',
             code:
               'uses BlaisePandas;\n' +
               'var\n' +
               '  DF: TPyDataFrame;\n' +
               'begin\n' +
-              '  DF := TPyDataFrame.Create(\'metricas_mensais\');\n' +
-              '  DF.AddColumn(\'Mes\', [\'Jan\', \'Fev\', \'Mar\', \'Abr\', \'Mai\', \'Jun\']);\n' +
-              '  DF.AddColumn(\'Receita\', [42.0, 48.5, 55.2, 61.8, 72.4, 84.0]);\n' +
-              '  DF.AddColumn(\'Custos\', [28.0, 29.5, 31.0, 33.2, 35.0, 37.5]);\n\n' +
-              '  DF.PlotLine(\'Evolução Mensal: Receita vs Custos (R$ Mil)\', \'Mes\', [\'Receita\', \'Custos\']);\n' +
-              '  DF.PlotDoughnut(\'Participação da Receita por Mês\', \'Mes\', \'Receita\');\n' +
+              '  DF := TPyDataFrame.Create(\'monthly_metrics\');\n' +
+              '  DF.AddColumn(\'Month\', [\'Jan\', \'Feb\', \'Mar\', \'Apr\', \'May\', \'Jun\']);\n' +
+              '  DF.AddColumn(\'Revenue\', [42.0, 48.5, 55.2, 61.8, 72.4, 84.0]);\n' +
+              '  DF.AddColumn(\'Costs\', [28.0, 29.5, 31.0, 33.2, 35.0, 37.5]);\n\n' +
+              '  DF.PlotLine(\'Monthly Trend: Revenue vs Costs ($ thousands)\', \'Month\', [\'Revenue\', \'Costs\']);\n' +
+              '  DF.PlotDoughnut(\'Revenue Share by Month\', \'Month\', \'Revenue\');\n' +
               'end.'
           },
           {
             id: 'snip_rf_split',
             icon: '🌲',
-            title: 'Split Treino/Teste & Random Forest + Importância',
+            title: 'Train/Test Split & Random Forest + Feature Importance',
             category: 'sklearn',
             categoryLabel: 'Machine Learning',
             unitTag: 'BlaiseSklearn',
             cellType: 'code',
-            description: 'Divide os dados em Treino/Teste (PyTrainTestSplit), treina uma Random Forest Regressor, avalia o R² e plota a importância das variáveis.',
+            description: 'Splits the data into Train/Test sets (PyTrainTestSplit), trains a Random Forest Regressor, evaluates R² and plots feature importances.',
             code:
               'uses BlaisePandas, BlaiseSklearn;\n' +
               'var\n' +
@@ -1023,58 +1023,58 @@
               '  Forest: TPyRandomForestRegressor;\n' +
               '  R2: Double;\n' +
               'begin\n' +
-              '  DF := TPyDataFrame.Create(\'imoveis_ml\');\n' +
+              '  DF := TPyDataFrame.Create(\'housing_ml\');\n' +
               '  DF.AddColumn(\'Area_m2\',     [55, 70, 85, 110, 130, 150, 180, 210, 250, 300]);\n' +
-              '  DF.AddColumn(\'Quartos\',     [1,  2,  2,  3,   3,   4,   4,   4,   5,   5]);\n' +
-              '  DF.AddColumn(\'Vagas\',       [1,  1,  2,  2,   2,   3,   3,   4,   4,   5]);\n' +
-              '  DF.AddColumn(\'Preco_Mil\',   [310, 420, 515, 680, 790, 950, 1150, 1380, 1690, 2050]);\n\n' +
-              '  X := DF.Columns([\'Area_m2\', \'Quartos\', \'Vagas\']);\n' +
-              '  Y := DF.Column(\'Preco_Mil\');\n\n' +
+              '  DF.AddColumn(\'Bedrooms\',    [1,  2,  2,  3,   3,   4,   4,   4,   5,   5]);\n' +
+              '  DF.AddColumn(\'Garages\',     [1,  1,  2,  2,   2,   3,   3,   4,   4,   5]);\n' +
+              '  DF.AddColumn(\'Price_k\',     [310, 420, 515, 680, 790, 950, 1150, 1380, 1690, 2050]);\n\n' +
+              '  X := DF.Columns([\'Area_m2\', \'Bedrooms\', \'Garages\']);\n' +
+              '  Y := DF.Column(\'Price_k\');\n\n' +
               '  PyTrainTestSplit(X, Y, 0.30, XTrain, XTest, YTrain, YTest, 42);\n\n' +
               '  Forest := TPyRandomForestRegressor.Create(100, -1, 42);\n' +
               '  Forest.Fit(XTrain, YTrain);\n' +
               '  YPred := Forest.Predict(XTest);\n' +
               '  R2 := PyR2Score(YTest, YPred);\n\n' +
-              '  Writeln(Format(\'Random Forest treinada! R² no conjunto de teste = %.4f\', [R2]));\n' +
-              '  Forest.PlotFeatureImportances([\'Area_m2\', \'Quartos\', \'Vagas\'], \'Importância das Variáveis no Preço do Imóvel\');\n' +
+              '  Writeln(Format(\'Random Forest trained! Test set R² = %.4f\', [R2]));\n' +
+              '  Forest.PlotFeatureImportances([\'Area_m2\', \'Bedrooms\', \'Garages\'], \'Feature Importance for House Price\');\n' +
               'end.'
           },
           {
             id: 'snip_kmeans',
             icon: '🎯',
-            title: 'Clusterização Não-Supervisionada com K-Means',
+            title: 'Unsupervised Clustering with K-Means',
             category: 'sklearn',
             categoryLabel: 'Machine Learning',
             unitTag: 'BlaiseSklearn',
             cellType: 'code',
-            description: 'Segmenta observações automaticamente em clusters com TPyKMeans, anexa os rótulos ao DataFrame e plota a dispersão.',
+            description: 'Automatically segments observations into clusters with TPyKMeans, attaches the labels to the DataFrame and plots the scatter.',
             code:
               'uses BlaisePandas, BlaiseSklearn;\n' +
               'var\n' +
               '  DF, Features: TPyDataFrame;\n' +
               '  KMeans: TPyKMeans;\n' +
               'begin\n' +
-              '  DF := TPyDataFrame.Create(\'segmentacao_clientes\');\n' +
-              '  DF.AddColumn(\'Frequencia_Compras\', [2, 3, 4, 14, 16, 18, 28, 31, 35]);\n' +
-              '  DF.AddColumn(\'Ticket_Medio\',       [120, 140, 135, 450, 490, 520, 1100, 1250, 1400]);\n\n' +
-              '  Features := DF.Columns([\'Frequencia_Compras\', \'Ticket_Medio\']);\n' +
+              '  DF := TPyDataFrame.Create(\'customer_segments\');\n' +
+              '  DF.AddColumn(\'Purchase_Frequency\', [2, 3, 4, 14, 16, 18, 28, 31, 35]);\n' +
+              '  DF.AddColumn(\'Avg_Ticket\',         [120, 140, 135, 450, 490, 520, 1100, 1250, 1400]);\n\n' +
+              '  Features := DF.Columns([\'Purchase_Frequency\', \'Avg_Ticket\']);\n' +
               '  KMeans := TPyKMeans.Create(3, 42);\n' +
               '  KMeans.Fit(Features);\n\n' +
               '  DF.AddColumn(\'Cluster\', KMeans.Labels);\n' +
-              '  Writeln(Format(\'K-Means convergiu! Inércia total = %.2f\', [KMeans.Inertia]));\n' +
-              '  DF.ShowTable(\'Clientes Segmentados por Cluster (K=3)\', 15);\n' +
-              '  DF.PlotScatter(\'Mapa de Dispersão: Frequência vs Ticket Médio\', \'Frequencia_Compras\', \'Ticket_Medio\');\n' +
+              '  Writeln(Format(\'K-Means converged! Total inertia = %.2f\', [KMeans.Inertia]));\n' +
+              '  DF.ShowTable(\'Customers Segmented by Cluster (K=3)\', 15);\n' +
+              '  DF.PlotScatter(\'Scatter Map: Frequency vs Average Ticket\', \'Purchase_Frequency\', \'Avg_Ticket\');\n' +
               'end.'
           },
           {
             id: 'snip_native_math',
             icon: '🧮',
-            title: 'Vetorização & Regressão Linear em Pascal Nativo',
+            title: 'Vectorization & Linear Regression in Native Pascal',
             category: 'math',
-            categoryLabel: 'Matemática & Sistema',
+            categoryLabel: 'Math & System',
             unitTag: 'BlaiseMathKernel',
             cellType: 'code',
-            description: 'Executa estatística vetorial e ajuste de Regressão Linear (Mínimos Quadrados) 100% em Free Pascal compilado (sem Python).',
+            description: 'Runs vector statistics and a Least Squares Linear Regression fit 100% in compiled Free Pascal (no Python).',
             code:
               'uses BlaiseMathKernel, BlaiseOutput;\n' +
               'var\n' +
@@ -1083,38 +1083,38 @@
               'begin\n' +
               '  X := TVector.Create([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);\n' +
               '  Y := TVector.Create([14.2, 18.9, 24.1, 28.8, 34.5, 39.2, 44.0, 49.6, 54.1, 59.8]);\n\n' +
-              '  Writeln(Format(\'Média de Y: %.2f | Desvio Padrão: %.2f | Mediana: %.2f\', [\n' +
+              '  Writeln(Format(\'Mean of Y: %.2f | Std Dev: %.2f | Median: %.2f\', [\n' +
               '    Y.CalculaMedia, Y.CalculaDesvioPadrao, Y.CalculaMediana\n' +
               '  ]));\n\n' +
               '  if X.LinearRegression(Y, Slope, Intercept, R2) then\n' +
-              '    Writeln(Format(\'Equação Ajustada: Y = %.3f * X + %.3f (R² = %.4f)\', [Slope, Intercept, R2]));\n' +
+              '    Writeln(Format(\'Fitted equation: Y = %.3f * X + %.3f (R² = %.4f)\', [Slope, Intercept, R2]));\n' +
               'end.'
           },
           {
             id: 'snip_pip_install',
             icon: '📦',
-            title: 'Instalar Biblioteca Python via %pip & Ponte Direta',
+            title: 'Install a Python Library via %pip & Direct Bridge',
             category: 'math',
-            categoryLabel: 'Matemática & Sistema',
+            categoryLabel: 'Math & System',
             unitTag: 'BlaisePyKernel',
             cellType: 'code',
-            description: 'Demonstra a diretiva mágica %pip install dentro da célula e a execução direta de código Python com PyRun e PyEval.',
+            description: 'Shows the %pip install magic directive inside a cell and direct Python execution with PyRun and PyEval.',
             code:
-              '// Diretiva mágica opcional: descomente a linha abaixo para instalar pacotes via pip\n' +
+              '// Optional magic directive: uncomment the line below to install packages via pip\n' +
               '// %pip install scipy\n' +
               'uses BlaisePyKernel, BlaiseOutput;\n' +
               'var\n' +
-              '  Resultado: string;\n' +
+              '  ResultValue: string;\n' +
               'begin\n' +
               '  PyRun(\n' +
               '    \'import numpy as np\'#10 +\n' +
-              '    \'matriz = np.array([[4.0, 2.0], [1.0, 3.0]])\'#10 +\n' +
-              '    \'det = float(np.linalg.det(matriz))\'#10 +\n' +
-              '    \'autovalores = np.linalg.eigvals(matriz).tolist()\'#10 +\n' +
-              '    \'print(f"[NumPy] Determinante = {det:.2f} | Autovalores = {autovalores}")\'\n' +
+              '    \'matrix = np.array([[4.0, 2.0], [1.0, 3.0]])\'#10 +\n' +
+              '    \'det = float(np.linalg.det(matrix))\'#10 +\n' +
+              '    \'eigenvalues = np.linalg.eigvals(matrix).tolist()\'#10 +\n' +
+              '    \'print(f"[NumPy] Determinant = {det:.2f} | Eigenvalues = {eigenvalues}")\'\n' +
               '  );\n' +
-              '  Resultado := PyEval(\'round(det, 4)\');\n' +
-              '  Writeln(\'Valor retornado para variável Object Pascal: \', Resultado);\n' +
+              '  ResultValue := PyEval(\'round(det, 4)\');\n' +
+              '  Writeln(\'Value returned to Object Pascal variable: \', ResultValue);\n' +
               'end.'
           }
         ];
@@ -1206,7 +1206,7 @@
       asm
         if (!recipe) return;
         const rawR = recipe.__bv_raw__ ? recipe.__bv_raw__ : recipe;
-        this.pushHistory('Inserir receita: ' + (rawR.title || 'Snippet'));
+        this.pushHistory('Insert recipe: ' + (rawR.title || 'Snippet'));
 
         const makeCell = this.createCell || window.bvCreateCell;
         const newCell = makeCell(rawR.cellType || 'code', rawR.code || '');
@@ -1269,7 +1269,7 @@
       newCell: JSValue;
     begin
       asm
-        this.pushHistory('Adicionar célula de código');
+        this.pushHistory('Add code cell');
         const c = (this.createCell || window.bvCreateCell)('code', '// New Object Pascal code block\n');
         this.cells.push(c);
       end;
@@ -1280,7 +1280,7 @@
       newCell: JSValue;
     begin
       asm
-        this.pushHistory('Adicionar célula de markdown');
+        this.pushHistory('Add markdown cell');
         const c = (this.createCell || window.bvCreateCell)('markdown', '### New Documentation Section\nDescribe your methodology or findings here.');
         this.cells.push(c);
       end;
@@ -1289,7 +1289,7 @@
     procedure insertCodeAt(idx: integer);
     begin
       asm
-        this.pushHistory('Inserir célula de código');
+        this.pushHistory('Insert code cell');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// Inserted code block\n');
         const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
@@ -1304,7 +1304,7 @@
     procedure insertMarkdownAt(idx: integer);
     begin
       asm
-        this.pushHistory('Inserir célula de markdown');
+        this.pushHistory('Insert markdown cell');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('markdown', '### Inserted Documentation\n');
         const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
@@ -1319,7 +1319,7 @@
     procedure insertBelowIndex(cellOrIdx: JSValue);
     begin
       asm
-        this.pushHistory('Inserir célula abaixo');
+        this.pushHistory('Insert cell below');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// Next step\n');
         let targetIdx = -1;
@@ -1343,7 +1343,7 @@
     procedure insertCodeBelowIndex(cellOrIdx: JSValue);
     begin
       asm
-        this.pushHistory('Inserir célula de código abaixo');
+        this.pushHistory('Insert code cell below');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// New Object Pascal code block\n');
         let targetIdx = -1;
@@ -1367,7 +1367,7 @@
     procedure insertMarkdownBelowIndex(cellOrIdx: JSValue);
     begin
       asm
-        this.pushHistory('Inserir célula de markdown abaixo');
+        this.pushHistory('Insert markdown cell below');
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('markdown', '### New Documentation Section\nDescribe your findings here.');
         let targetIdx = -1;
@@ -1392,7 +1392,7 @@
     begin
       asm
         if (idx > 0 && idx < this.cells.length) {
-          this.pushHistory('Mover célula para cima');
+          this.pushHistory('Move cell up');
           const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
           const item = this.cells.splice(idx, 1)[0];
           this.cells.splice(idx - 1, 0, item);
@@ -1408,7 +1408,7 @@
     begin
       asm
         if (idx >= 0 && idx < this.cells.length - 1) {
-          this.pushHistory('Mover célula para baixo');
+          this.pushHistory('Move cell down');
           const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
           const item = this.cells.splice(idx, 1)[0];
           this.cells.splice(idx + 1, 0, item);
@@ -1593,7 +1593,7 @@
 
         if (fromIdx === finalIdx) return;
 
-        this.pushHistory('Reordenar célula #' + (fromIdx + 1) + ' para #' + (finalIdx + 1));
+        this.pushHistory('Reorder cell #' + (fromIdx + 1) + ' to #' + (finalIdx + 1));
         const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
         const movedCell = this.cells.splice(fromIdx, 1)[0];
         const movedId = movedCell ? movedCell.id : '';
@@ -1708,7 +1708,7 @@
           alert('The notebook must contain at least one cell.');
           return;
         }
-        this.pushHistory('Excluir célula #' + (idx + 1));
+        this.pushHistory('Delete cell #' + (idx + 1));
 
         const cellToDelete = this.cells[idx];
         const cloned = JSON.parse(JSON.stringify(cellToDelete));
@@ -1717,7 +1717,7 @@
         const lines = (cloned.source || '').split('\n');
         let snippet = lines.slice(0, 3).join('\n');
         if (lines.length > 3) snippet += '\n...';
-        if (!snippet.trim()) snippet = '(Célula vazia)';
+        if (!snippet.trim()) snippet = '(Empty cell)';
 
         if (!this._trashList) this._trashList = [];
         const trashItem = new Object();
@@ -1736,7 +1736,7 @@
         this.cells.splice(idx, 1);
         this.cells = this.cells.slice();
 
-        this.undoToastMessage = 'Célula #' + (idx + 1) + ' excluída.';
+        this.undoToastMessage = 'Cell #' + (idx + 1) + ' deleted.';
         this.undoToastVisible = true;
         if (this._toastTimer) clearTimeout(this._toastTimer);
         const self = this;
@@ -1756,7 +1756,7 @@
     begin
       asm
         if (cell) {
-          this.pushHistory('Alterar tipo de célula');
+          this.pushHistory('Change cell type');
           cell.type = newType;
         }
       end;
@@ -1765,7 +1765,7 @@
     procedure clearAllOutputs;
     begin
       asm
-        this.pushHistory('Limpar todas as saídas');
+        this.pushHistory('Clear all outputs');
         for (let i = 0; i < this.cells.length; i++) {
           this.cells[i].outputs = [];
           this.cells[i].status = 'idle';
@@ -2092,7 +2092,7 @@
         }
 
         // Instant visual feedback banner
-        this.undoToastMessage = '🔄 Kernel reiniciado com sucesso! Sessão e variáveis limpas.';
+        this.undoToastMessage = '🔄 Kernel restarted successfully! Session and variables cleared.';
         this.undoToastVisible = true;
         if (this._toastTimer) clearTimeout(this._toastTimer);
         const self = this;
@@ -2409,7 +2409,7 @@
         if (msg.event === 'kernel_restarted') {
           self.isRunning = false;
           self.kernelStatus = 'connected';
-          self.undoToastMessage = '🔄 Kernel reiniciado com sucesso! Sessão e variáveis limpas.';
+          self.undoToastMessage = '🔄 Kernel restarted successfully! Session and variables cleared.';
           self.undoToastVisible = true;
           if (self._toastTimer) clearTimeout(self._toastTimer);
           self._toastTimer = setTimeout(() => {
@@ -2855,7 +2855,7 @@
     margin: 0;
   }
 
-  /* CANVAS DAS CÉLULAS */
+  /* CELLS CANVAS */
   .notebook-cells-canvas {
     max-width: 1100px;
     width: 100%;

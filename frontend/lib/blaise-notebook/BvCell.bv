@@ -5,7 +5,7 @@
       <div
         class="cell-drag-handle"
         draggable="true"
-        title="Arrastar para reordenar célula (Drag & Drop)"
+        title="Drag to reorder cell (Drag & Drop)"
         @dragstart="onHandleDragStart($event)"
         @dragend="onHandleDragEnd($event)"
       >
