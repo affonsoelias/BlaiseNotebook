@@ -23,13 +23,51 @@ uses
   {$endif OSWINDOWS}
   sysutils,
   classes,
+  Sockets,
   mormot.core.base,
   mormot.core.os,
   ServerModels,
   ServerApp;
 
+function IsTcpPortAvailable(APort: Word): Boolean;
+var
+  S: TSocket;
+  Addr: TInetSockAddr;
+  Res: Integer;
+begin
+  Result := False;
+  S := fpSocket(AF_INET, SOCK_STREAM, 0);
+  if S = -1 then Exit;
+  try
+    FillChar(Addr, SizeOf(Addr), 0);
+    Addr.sin_family := AF_INET;
+    Addr.sin_port := htons(APort);
+    Addr.sin_addr.s_addr := 0; // INADDR_ANY
+    Res := fpBind(S, @Addr, SizeOf(Addr));
+    Result := (Res = 0);
+  finally
+    CloseSocket(S);
+  end;
+end;
+
+function FindNextAvailableTcpPort(StartPort: Word; MaxAttempts: Word = 50): Word;
+var
+  Candidate: Word;
+begin
+  Candidate := StartPort;
+  while Candidate < StartPort + MaxAttempts do
+  begin
+    if IsTcpPortAvailable(Candidate) then
+      Exit(Candidate);
+    Inc(Candidate);
+  end;
+  Result := StartPort;
+end;
+
 var
   App: TBlaiseServerApp;
+  TargetPort, OrigPort: Word;
+  MaxRetries: Integer;
   Port: RawUtf8;
   DistPath, EnvPath, EnvLine, EnvKey, EnvVal: string;
   EnvLines: TStringList;
@@ -123,18 +161,26 @@ begin
     end;
   end;
 
-  // Intelligent resolution of dist/ folder
-  DistPath := '..' + DirectorySeparator + 'dist';
-  if DirectoryExists(ExtractFilePath(ParamStr(0)) + 'dist') then
-    DistPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + 'dist')
-  else if DirectoryExists('dist') then
-    DistPath := ExpandFileName('dist')
-  else if DirectoryExists('..' + DirectorySeparator + 'dist') then
+  // Intelligent resolution of dist/ folder (prioritize directory containing index.html)
+  DistPath := '';
+  if FileExists(ExpandFileName(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + '..' + DirectorySeparator + 'dist' + DirectorySeparator + 'index.html')) then
+    DistPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + '..' + DirectorySeparator + 'dist')
+  else if FileExists(ExpandFileName('frontend' + DirectorySeparator + 'dist' + DirectorySeparator + 'index.html')) then
+    DistPath := ExpandFileName('frontend' + DirectorySeparator + 'dist')
+  else if FileExists(ExpandFileName('..' + DirectorySeparator + 'dist' + DirectorySeparator + 'index.html')) then
     DistPath := ExpandFileName('..' + DirectorySeparator + 'dist')
+  else if FileExists(ExpandFileName('dist' + DirectorySeparator + 'index.html')) then
+    DistPath := ExpandFileName('dist')
+  else if FileExists(ExpandFileName(ExtractFilePath(ParamStr(0)) + 'dist' + DirectorySeparator + 'index.html')) then
+    DistPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + 'dist')
   else if DirectoryExists(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + '..' + DirectorySeparator + 'dist') then
     DistPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + '..' + DirectorySeparator + 'dist')
-  else if DirectoryExists(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + 'dist') then
-    DistPath := ExpandFileName(ExtractFilePath(ParamStr(0)) + '..' + DirectorySeparator + 'dist');
+  else if DirectoryExists('frontend' + DirectorySeparator + 'dist') then
+    DistPath := ExpandFileName('frontend' + DirectorySeparator + 'dist')
+  else if DirectoryExists('..' + DirectorySeparator + 'dist') then
+    DistPath := ExpandFileName('..' + DirectorySeparator + 'dist')
+  else
+    DistPath := ExpandFileName('dist');
 
   // Parse command line arguments
   i := 1;
@@ -166,7 +212,17 @@ begin
 
   // Environment variable override
   if GetEnvironmentVariable('PORT') <> '' then
-    Port := GetEnvironmentVariable('PORT');
+    Port := RawUtf8(GetEnvironmentVariable('PORT'));
+
+  TargetPort := StrToIntDef(string(Port), 8090);
+  if not IsTcpPortAvailable(TargetPort) then
+  begin
+    OrigPort := TargetPort;
+    TargetPort := FindNextAvailableTcpPort(TargetPort + 1);
+    Port := RawUtf8(IntToStr(TargetPort));
+    WriteLn('  [!] Notice: Port ' + IntToStr(OrigPort) + ' is busy or locked by a lingering socket.');
+    WriteLn('  [+] Automatically switched server to available port: ' + string(Port));
+  end;
 
   WriteLn('======================================================');
   WriteLn('   BlaiseVue 3.5 Full-Stack - mORMot 2 Native Server  ');
@@ -176,15 +232,38 @@ begin
   if DirectoryExists(DistPath) then
     WriteLn('[+] Static:    ', DistPath, ' (SPA History fallback active)')
   else
-    WriteLn('[!] Static:    ', DistPath, ' (Directory not found yet, run: bv build)');
+    WriteLn('[!] Static:    ', DistPath, ' (Directory not found yet, run: bvnb build)');
+  WriteLn('[+] App URL:   http://localhost:', Port, '/');
   WriteLn('[+] REST API:  http://localhost:', Port, '/api/status');
   WriteLn('               http://localhost:', Port, '/api/items');
-  WriteLn('[+] WebSocket: ws://localhost:', Port, '/blaise-ws');
+  WriteLn('[+] WebSocket: ws://localhost:', Port, '/ws');
   WriteLn('------------------------------------------------------');
   WriteLn('Press [Enter] or Ctrl+C to terminate server...');
 
   try
-    App := TBlaiseServerApp.Create(Port, DistPath);
+    App := nil;
+    MaxRetries := 10;
+    while (App = nil) and (MaxRetries > 0) do
+    begin
+      try
+        App := TBlaiseServerApp.Create(Port, DistPath);
+      except
+        on E: Exception do
+        begin
+          WriteLn('  [!] Could not bind mORMot 2 server to port ', Port, ': ', E.Message);
+          TargetPort := FindNextAvailableTcpPort(StrToIntDef(string(Port), 8090) + 1);
+          Port := RawUtf8(IntToStr(TargetPort));
+          WriteLn('  [+] Retrying with next available port: ', Port);
+          Dec(MaxRetries);
+          if MaxRetries = 0 then
+          begin
+            WriteLn('[!] Server Fatal Error: Exhausted port fallback retries.');
+            Halt(1);
+          end;
+        end;
+      end;
+    end;
+
     try
       {$ifdef OSWINDOWS}
       try
@@ -208,7 +287,11 @@ begin
       {$endif}
     finally
       WriteLn(#10'[+] Shutting down mORMot 2 server...');
-      App.Free;
+      if Assigned(App) then
+      begin
+        App.Free;
+        App := nil;
+      end;
       WriteLn('[+] Server stopped successfully.');
     end;
   except

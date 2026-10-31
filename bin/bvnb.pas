@@ -18,7 +18,7 @@ program bvnb;
 {$mode objfpc}{$H+}
 
 uses
-  SysUtils, Classes, Process, StrUtils;
+  SysUtils, Classes, Process, StrUtils, Sockets;
 
 const
   BVNB_VERSION = '1.0.0';
@@ -521,20 +521,158 @@ begin
   WriteLn('');
 end;
 
+function IsTcpPortAvailable(APort: Word): Boolean;
+var
+  S: TSocket;
+  Addr: TInetSockAddr;
+  Res: Integer;
+begin
+  Result := False;
+  S := fpSocket(AF_INET, SOCK_STREAM, 0);
+  if S = -1 then Exit;
+  try
+    FillChar(Addr, SizeOf(Addr), 0);
+    Addr.sin_family := AF_INET;
+    Addr.sin_port := htons(APort);
+    Addr.sin_addr.s_addr := 0; // INADDR_ANY
+    Res := fpBind(S, @Addr, SizeOf(Addr));
+    Result := (Res = 0);
+  finally
+    CloseSocket(S);
+  end;
+end;
+
+function FindNextAvailableTcpPort(StartPort: Word; MaxAttempts: Word = 50): Word;
+var
+  Candidate: Word;
+begin
+  Candidate := StartPort;
+  while Candidate < StartPort + MaxAttempts do
+  begin
+    if IsTcpPortAvailable(Candidate) then
+      Exit(Candidate);
+    Inc(Candidate);
+  end;
+  Result := StartPort;
+end;
+
+procedure CmdKill;
+var
+  DummyOut: string;
+begin
+  WriteLn('');
+  WriteLn('======================================================================');
+  WriteLn('  Terminating lingering server instances and releasing locked ports...');
+  WriteLn('======================================================================');
+  {$IFDEF WINDOWS}
+  ExecCmdCapture('taskkill /F /IM server.exe', DummyOut);
+  {$ELSE}
+  ExecCmdCapture('killall -9 server', DummyOut);
+  {$ENDIF}
+  WriteLn('  [+] Lingering server.exe processes terminated.');
+  WriteLn('  [+] Sockets and ports released.');
+  WriteLn('======================================================================');
+  WriteLn('');
+end;
+
 procedure CmdRun;
 var
-  RepoDir, FrontendDir, BvExe, BvDesc: string;
+  RepoDir, FrontendDir, ServerDir, ServerBin, EnvPath, EnvLine, BvExe, BvDesc: string;
+  EnvLines: TStringList;
+  TargetPort, OrigPort: Word;
+  PortArg, ExtraArgs, Url, DummyOut: string;
+  i: Integer;
 begin
   RepoDir := GetRepoRoot;
   FrontendDir := RepoDir + DirectorySeparator + 'frontend';
+  ServerDir := FrontendDir + DirectorySeparator + 'server';
+  ServerBin := ServerDir + DirectorySeparator + 'bin' + DirectorySeparator + 'server' + {$IFDEF WINDOWS}'.exe'{$ELSE}''{$ENDIF};
 
-  if not FindBvExecutable(BvExe, BvDesc) then
+  // 1. Terminate any previous lingering/zombie server instances on Windows/Linux
+  {$IFDEF WINDOWS}
+  ExecCmdCapture('taskkill /F /IM server.exe', DummyOut);
+  {$ELSE}
+  ExecCmdCapture('killall -9 server', DummyOut);
+  {$ENDIF}
+
+  // 2. Parse command-line port if explicitly requested (e.g. bvnb run --port 8092)
+  TargetPort := 8090;
+  PortArg := '';
+  for i := 2 to ParamCount do
   begin
-    WriteLn('  [ERROR] BlaiseVue CLI (bv) not found. Ensure "bv" is on your PATH.');
-    Halt(1);
+    if (ParamStr(i) = '--port') or (ParamStr(i) = '-p') then
+    begin
+      if i + 1 <= ParamCount then
+        PortArg := ParamStr(i + 1);
+    end
+    else if Copy(ParamStr(i), 1, 7) = '--port=' then
+      PortArg := Copy(ParamStr(i), 8, MaxInt);
   end;
 
-  ExecCmdInteractive('"' + BvExe + '" mormot run', FrontendDir);
+  if PortArg <> '' then
+    TargetPort := StrToIntDef(PortArg, 8090)
+  else
+  begin
+    // Check .env configuration file
+    EnvPath := FrontendDir + DirectorySeparator + '.env';
+    if FileExists(EnvPath) then
+    begin
+      EnvLines := TStringList.Create;
+      try
+        EnvLines.LoadFromFile(EnvPath);
+        for i := 0 to EnvLines.Count - 1 do
+        begin
+          EnvLine := Trim(EnvLines[i]);
+          if (EnvLine <> '') and (EnvLine[1] <> '#') and (Pos('PORT=', UpperCase(EnvLine)) = 1) then
+          begin
+            TargetPort := StrToIntDef(Trim(Copy(EnvLine, 6, MaxInt)), 8090);
+            Break;
+          end;
+        end;
+      finally
+        EnvLines.Free;
+      end;
+    end;
+  end;
+
+  // 3. Verify TCP socket availability and perform automatic port conflict fallback
+  if not IsTcpPortAvailable(TargetPort) then
+  begin
+    OrigPort := TargetPort;
+    TargetPort := FindNextAvailableTcpPort(TargetPort + 1);
+    WriteLn('');
+    WriteLn('  [!] Notice: Port ' + IntToStr(OrigPort) + ' is busy or locked by a lingering socket.');
+    WriteLn('  [+] Automatically switched to available port: ' + IntToStr(TargetPort));
+  end;
+
+  Url := 'http://localhost:' + IntToStr(TargetPort);
+  WriteLn('');
+  WriteLn('======================================================================');
+  WriteLn('  Starting BlaiseNotebook Native Server...');
+  WriteLn('  URL:        ', Url);
+  WriteLn('  WebSocket:  ws://localhost:', IntToStr(TargetPort), '/ws');
+  WriteLn('======================================================================');
+  WriteLn('');
+
+  // 4. Launch browser automatically in the background
+  {$IFDEF WINDOWS}
+  ExecCmdCapture('start "" "' + Url + '"', DummyOut);
+  {$ELSE}
+  ExecCmdCapture('xdg-open "' + Url + '" >/dev/null 2>&1 &', DummyOut);
+  {$ENDIF}
+
+  // 5. Run native server with selected free port
+  ExtraArgs := ' --port ' + IntToStr(TargetPort);
+  if FileExists(ServerBin) then
+    ExecCmdInteractive('"' + ServerBin + '"' + ExtraArgs, ServerDir)
+  else if FindBvExecutable(BvExe, BvDesc) then
+    ExecCmdInteractive('"' + BvExe + '" mormot run' + ExtraArgs, FrontendDir)
+  else
+  begin
+    WriteLn('  [ERROR] Server binary not found: ', ServerBin);
+    WriteLn('          Compile first using: bvnb build');
+    Halt(1);
+  end;
 end;
 
 procedure CmdSetupPython;
@@ -879,9 +1017,10 @@ begin
   WriteLn('  bvnb self-update [--check]   Syncs & rebuilds BlaiseNotebook directly from GitHub via Git');
   WriteLn('  bvnb channel [use <name>]    Inspects or switches repository branch (main | develop)');
   WriteLn('');
-  WriteLn('  # === Build, Execution & Python Setup ===');
+  WriteLn('  # === Build, Execution & Process Management ===');
   WriteLn('  bvnb build                   Compiles Frontend SPA + Native mORMot 2 Server');
-  WriteLn('  bvnb run                     Starts the BlaiseNotebook Server (http://localhost:8090)');
+  WriteLn('  bvnb run [--port <port>]     Starts BlaiseNotebook with smart port auto-fallback & browser');
+  WriteLn('  bvnb kill                    Terminates lingering server instances and frees locked ports');
   WriteLn('  bvnb setup-python            Installs numpy, pandas, and scikit-learn via pip');
   WriteLn('  bvnb help                    Displays this help overview');
   WriteLn('======================================================================');
@@ -908,6 +1047,8 @@ begin
     CmdBuild
   else if (Cmd = 'run') or (Cmd = 'start') or (Cmd = 'serve') then
     CmdRun
+  else if (Cmd = 'kill') or (Cmd = 'stop') then
+    CmdKill
   else if (Cmd = 'setup-python') or (Cmd = 'pip-setup') or (Cmd = 'install-python') then
     CmdSetupPython
   else
