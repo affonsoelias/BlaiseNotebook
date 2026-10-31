@@ -42,3 +42,6 @@ Thumbs.db
 
 # Scratch scripts
 scratch/
+
+# Temporary Chrome capture profiles
+.chrome_tmp*

@@ -41,7 +41,7 @@ For developers and technical users, here is what a `.bynb` looks like inside:
   "metadata": {
     "name": "my_analysis",
     "framework": "BlaiseVue",
-    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python",
     "version": "1.0.0"
   },
   "cells": [

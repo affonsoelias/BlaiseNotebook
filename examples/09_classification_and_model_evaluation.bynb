@@ -5,7 +5,7 @@
     "lesson": 9,
     "title": "Classification Models & Model Evaluation Metrics",
     "framework": "BlaiseVue",
-    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python",
     "version": "1.0.0"
   },
   "cells": [

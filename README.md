@@ -4,6 +4,10 @@
 
 By unifying the reactive Single File Component architecture of **BlaiseVue**, hardware-accelerated charting via **Chart.js (`<bv-chart>`)**, ultra-fast asynchronous execution through **Synopse mORMot 2**, native **Free Pascal** mathematical routines, and a 100% cross-platform, zero-dependency bridge to the Python scientific stack (`numpy`, `pandas`, `scikit-learn`), BlaiseNotebook brings modern exploratory data analysis to Object Pascal developers on **Windows, Linux, and macOS**.
 
+<p align="center">
+  <img src="docs/images/blaisenotebook_demo.gif" alt="BlaiseNotebook Interactive Demo" width="920" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
+</p>
+
 ---
 
 ## ✨ Key Features & Capabilities

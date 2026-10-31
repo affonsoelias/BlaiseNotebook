@@ -2027,7 +2027,7 @@
           else if (src.indexOf('BlaisePyKernel') >= 0 || src.indexOf('pandas') >= 0 || src.indexOf('sklearn') >= 0) {
             outputs.push({
               type: 'stdout',
-              text: '[Python4Delphi / Python4Lazarus Bridge Active]\n' +
+              text: '[Python Scientific Bridge Active]\n' +
                     'Python 3.13.x Runtime Connected via CPython API.\n' +
                     'Loading packages: pandas (v2.2), numpy (v2.1), scikit-learn (v1.5)...\n' +
                     'Dataset loaded with 200 samples across 4 features.\n' +
@@ -2412,7 +2412,7 @@
           {
             id: 'demo_3',
             type: 'markdown',
-            source: '## 🐍 Python4Delphi / Python4Lazarus Scientific Bridge\n' +
+            source: '## 🐍 Python Scientific Bridge (BlaisePyKernel)\n' +
                     'Now let\'s use **`BlaisePyKernel`** to dynamically invoke Python packages (**Pandas** and **Scikit-learn**). Pascal orchestrates the pipeline and streams responsive tables and reactive charts directly to the notebook!',
             execution_count: 0,
             status: 'idle',
@@ -2422,7 +2422,7 @@
           {
             id: 'demo_4',
             type: 'code',
-            source: '// 2. Model Training with Python4Delphi (Scikit-Learn & Pandas)\n' +
+            source: '// 2. Model Training with Python Scientific Bridge (Scikit-Learn & Pandas)\n' +
                     'var\n' +
                     '  PyCode: string;\n' +
                     'begin\n' +
@@ -2464,7 +2464,7 @@
           metadata: {
             name: this.notebookName,
             framework: 'BlaiseVue',
-            engine: 'Synopse mORMot 2 + Free Pascal + Python4Delphi',
+            engine: 'Synopse mORMot 2 + Free Pascal + Python',
             license: 'Modified LGPL v2.1 with Static Linking Exception',
             created_at: new Date().toISOString()
           },

@@ -266,9 +266,19 @@ begin
 
     try
       {$ifdef OSWINDOWS}
-      try
-        ReadLn;
-      except
+      if Eof(input) then
+      begin
+        while True do
+          Sleep(1000);
+      end
+      else
+      begin
+        try
+          ReadLn;
+        except
+          while True do
+            Sleep(1000);
+        end;
       end;
       {$else}
       while True do

@@ -2,7 +2,7 @@
   "metadata": {
     "name": "demo_datascience",
     "framework": "BlaiseVue",
-    "engine": "Synopse mORMot 2 + Free Pascal + Python4Delphi",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python",
     "license": "Modified LGPL v2.1 with Static Linking Exception",
     "version": "1.0.0"
   },
