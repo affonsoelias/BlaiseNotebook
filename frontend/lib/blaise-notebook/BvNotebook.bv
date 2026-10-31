@@ -1323,10 +1323,21 @@
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// Next step\n');
         let targetIdx = -1;
-        if (cellOrIdx && typeof cellOrIdx === 'object' && cellOrIdx.id) {
-          targetIdx = (this.cells || []).findIndex(x => x && x.id === cellOrIdx.id);
-        } else if (typeof cellOrIdx === 'number') {
-          targetIdx = cellOrIdx;
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (!a) continue;
+          if (typeof a === 'number') { targetIdx = a; break; }
+          if (typeof a === 'object') {
+            if (a.cell && a.cell.id && this.cells) {
+              targetIdx = this.cells.findIndex(x => x && x.id === a.cell.id);
+              if (targetIdx >= 0) break;
+            }
+            if (a.id && this.cells) {
+              targetIdx = this.cells.findIndex(x => x && x.id === a.id);
+              if (targetIdx >= 0) break;
+            }
+          }
         }
         if (targetIdx < 0 || targetIdx >= this.cells.length) {
           targetIdx = (this.cells || []).length - 1;
@@ -1347,10 +1358,21 @@
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('code', '// New Object Pascal code block\n');
         let targetIdx = -1;
-        if (cellOrIdx && typeof cellOrIdx === 'object' && cellOrIdx.id) {
-          targetIdx = (this.cells || []).findIndex(x => x && x.id === cellOrIdx.id);
-        } else if (typeof cellOrIdx === 'number') {
-          targetIdx = cellOrIdx;
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (!a) continue;
+          if (typeof a === 'number') { targetIdx = a; break; }
+          if (typeof a === 'object') {
+            if (a.cell && a.cell.id && this.cells) {
+              targetIdx = this.cells.findIndex(x => x && x.id === a.cell.id);
+              if (targetIdx >= 0) break;
+            }
+            if (a.id && this.cells) {
+              targetIdx = this.cells.findIndex(x => x && x.id === a.id);
+              if (targetIdx >= 0) break;
+            }
+          }
         }
         if (targetIdx < 0 || targetIdx >= this.cells.length) {
           targetIdx = (this.cells || []).length - 1;
@@ -1371,10 +1393,21 @@
         const makeCell = this.createCell || window.bvCreateCell;
         const c = makeCell('markdown', '### New Documentation Section\nDescribe your findings here.');
         let targetIdx = -1;
-        if (cellOrIdx && typeof cellOrIdx === 'object' && cellOrIdx.id) {
-          targetIdx = (this.cells || []).findIndex(x => x && x.id === cellOrIdx.id);
-        } else if (typeof cellOrIdx === 'number') {
-          targetIdx = cellOrIdx;
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (!a) continue;
+          if (typeof a === 'number') { targetIdx = a; break; }
+          if (typeof a === 'object') {
+            if (a.cell && a.cell.id && this.cells) {
+              targetIdx = this.cells.findIndex(x => x && x.id === a.cell.id);
+              if (targetIdx >= 0) break;
+            }
+            if (a.id && this.cells) {
+              targetIdx = this.cells.findIndex(x => x && x.id === a.id);
+              if (targetIdx >= 0) break;
+            }
+          }
         }
         if (targetIdx < 0 || targetIdx >= this.cells.length) {
           targetIdx = (this.cells || []).length - 1;
@@ -1391,11 +1424,28 @@
     procedure moveCellUp(idx: integer);
     begin
       asm
-        if (idx > 0 && idx < this.cells.length) {
+        let targetIdx = -1;
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (typeof a === 'number') { targetIdx = a; break; }
+          if (a && typeof a === 'object') {
+            if (typeof a.$index === 'number') { targetIdx = a.$index; break; }
+            if (a.id && this.cells) {
+              targetIdx = this.cells.findIndex(c => c && c.id === a.id);
+              if (targetIdx >= 0) break;
+            }
+            if (a.cell && a.cell.id && this.cells) {
+              targetIdx = this.cells.findIndex(c => c && c.id === a.cell.id);
+              if (targetIdx >= 0) break;
+            }
+          }
+        }
+        if (targetIdx > 0 && targetIdx < (this.cells || []).length) {
           this.pushHistory('Move cell up');
           const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
-          const item = this.cells.splice(idx, 1)[0];
-          this.cells.splice(idx - 1, 0, item);
+          const item = this.cells.splice(targetIdx, 1)[0];
+          this.cells.splice(targetIdx - 1, 0, item);
           if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
           requestAnimationFrame(() => {
             window.scrollTo({ top: scrollY, behavior: 'instant' });
@@ -1407,11 +1457,28 @@
     procedure moveCellDown(idx: integer);
     begin
       asm
-        if (idx >= 0 && idx < this.cells.length - 1) {
+        let targetIdx = -1;
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (typeof a === 'number') { targetIdx = a; break; }
+          if (a && typeof a === 'object') {
+            if (typeof a.$index === 'number') { targetIdx = a.$index; break; }
+            if (a.id && this.cells) {
+              targetIdx = this.cells.findIndex(c => c && c.id === a.id);
+              if (targetIdx >= 0) break;
+            }
+            if (a.cell && a.cell.id && this.cells) {
+              targetIdx = this.cells.findIndex(c => c && c.id === a.cell.id);
+              if (targetIdx >= 0) break;
+            }
+          }
+        }
+        if (targetIdx >= 0 && targetIdx < (this.cells || []).length - 1) {
           this.pushHistory('Move cell down');
           const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
-          const item = this.cells.splice(idx, 1)[0];
-          this.cells.splice(idx + 1, 0, item);
+          const item = this.cells.splice(targetIdx, 1)[0];
+          this.cells.splice(targetIdx + 1, 0, item);
           if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
           requestAnimationFrame(() => {
             window.scrollTo({ top: scrollY, behavior: 'instant' });
@@ -1704,13 +1771,31 @@
     procedure deleteCellAt(idx: integer);
     begin
       asm
+        let targetIdx = -1;
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (typeof a === 'number') { targetIdx = a; break; }
+          if (a && typeof a === 'object') {
+            if (typeof a.$index === 'number') { targetIdx = a.$index; break; }
+            if (a.id && this.cells) {
+              targetIdx = this.cells.findIndex(c => c && c.id === a.id);
+              if (targetIdx >= 0) break;
+            }
+            if (a.cell && a.cell.id && this.cells) {
+              targetIdx = this.cells.findIndex(c => c && c.id === a.cell.id);
+              if (targetIdx >= 0) break;
+            }
+          }
+        }
+        if (targetIdx < 0 || targetIdx >= (this.cells || []).length) return;
         if (this.cells.length <= 1) {
           alert('The notebook must contain at least one cell.');
           return;
         }
-        this.pushHistory('Delete cell #' + (idx + 1));
+        this.pushHistory('Delete cell #' + (targetIdx + 1));
 
-        const cellToDelete = this.cells[idx];
+        const cellToDelete = this.cells[targetIdx];
         const cloned = JSON.parse(JSON.stringify(cellToDelete));
         const now = new Date();
         const timeStr = now.toLocaleTimeString();
@@ -1724,7 +1809,7 @@
         trashItem.id = cloned.id;
         trashItem.cell = cloned;
         trashItem.type = cloned.type || 'code';
-        trashItem.originalIndex = idx;
+        trashItem.originalIndex = targetIdx;
         trashItem.deletedTime = timeStr;
         trashItem.snippet = snippet;
         this._trashList.unshift(trashItem);
@@ -1733,10 +1818,10 @@
         this.trashCount = this._trashList.length;
 
         const scrollY = window.scrollY || window.pageYOffset || (document.documentElement ? document.documentElement.scrollTop : 0);
-        this.cells.splice(idx, 1);
+        this.cells.splice(targetIdx, 1);
         this.cells = this.cells.slice();
 
-        this.undoToastMessage = 'Cell #' + (idx + 1) + ' deleted.';
+        this.undoToastMessage = 'Cell #' + (targetIdx + 1) + ' deleted.';
         this.undoToastVisible = true;
         if (this._toastTimer) clearTimeout(this._toastTimer);
         const self = this;
@@ -1755,9 +1840,27 @@
     procedure onCellTypeChanged(cell: JSValue; newType: string);
     begin
       asm
-        if (cell) {
-          this.pushHistory('Change cell type');
-          cell.type = newType;
+        let targetCell = null;
+        let val = '';
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (!a) continue;
+          if (typeof a === 'string' && (a === 'code' || a === 'markdown')) {
+            val = a;
+          } else if (typeof a === 'object') {
+            if (a.cell && a.cell.id) targetCell = a.cell;
+            else if (a.id && a.type !== undefined) targetCell = a;
+          }
+        }
+        if (targetCell) {
+          const rawCell = targetCell.__bv_raw__ || targetCell;
+          if (val && rawCell.type !== val) {
+            this.pushHistory('Change cell type to ' + val);
+            rawCell.type = val;
+            this.cells = this.cells.slice();
+            if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
+          }
         }
       end;
     end;
@@ -1808,13 +1911,56 @@
       startTime: Double;
     begin
       asm
-        if (!cell || cell.type !== 'code') return;
+        let targetCell = null;
+        let targetIdx = -1;
+
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (!a) continue;
+          if (typeof a === 'object') {
+            if (a.cell && typeof a.cell === 'object' && a.cell.id) {
+              targetCell = a.cell;
+              if (typeof a.$index === 'number') targetIdx = a.$index;
+              break;
+            }
+            if (a.id && a.type !== undefined) {
+              targetCell = a;
+              break;
+            }
+          } else if (typeof a === 'string') {
+            const foundById = (this.cells || []).find(c => c && c.id === a);
+            if (foundById) {
+              targetCell = foundById;
+              break;
+            }
+          }
+        }
+
+        if (targetIdx < 0) {
+          for (let i = 0; i < allArgs.length; i++) {
+            if (typeof allArgs[i] === 'number') {
+              targetIdx = allArgs[i];
+              break;
+            }
+          }
+        }
+
+        if (targetCell && targetCell.__bv_raw__) {
+          targetCell = targetCell.__bv_raw__;
+        }
+
+        if (!targetCell || targetCell.type !== 'code') return;
+
+        if (targetIdx < 0 && this.cells) {
+          targetIdx = this.cells.findIndex(c => c && c.id === targetCell.id);
+        }
 
         this.isRunning = true;
         this.kernelStatus = 'busy';
 
-        cell.status = 'running';
-        cell.outputs = [];
+        targetCell.status = 'running';
+        targetCell.outputs = [];
         this.cells = this.cells.slice();
         if (typeof this.$forceUpdate === 'function') this.$forceUpdate();
 
@@ -1828,9 +1974,9 @@
         if (this._ws && this._ws.readyState === WebSocket.OPEN) {
           const msg = {
             action: 'execute_cell',
-            cell_id: cell.id,
+            cell_id: targetCell.id,
             execution_count: currentExecNum,
-            source: cell.source
+            source: targetCell.source
           };
           this._ws.send(JSON.stringify(msg));
           return;
@@ -1842,13 +1988,13 @@
           this._activeSimTimeout = null;
         }
         this._activeSimTimeout = setTimeout(() => {
-          const src = cell.source || '';
+          const src = targetCell.source || '';
           const t1 = performance.now();
           const elapsed = Math.round(t1 - t0) + 15;
 
-          cell.execution_count = currentExecNum;
-          cell.execution_time_ms = elapsed;
-          cell.status = 'success';
+          targetCell.execution_count = currentExecNum;
+          targetCell.execution_time_ms = elapsed;
+          targetCell.status = 'success';
 
           const outputs = [];
 
@@ -1989,7 +2135,7 @@
             });
           }
 
-          cell.outputs = outputs;
+          targetCell.outputs = outputs;
           this._activeSimTimeout = null;
           this.cells = this.cells.slice();
 
@@ -2007,7 +2153,31 @@
     procedure stopCell(cell: JSValue; index: integer);
     begin
       asm
-        if (!cell) return;
+        let targetCell = null;
+        const allArgs = Array.from(arguments);
+        for (let i = 0; i < allArgs.length; i++) {
+          const a = allArgs[i];
+          if (!a) continue;
+          if (typeof a === 'object') {
+            if (a.cell && typeof a.cell === 'object' && a.cell.id) {
+              targetCell = a.cell;
+              break;
+            }
+            if (a.id && a.type !== undefined) {
+              targetCell = a;
+              break;
+            }
+          } else if (typeof a === 'string') {
+            const foundById = (this.cells || []).find(c => c && c.id === a);
+            if (foundById) {
+              targetCell = foundById;
+              break;
+            }
+          }
+        }
+        if (targetCell && targetCell.__bv_raw__) targetCell = targetCell.__bv_raw__;
+        if (!targetCell) return;
+
         this._runQueue = [];
         if (this._activeSimTimeout) {
           clearTimeout(this._activeSimTimeout);
@@ -2017,13 +2187,13 @@
           try {
             this._ws.send(JSON.stringify({
               action: 'interrupt_cell',
-              cell_id: cell.id
+              cell_id: targetCell.id
             }));
           } catch(e) {}
         }
-        cell.status = 'aborted';
-        cell.outputs = cell.outputs || [];
-        cell.outputs.push({
+        targetCell.status = 'aborted';
+        targetCell.outputs = targetCell.outputs || [];
+        targetCell.outputs.push({
           type: 'stderr',
           text: '⏹ Execution interrupted by user.'
         });

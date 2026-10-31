@@ -62,6 +62,7 @@
 
           <!-- RUN BUTTON (WHEN IDLE) -->
           <button
+            type="button"
             b-if="isCode && (!cell || cell.status !== 'running')"
             class="btn-cell-run"
             title="Run Cell (Shift + Enter)"
@@ -72,6 +73,7 @@
 
           <!-- STOP BUTTON (WHEN RUNNING) -->
           <button
+            type="button"
             b-if="isCode && cell && cell.status === 'running'"
             class="btn-cell-stop"
             title="Stop / Interrupt Execution Immediately"
@@ -170,14 +172,18 @@
     procedure runThisCell;
     begin
       asm
-        if (this.$emit) this.$emit('run', this.cell, this.index);
+        const c = this.cell || null;
+        const idx = (typeof this.index === 'number') ? this.index : 0;
+        if (this.$emit) this.$emit('run', c, idx);
       end;
     end;
 
     procedure stopThisCell;
     begin
       asm
-        if (this.$emit) this.$emit('stop', this.cell, this.index);
+        const c = this.cell || null;
+        const idx = (typeof this.index === 'number') ? this.index : 0;
+        if (this.$emit) this.$emit('stop', c, idx);
       end;
     end;
 
