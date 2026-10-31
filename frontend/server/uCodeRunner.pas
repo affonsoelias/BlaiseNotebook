@@ -490,6 +490,9 @@ begin
       FinalCode.Add('{$mode objfpc}{$H+}');
       FinalCode.Add('{$modeswitch advancedrecords}');
       FinalCode.Add('uses');
+      {$IFDEF UNIX}
+      FinalCode.Add('  cthreads,');
+      {$ENDIF}
       if HasUserUses then
       begin
         FinalCode.Add('  SysUtils, Math, Classes, BlaiseOutput,');
