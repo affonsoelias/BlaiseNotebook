@@ -64,7 +64,7 @@
           <div class="info-line"><span>Run in-place:</span> <code>Ctrl + Enter</code></div>
           <div class="info-line"><span>Add code cell:</span> <code>Alt + C</code></div>
           <div class="info-line"><span>Environment:</span> <strong>FPC 3.2.2 + mORMot 2</strong></div>
-          <div class="info-line"><span>AI / Python:</span> <strong>Python4Delphi 3.13</strong></div>
+          <div class="info-line"><span>AI / Python:</span> <strong>Python</strong></div>
         </div>
       </div>
     </bv-drawer>
@@ -94,7 +94,7 @@
 
     <!-- PERSISTENT FOOTER -->
     <div class="footer-status desktop-only-footer">
-       📐 <strong>BlaiseNotebook v1.0</strong> | Object Pascal + Synopse mORMot 2 + Python4Delphi | License: <strong>Modified LGPL v2.1 (with Static Linking Exception)</strong> | Theme: <strong>{{ currentThemeName }}</strong>
+       📐 <strong>BlaiseNotebook v1.0</strong> | Object Pascal + Synopse mORMot 2 | License: <strong>Modified LGPL v2.1 (with Static Linking Exception)</strong> | Theme: <strong>{{ currentThemeName }}</strong>
     </div>
   </div>
 </template>
