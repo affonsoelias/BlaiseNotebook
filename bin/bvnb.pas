@@ -730,37 +730,37 @@ begin
   end
   else if Canonical = 'bvnb-math' then
   begin
-    ACategory := 'Official Scientific Package (frontend/server/packages/external/math)';
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/bvnb-math)';
     AUnitName := 'BlaiseMathKernel.pas';
     Result := True;
   end
   else if Canonical = 'bvnb-pandas' then
   begin
-    ACategory := 'Official Scientific Package (frontend/server/packages/external/pandas)';
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/bvnb-pandas)';
     AUnitName := 'BlaisePandas.pas';
     Result := True;
   end
   else if Canonical = 'bvnb-sklearn' then
   begin
-    ACategory := 'Official Scientific Package (frontend/server/packages/external/sklearn)';
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/bvnb-sklearn)';
     AUnitName := 'BlaiseSklearn.pas';
     Result := True;
   end
   else if Canonical = 'bvnb-datascience' then
   begin
-    ACategory := 'Official Scientific Package (frontend/server/packages/external/datascience)';
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/bvnb-datascience)';
     AUnitName := 'BlaiseDataScience.pas';
     Result := True;
   end
   else if Canonical = 'bvnb-python-bridge' then
   begin
-    ACategory := 'Official Scientific Package (frontend/server/packages/external/python_bridge)';
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/bvnb-python-bridge)';
     AUnitName := 'BlaisePyKernel.pas';
     Result := True;
   end
   else if Canonical = 'bvnb-tool-data-generator' then
   begin
-    ACategory := 'Official Auxiliary Tool (frontend/server/packages/tools/data_generator)';
+    ACategory := 'Official Auxiliary Tool (frontend/server/packages/tools/bvnb-tool-data-generator)';
     AUnitName := 'uDataGenerator.pas';
     Result := True;
   end
@@ -770,6 +770,22 @@ begin
     AUnitName := 'uToolTemplate.pas';
     Result := True;
   end;
+end;
+
+function GetShortAlias(const ACanonical: string): string;
+var
+  L: string;
+begin
+  L := LowerCase(Trim(ACanonical));
+  if L = 'bvnb-core' then Result := 'core'
+  else if L = 'bvnb-math' then Result := 'math'
+  else if L = 'bvnb-pandas' then Result := 'pandas'
+  else if L = 'bvnb-sklearn' then Result := 'sklearn'
+  else if L = 'bvnb-datascience' then Result := 'datascience'
+  else if L = 'bvnb-python-bridge' then Result := 'python_bridge'
+  else if L = 'bvnb-tool-data-generator' then Result := 'data_generator'
+  else if L = 'bvnb-tool-template' then Result := '_template'
+  else Result := '';
 end;
 
 // =====================================================================
@@ -837,7 +853,9 @@ var
             Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + ']');
             if MUnit <> '' then
               Write(' (Unit: ' + MUnit + ')');
-            if (MName <> SR.Name) and (Pos('bvnb-', MName) = 1) then
+            if GetShortAlias(MName) <> '' then
+              Write(' [alias: ' + GetShortAlias(MName) + ']')
+            else if (MName <> SR.Name) and (Pos('bvnb-', MName) = 1) then
               Write(' [alias: ' + SR.Name + ']');
             WriteLn('');
             if MDesc <> '' then

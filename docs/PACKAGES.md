@@ -14,36 +14,44 @@ The backend execution engine (`frontend/server/`) isolates all libraries into se
 frontend/server/
 ├── packages/                                  <-- Central Packages Root
 │   │
-│   ├── core/                                  <-- Essential Notebook Core
+│   ├── core/                                  <-- Essential Notebook Core (bvnb-core)
 │   │   ├── BlaiseOutput.pas                   (ShowText, ShowHtml, ShowChart, ShowTable)
 │   │   └── package.json
 │   │
-│   └── external/                              <-- All Modular Libraries Live Here
+│   ├── tools/                                 <-- Official Auxiliary Tools
+│   │   ├── _template/                         <-- Tool scaffold template
+│   │   └── bvnb-tool-data-generator/          <-- Synthetic data & matrix generator
+│   │       ├── uDataGenerator.pas
+│   │       ├── package.json
+│   │       ├── doc/
+│   │       └── examples/
+│   │
+│   └── external/                              <-- All Modular Scientific Libraries Live Here
 │       │
 │       ├── _template/                         <-- Ready-to-use template for new libraries
 │       │   ├── MyLibrary.pas
 │       │   ├── package.json
 │       │   └── requirements.txt
 │       │
-│       ├── pandas/                            <-- Official Pandas & NumPy Wrapper
+│       ├── bvnb-pandas/                       <-- Official Pandas & NumPy Wrapper [alias: pandas]
 │       │   ├── BlaisePandas.pas               (TPyDataFrame, TPySeries, TPyGroupBy)
 │       │   ├── package.json
 │       │   └── requirements.txt               (pandas>=2.0.0, numpy>=1.24.0)
 │       │
-│       ├── sklearn/                           <-- Official Scikit-Learn Wrapper
+│       ├── bvnb-sklearn/                      <-- Official Scikit-Learn Wrapper [alias: sklearn]
 │       │   ├── BlaiseSklearn.pas              (Regressors, Classifiers, Evaluation)
 │       │   ├── package.json
 │       │   └── requirements.txt               (scikit-learn>=1.3.0)
 │       │
-│       ├── math/                              <-- High-Performance Native Pascal Math
+│       ├── bvnb-math/                         <-- High-Performance Native Pascal Math [alias: math]
 │       │   ├── BlaiseMathKernel.pas           (TVector, fast native statistics)
 │       │   └── package.json
 │       │
-│       ├── python_bridge/                     <-- PythonEngine Bridge
+│       ├── bvnb-python-bridge/                <-- PythonEngine Bridge [alias: python_bridge]
 │       │   ├── BlaisePyKernel.pas             (Auto-discovery of local Python DLLs)
 │       │   └── package.json
 │       │
-│       ├── datascience/                       <-- Backward-Compatibility Aggregator
+│       ├── bvnb-datascience/                  <-- Backward-Compatibility Aggregator [alias: datascience]
 │       │   ├── BlaiseDataScience.pas          (Re-exports Pandas & Sklearn)
 │       │   └── package.json
 │       │
