@@ -14,8 +14,8 @@ unit BlaiseSklearn;
   - PyTrainTestSplit, PyAccuracyScore, PyR2Score, PyConfusionMatrix
 }
 
-{ objfpc}{+}
-{ advancedrecords}
+{$mode objfpc}{$H+}
+{$modeswitch advancedrecords}
 
 interface
 

@@ -85,11 +85,13 @@ begin
     FPackagesDir := ExpandFileName('frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages');
 
   // Purge any stale package unit artifacts from workspace to avoid PPU checksum mismatch
-  if FindFirst(FWorkspaceDir + DirectorySeparator + 'Blaise*.*', faAnyFile, SR) = 0 then
+  if FindFirst(FWorkspaceDir + DirectorySeparator + '*.*', faAnyFile, SR) = 0 then
   begin
     try
       repeat
-        if (LowerCase(ExtractFileExt(SR.Name)) = '.ppu') or (LowerCase(ExtractFileExt(SR.Name)) = '.o') then
+        if (LowerCase(ExtractFileExt(SR.Name)) = '.ppu') or
+           (LowerCase(ExtractFileExt(SR.Name)) = '.o') or
+           (LowerCase(ExtractFileExt(SR.Name)) = '.obj') then
           DeleteFile(FWorkspaceDir + DirectorySeparator + SR.Name);
       until FindNext(SR) <> 0;
     finally
@@ -268,11 +270,17 @@ begin
   EnsureSessionDaemon;
 
   // 3. Purge workspace binaries and temp files
-  if FindFirst(FWorkspaceDir + DirectorySeparator + 'cell_*.*', faAnyFile, SR) = 0 then
+  if FindFirst(FWorkspaceDir + DirectorySeparator + '*.*', faAnyFile, SR) = 0 then
   begin
     try
       repeat
-        DeleteFile(FWorkspaceDir + DirectorySeparator + SR.Name);
+        if (LowerCase(ExtractFileExt(SR.Name)) = '.ppu') or
+           (LowerCase(ExtractFileExt(SR.Name)) = '.o') or
+           (LowerCase(ExtractFileExt(SR.Name)) = '.obj') or
+           (LowerCase(ExtractFileExt(SR.Name)) = '.exe') or
+           (LowerCase(ExtractFileExt(SR.Name)) = '.hash') or
+           (Pos('cell_', LowerCase(SR.Name)) = 1) then
+          DeleteFile(FWorkspaceDir + DirectorySeparator + SR.Name);
       until FindNext(SR) <> 0;
     finally
       FindClose(SR);

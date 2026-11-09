@@ -1450,8 +1450,8 @@ begin
   WriteLn('======================================================================');
   WriteLn('  BlaiseNotebook Builder - Full-Stack Compilation');
   WriteLn('======================================================================');
-  WriteLn('  [1/2] Building Reactive Frontend SPA (bv run build)...');
-  Code := ExecCmdInteractive('"' + BvExe + '" run build', FrontendDir);
+  WriteLn('  [1/2] Building Reactive Frontend SPA (bv build)...');
+  Code := ExecCmdInteractive('"' + BvExe + '" build', FrontendDir);
   if Code <> 0 then
   begin
     WriteLn('  [ERROR] Frontend SPA compilation failed.');

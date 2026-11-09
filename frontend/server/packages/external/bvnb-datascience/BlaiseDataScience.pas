@@ -7,8 +7,8 @@ unit BlaiseDataScience;
   Re-exports BlaisePandas and BlaiseSklearn for existing notebooks and courses.
 }
 
-{ objfpc}{+}
-{ advancedrecords}
+{$mode objfpc}{$H+}
+{$modeswitch advancedrecords}
 
 interface
 

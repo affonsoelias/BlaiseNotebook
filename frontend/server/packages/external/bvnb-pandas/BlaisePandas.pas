@@ -11,8 +11,8 @@ unit BlaisePandas;
   - Seamless Chart.js and Data Table visual outputs
 }
 
-{ objfpc}{+}
-{ advancedrecords}
+{$mode objfpc}{$H+}
+{$modeswitch advancedrecords}
 
 interface
 
