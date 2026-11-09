@@ -1,5 +1,5 @@
 {
-  "name": "blaise-sklearn",
+  "name": "bvnb-sklearn",
   "version": "1.0.0",
   "description": "Strongly-typed Object Pascal wrapper for Scikit-Learn Machine Learning models",
   "main": "BlaiseSklearn.pas",

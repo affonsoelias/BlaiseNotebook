@@ -1,7 +1,7 @@
 {
-  "name": "blaise-core",
+  "name": "bvnb-core",
   "version": "1.0.0",
-  "description": "Essential I/O and display protocol for BlaiseNotebook",
+  "description": "Essential I/O and display protocol for BlaiseNotebook kernel",
   "main": "BlaiseOutput.pas",
   "type": "core"
 }

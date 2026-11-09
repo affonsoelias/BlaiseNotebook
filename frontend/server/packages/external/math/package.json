@@ -1,5 +1,5 @@
 {
-  "name": "blaise-math",
+  "name": "bvnb-math",
   "version": "1.0.0",
   "description": "High-performance native Object Pascal mathematics, vectors, and statistics",
   "main": "BlaiseMathKernel.pas",

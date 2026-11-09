@@ -1,5 +1,5 @@
 {
-  "name": "blaise-pandas",
+  "name": "bvnb-pandas",
   "version": "1.0.0",
   "description": "Strongly-typed Object Pascal wrapper for Python Pandas & NumPy DataFrames",
   "main": "BlaisePandas.pas",

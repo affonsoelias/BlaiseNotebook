@@ -1,5 +1,5 @@
 {
-  "name": "blaise-datascience",
+  "name": "bvnb-datascience",
   "version": "1.0.0",
   "description": "Backward-compatible aggregate wrapper exporting BlaisePandas and BlaiseSklearn",
   "main": "BlaiseDataScience.pas",

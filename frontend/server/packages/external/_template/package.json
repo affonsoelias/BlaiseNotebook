@@ -1,5 +1,5 @@
 {
-  "name": "my-library-template",
+  "name": "bvnb-external-template",
   "version": "1.0.0",
   "description": "Starter template for BlaiseNotebook modular external packages",
   "main": "MyLibrary.pas",

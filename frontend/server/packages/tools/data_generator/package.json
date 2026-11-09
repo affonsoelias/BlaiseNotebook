@@ -1,5 +1,5 @@
 {
-  "name": "data_generator",
+  "name": "bvnb-tool-data-generator",
   "version": "1.0.0",
   "description": "Official synthetic data generator for test vectors, regression datasets, and matrices",
   "author": "BlaiseNotebook Official",

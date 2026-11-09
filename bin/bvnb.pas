@@ -668,6 +668,110 @@ begin
   {$ENDIF}
 end;
 
+function IsReservedPackageName(const AName: string): Boolean;
+var
+  L: string;
+begin
+  L := LowerCase(Trim(AName));
+  if (Length(L) > 0) and (L[1] = '@') then
+    L := Copy(L, 2, MaxInt);
+
+  // 1. Official prefixes
+  if (Pos('bvnb-', L) = 1) or (Pos('blaise-', L) = 1) then
+    Exit(True);
+
+  // 2. Reserved core, scientific, and tool aliases
+  Result := (L = 'core') or (L = 'math') or (L = 'pandas') or (L = 'sklearn') or
+            (L = 'datascience') or (L = 'python_bridge') or (L = 'bridge') or
+            (L = 'python') or (L = 'tools') or (L = 'data_generator') or
+            (L = 'sdk') or (L = 'kernel') or (L = 'runtime') or (L = 'std') or
+            (L = 'bvnb');
+end;
+
+function ResolveCanonicalPackageName(const AName: string): string;
+var
+  L: string;
+begin
+  L := LowerCase(Trim(AName));
+  if (L = 'core') or (L = 'blaise-core') or (L = 'bvnb-core') then
+    Result := 'bvnb-core'
+  else if (L = 'math') or (L = 'blaise-math') or (L = 'bvnb-math') then
+    Result := 'bvnb-math'
+  else if (L = 'pandas') or (L = 'blaise-pandas') or (L = 'bvnb-pandas') then
+    Result := 'bvnb-pandas'
+  else if (L = 'sklearn') or (L = 'blaise-sklearn') or (L = 'bvnb-sklearn') then
+    Result := 'bvnb-sklearn'
+  else if (L = 'datascience') or (L = 'blaise-datascience') or (L = 'bvnb-datascience') then
+    Result := 'bvnb-datascience'
+  else if (L = 'python_bridge') or (L = 'bridge') or (L = 'blaise-python-bridge') or (L = 'bvnb-python-bridge') then
+    Result := 'bvnb-python-bridge'
+  else if (L = 'data_generator') or (L = 'generator') or (L = 'bvnb-tool-data-generator') then
+    Result := 'bvnb-tool-data-generator'
+  else if (L = '_template') or (L = 'bvnb-tool-template') or (L = 'tool_template') then
+    Result := 'bvnb-tool-template'
+  else
+    Result := AName;
+end;
+
+function IsOfficialBuiltinPackage(const AName: string; out ACategory, AUnitName: string): Boolean;
+var
+  Canonical: string;
+begin
+  Result := False;
+  ACategory := '';
+  AUnitName := '';
+  Canonical := ResolveCanonicalPackageName(AName);
+
+  if Canonical = 'bvnb-core' then
+  begin
+    ACategory := 'Official Core System (frontend/server/packages/core)';
+    AUnitName := 'BlaiseOutput.pas';
+    Result := True;
+  end
+  else if Canonical = 'bvnb-math' then
+  begin
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/math)';
+    AUnitName := 'BlaiseMathKernel.pas';
+    Result := True;
+  end
+  else if Canonical = 'bvnb-pandas' then
+  begin
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/pandas)';
+    AUnitName := 'BlaisePandas.pas';
+    Result := True;
+  end
+  else if Canonical = 'bvnb-sklearn' then
+  begin
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/sklearn)';
+    AUnitName := 'BlaiseSklearn.pas';
+    Result := True;
+  end
+  else if Canonical = 'bvnb-datascience' then
+  begin
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/datascience)';
+    AUnitName := 'BlaiseDataScience.pas';
+    Result := True;
+  end
+  else if Canonical = 'bvnb-python-bridge' then
+  begin
+    ACategory := 'Official Scientific Package (frontend/server/packages/external/python_bridge)';
+    AUnitName := 'BlaisePyKernel.pas';
+    Result := True;
+  end
+  else if Canonical = 'bvnb-tool-data-generator' then
+  begin
+    ACategory := 'Official Auxiliary Tool (frontend/server/packages/tools/data_generator)';
+    AUnitName := 'uDataGenerator.pas';
+    Result := True;
+  end
+  else if Canonical = 'bvnb-tool-template' then
+  begin
+    ACategory := 'Official Tool Template (frontend/server/packages/tools/_template)';
+    AUnitName := 'uToolTemplate.pas';
+    Result := True;
+  end;
+end;
+
 // =====================================================================
 //  PACKAGE & EXTENSIONS MANAGER (bvnb pkg)
 // =====================================================================
@@ -685,7 +789,7 @@ var
   procedure ListDirPackages(const ATitle, ABaseDir: string);
   var
     SR: TSearchRec;
-    ItemDir, MFile, MVer, MDesc, MUnit: string;
+    ItemDir, MFile, MName, MVer, MDesc, MUnit: string;
     Count: Integer;
   begin
     WriteLn('  --- ' + ATitle + ' ---');
@@ -699,11 +803,13 @@ var
     MFile := IncludeTrailingPathDelimiter(ABaseDir) + 'package.json';
     if FileExists(MFile) then
     begin
+      MName := ReadPackageJsonField(MFile, 'name');
+      if MName = '' then MName := ExtractFileName(ExcludeTrailingPathDelimiter(ABaseDir));
       MVer := ReadPackageJsonField(MFile, 'version');
       if MVer = '' then MVer := '1.0.0';
       MDesc := ReadPackageJsonField(MFile, 'description');
       MUnit := ReadPackageJsonField(MFile, 'main');
-      Write('    * ' + PadRight(ExtractFileName(ExcludeTrailingPathDelimiter(ABaseDir)), 22) + ' [v' + MVer + ']');
+      Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + ']');
       if MUnit <> '' then
         Write(' (Unit: ' + MUnit + ')');
       WriteLn('');
@@ -720,15 +826,19 @@ var
           begin
             ItemDir := IncludeTrailingPathDelimiter(ABaseDir) + SR.Name;
             MFile := ItemDir + DirectorySeparator + 'package.json';
+            MName := ReadPackageJsonField(MFile, 'name');
+            if MName = '' then MName := SR.Name;
             MVer := ReadPackageJsonField(MFile, 'version');
             if MVer = '' then MVer := '1.0.0';
             MDesc := ReadPackageJsonField(MFile, 'description');
             MUnit := ReadPackageJsonField(MFile, 'main');
             if MUnit = '' then MUnit := SR.Name + '.pas';
 
-            Write('    * ' + PadRight(SR.Name, 22) + ' [v' + MVer + ']');
+            Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + ']');
             if MUnit <> '' then
               Write(' (Unit: ' + MUnit + ')');
+            if (MName <> SR.Name) and (Pos('bvnb-', MName) = 1) then
+              Write(' [alias: ' + SR.Name + ']');
             WriteLn('');
             if MDesc <> '' then
               WriteLn('        ' + MDesc);
@@ -902,6 +1012,24 @@ begin
     WriteLn('======================================================================');
     WriteLn('');
 
+    // Security & Namespace Protection: Block installing official built-in packages in ./packages/
+    if IsOfficialBuiltinPackage(PkgName, PkgDesc, MainUnit) then
+    begin
+      WriteLn('  [INFO] "' + ResolveCanonicalPackageName(PkgName) + '" is already an official built-in component:');
+      WriteLn('         Category: ' + PkgDesc);
+      WriteLn('         Unit:     ' + MainUnit);
+      WriteLn('');
+      WriteLn('         It is permanently included and ready to use in your notebooks:');
+      WriteLn('           uses');
+      WriteLn('             BlaiseOutput,');
+      WriteLn('             ' + ChangeFileExt(MainUnit, '') + ';');
+      WriteLn('');
+      WriteLn('         Installation into ./packages/ blocked to prevent namespace shadowing.');
+      WriteLn('======================================================================');
+      WriteLn('');
+      Exit;
+    end;
+
     ForceDirectories(UserPkgDir);
     DestDir := UserPkgDir + DirectorySeparator + PkgName;
 
@@ -1019,10 +1147,34 @@ begin
       if (ParamStr(i) = '--tool') or (ParamStr(i) = '-t') then
         IsTool := True;
 
+    // Security & Namespace Reservation Check
+    if (not IsTool) and IsReservedPackageName(PkgArg) then
+    begin
+      WriteLn('');
+      WriteLn('  [ERROR] Cannot create third-party package with reserved name: "' + PkgArg + '"');
+      WriteLn('          Names starting with "bvnb-", "blaise-", or matching official components');
+      WriteLn('          (core, math, pandas, sklearn, datascience, python_bridge, data_generator, tools, sdk)');
+      WriteLn('          are strictly reserved for the official BlaiseNotebook distribution.');
+      WriteLn('');
+      WriteLn('  Tip: Choose a unique community name (e.g. "my-' + PkgArg + '", "fast-' + PkgArg + '").');
+      WriteLn('       If you are authoring an official tool, use: bvnb pkg create <name> --tool');
+      WriteLn('');
+      Halt(1);
+    end;
+
     if IsTool then
-      DestDir := ToolsDir + DirectorySeparator + PkgArg
+    begin
+      if (Pos('bvnb-tool-', PkgArg) <> 1) and (Pos('bvnb-', PkgArg) <> 1) then
+        PkgName := 'bvnb-tool-' + PkgArg
+      else
+        PkgName := PkgArg;
+      DestDir := ToolsDir + DirectorySeparator + PkgArg;
+    end
     else
+    begin
+      PkgName := PkgArg;
       DestDir := UserPkgDir + DirectorySeparator + PkgArg;
+    end;
 
     if DirectoryExists(DestDir) then
     begin
@@ -1086,7 +1238,7 @@ begin
     ManifestLines := TStringList.Create;
     try
       ManifestLines.Add('{');
-      ManifestLines.Add('  "name": "' + PkgArg + '",');
+      ManifestLines.Add('  "name": "' + PkgName + '",');
       ManifestLines.Add('  "version": "1.0.0",');
       if IsTool then
         ManifestLines.Add('  "description": "Official auxiliary tool ' + PkgArg + ' for BlaiseNotebook",')
