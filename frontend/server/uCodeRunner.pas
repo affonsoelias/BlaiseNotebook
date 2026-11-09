@@ -292,40 +292,58 @@ end;
 
 procedure TCodeRunner.DiscoverPackageDirs(ADirs: TStrings);
 var
-  CoreDir, ExtDir: string;
-  SR: TSearchRec;
-begin
-  if ADirs = nil then Exit;
+  CoreDir, ExtDir, ToolsDir, UserPkgDir, RootUserPkgDir: string;
 
-  // 1. Core package dir
-  CoreDir := FPackagesDir + DirectorySeparator + 'core';
-  if DirectoryExists(CoreDir) and (ADirs.IndexOf(CoreDir) < 0) then
-    ADirs.Add(CoreDir);
-
-  // 2. Discover all subdirectories under packages/external/
-  ExtDir := FPackagesDir + DirectorySeparator + 'external';
-  if DirectoryExists(ExtDir) then
+  procedure AddDirAndSubdirs(const ABaseDir: string);
+  var
+    SubSR: TSearchRec;
   begin
-    if ADirs.IndexOf(ExtDir) < 0 then
-      ADirs.Add(ExtDir);
+    if (ABaseDir = '') or (not DirectoryExists(ABaseDir)) then Exit;
+    if ADirs.IndexOf(ABaseDir) < 0 then
+      ADirs.Add(ABaseDir);
 
-    if FindFirst(ExtDir + DirectorySeparator + '*', faAnyFile, SR) = 0 then
+    if FindFirst(ABaseDir + DirectorySeparator + '*', faAnyFile, SubSR) = 0 then
     begin
       try
         repeat
-          if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') then
+          if ((SubSR.Attr and faDirectory) <> 0) and (SubSR.Name <> '.') and (SubSR.Name <> '..') and (SubSR.Name[1] <> '.') then
           begin
-            if DirectoryExists(ExtDir + DirectorySeparator + SR.Name) and (ADirs.IndexOf(ExtDir + DirectorySeparator + SR.Name) < 0) then
-              ADirs.Add(ExtDir + DirectorySeparator + SR.Name);
+            if DirectoryExists(ABaseDir + DirectorySeparator + SubSR.Name) and (ADirs.IndexOf(ABaseDir + DirectorySeparator + SubSR.Name) < 0) then
+              ADirs.Add(ABaseDir + DirectorySeparator + SubSR.Name);
           end;
-        until FindNext(SR) <> 0;
+        until FindNext(SubSR) <> 0;
       finally
-        FindClose(SR);
+        FindClose(SubSR);
       end;
     end;
   end;
 
-  // 4. Current workspace dir
+begin
+  if ADirs = nil then Exit;
+
+  // 1. User / Third-party packages in active workspace (highest precedence)
+  UserPkgDir := FWorkspaceDir + DirectorySeparator + 'packages';
+  AddDirAndSubdirs(UserPkgDir);
+
+  // Also check ./packages in current working directory
+  RootUserPkgDir := ExpandFileName('packages');
+  if (RootUserPkgDir <> '') and (RootUserPkgDir <> UserPkgDir) and (RootUserPkgDir <> FPackagesDir) then
+    AddDirAndSubdirs(RootUserPkgDir);
+
+  // 2. Official auxiliary tools (frontend/server/packages/tools)
+  ToolsDir := FPackagesDir + DirectorySeparator + 'tools';
+  AddDirAndSubdirs(ToolsDir);
+
+  // 3. Official scientific packages (frontend/server/packages/external)
+  ExtDir := FPackagesDir + DirectorySeparator + 'external';
+  AddDirAndSubdirs(ExtDir);
+
+  // 4. Official core package dir (frontend/server/packages/core)
+  CoreDir := FPackagesDir + DirectorySeparator + 'core';
+  if DirectoryExists(CoreDir) and (ADirs.IndexOf(CoreDir) < 0) then
+    ADirs.Add(CoreDir);
+
+  // 5. Current workspace dir
   if (FWorkspaceDir <> '') and DirectoryExists(FWorkspaceDir) and (ADirs.IndexOf(FWorkspaceDir) < 0) then
     ADirs.Add(FWorkspaceDir);
 end;

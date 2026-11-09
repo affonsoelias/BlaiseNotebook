@@ -7,8 +7,10 @@ program bvnb;
   =====================================================================
    Commands:
      bvnb doctor                  Diagnoses environment (Git, FPC, Lazarus, bv, Python, NumPy, Pandas, Sklearn)
-     bvnb self-update [--check]   Syncs & recompiles BlaiseNotebook directly from GitHub via Git
+     bvnb self-update [--check]   Syncs & recompiles BlaiseNotebook directly from GitHub via Git (--force supported)
      bvnb channel [use <name>]    Inspects or switches repository channel (main | develop)
+     bvnb rollback                Restores previous working CLI binary from persistent backup
+     bvnb pkg <list|search|...>   Manages official and community packages / tools
      bvnb build                   Compiles frontend SPA (bv run build) and native mORMot 2 server (bv mormot build)
      bvnb run                     Starts the native BlaiseNotebook mORMot 2 server
      bvnb setup-python            Installs numpy, pandas, and scikit-learn into the detected Python 3 environment
@@ -479,6 +481,698 @@ end;
 //  2. BUILD & RUN COMMANDS (bvnb build | bvnb run | bvnb setup-python)
 // =====================================================================
 
+
+function PadRight(const S: string; const Len: Integer): string;
+begin
+  Result := S;
+  while Length(Result) < Len do
+    Result := Result + ' ';
+end;
+
+function ReadPackageJsonField(const AFilePath, AField: string): string;
+var
+  Lines: TStringList;
+  i, p: Integer;
+  Line, Key: string;
+begin
+  Result := '';
+  if not FileExists(AFilePath) then Exit;
+  Lines := TStringList.Create;
+  try
+    Lines.LoadFromFile(AFilePath);
+    Key := '"' + LowerCase(AField) + '"';
+    for i := 0 to Lines.Count - 1 do
+    begin
+      Line := Lines[i];
+      p := Pos(Key, LowerCase(Line));
+      if p > 0 then
+      begin
+        p := Pos(':', Line);
+        if p > 0 then
+        begin
+          Line := Trim(Copy(Line, p + 1, MaxInt));
+          if (Length(Line) > 0) and (Line[Length(Line)] = ',') then
+            SetLength(Line, Length(Line) - 1);
+          Line := Trim(Line);
+          if (Length(Line) >= 2) and (Line[1] = '"') and (Line[Length(Line)] = '"') then
+            Line := Copy(Line, 2, Length(Line) - 2);
+          Result := Trim(Line);
+          Exit;
+        end;
+      end;
+    end;
+  finally
+    Lines.Free;
+  end;
+end;
+
+function DeleteDirRecursive(const ADir: string): Boolean;
+var
+  SR: TSearchRec;
+  Path: string;
+begin
+  Result := True;
+  Path := IncludeTrailingPathDelimiter(ADir);
+  if FindFirst(Path + '*', faAnyFile, SR) = 0 then
+  begin
+    try
+      repeat
+        if (SR.Name <> '.') and (SR.Name <> '..') then
+        begin
+          if (SR.Attr and faDirectory) <> 0 then
+            DeleteDirRecursive(Path + SR.Name)
+          else
+            DeleteFile(Path + SR.Name);
+        end;
+      until FindNext(SR) <> 0;
+    finally
+      FindClose(SR);
+    end;
+  end;
+  RemoveDir(ADir);
+end;
+
+function CopyFileSimple(const Src, Dst: string): Boolean;
+var
+  SrcStream, DstStream: TFileStream;
+begin
+  Result := False;
+  try
+    SrcStream := TFileStream.Create(Src, fmOpenRead or fmShareDenyWrite);
+    try
+      DstStream := TFileStream.Create(Dst, fmCreate);
+      try
+        DstStream.CopyFrom(SrcStream, SrcStream.Size);
+        Result := True;
+      finally
+        DstStream.Free;
+      end;
+    finally
+      SrcStream.Free;
+    end;
+  except
+    Result := False;
+  end;
+end;
+
+function CopyDirectory(const SrcDir, DstDir: string): Boolean;
+var
+  SR: TSearchRec;
+  SrcPath, DstPath: string;
+begin
+  Result := True;
+  SrcPath := IncludeTrailingPathDelimiter(SrcDir);
+  DstPath := IncludeTrailingPathDelimiter(DstDir);
+  ForceDirectories(DstPath);
+
+  if FindFirst(SrcPath + '*', faAnyFile, SR) = 0 then
+  begin
+    try
+      repeat
+        if (SR.Name <> '.') and (SR.Name <> '..') then
+        begin
+          if (SR.Attr and faDirectory) <> 0 then
+            CopyDirectory(SrcPath + SR.Name, DstPath + SR.Name)
+          else
+            CopyFileSimple(SrcPath + SR.Name, DstPath + SR.Name);
+        end;
+      until FindNext(SR) <> 0;
+    finally
+      FindClose(SR);
+    end;
+  end;
+end;
+
+// =====================================================================
+//  PACKAGE & EXTENSIONS MANAGER (bvnb pkg)
+// =====================================================================
+
+procedure CmdPackage;
+var
+  SubCmd, PkgArg, PkgName, PkgVer, RepoDir, PackagesDir, CoreDir, ExtDir, ToolsDir, UserPkgDir: string;
+  LocalEcoRepo, LocalEcoPkg, ManifestFile, PkgDesc, MainUnit, UnitName, TemplateDir, DestDir: string;
+  EcoJsonFile, EcoContent, TarCmd, DummyOut, PyExe, PyVer, PySource: string;
+  Lines, ManifestLines: TStringList;
+  IsTool, FoundAny: Boolean;
+  p, i: Integer;
+  SR: TSearchRec;
+
+  procedure ListDirPackages(const ATitle, ABaseDir: string);
+  var
+    SR: TSearchRec;
+    ItemDir, MFile, MVer, MDesc, MUnit: string;
+    Count: Integer;
+  begin
+    WriteLn('  --- ' + ATitle + ' ---');
+    if not DirectoryExists(ABaseDir) then
+    begin
+      WriteLn('      (Directory not found: ' + ExtractRelativePath(GetCurrentDir + DirectorySeparator, ABaseDir) + ')');
+      WriteLn('');
+      Exit;
+    end;
+    Count := 0;
+    MFile := IncludeTrailingPathDelimiter(ABaseDir) + 'package.json';
+    if FileExists(MFile) then
+    begin
+      MVer := ReadPackageJsonField(MFile, 'version');
+      if MVer = '' then MVer := '1.0.0';
+      MDesc := ReadPackageJsonField(MFile, 'description');
+      MUnit := ReadPackageJsonField(MFile, 'main');
+      Write('    * ' + PadRight(ExtractFileName(ExcludeTrailingPathDelimiter(ABaseDir)), 22) + ' [v' + MVer + ']');
+      if MUnit <> '' then
+        Write(' (Unit: ' + MUnit + ')');
+      WriteLn('');
+      if MDesc <> '' then
+        WriteLn('        ' + MDesc);
+      Inc(Count);
+    end;
+
+    if FindFirst(IncludeTrailingPathDelimiter(ABaseDir) + '*', faAnyFile, SR) = 0 then
+    begin
+      try
+        repeat
+          if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') and (SR.Name[1] <> '.') then
+          begin
+            ItemDir := IncludeTrailingPathDelimiter(ABaseDir) + SR.Name;
+            MFile := ItemDir + DirectorySeparator + 'package.json';
+            MVer := ReadPackageJsonField(MFile, 'version');
+            if MVer = '' then MVer := '1.0.0';
+            MDesc := ReadPackageJsonField(MFile, 'description');
+            MUnit := ReadPackageJsonField(MFile, 'main');
+            if MUnit = '' then MUnit := SR.Name + '.pas';
+
+            Write('    * ' + PadRight(SR.Name, 22) + ' [v' + MVer + ']');
+            if MUnit <> '' then
+              Write(' (Unit: ' + MUnit + ')');
+            WriteLn('');
+            if MDesc <> '' then
+              WriteLn('        ' + MDesc);
+            Inc(Count);
+          end;
+        until FindNext(SR) <> 0;
+      finally
+        FindClose(SR);
+      end;
+    end;
+    if Count = 0 then
+      WriteLn('      (No packages found)');
+    WriteLn('');
+  end;
+
+begin
+  RepoDir := GetRepoRoot;
+  PackagesDir := RepoDir + DirectorySeparator + 'frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages';
+  CoreDir := PackagesDir + DirectorySeparator + 'core';
+  ExtDir := PackagesDir + DirectorySeparator + 'external';
+  ToolsDir := PackagesDir + DirectorySeparator + 'tools';
+  UserPkgDir := GetCurrentDir + DirectorySeparator + 'packages';
+
+  SubCmd := '';
+  PkgArg := '';
+  if ParamCount >= 2 then
+    SubCmd := LowerCase(Trim(ParamStr(2)));
+  if ParamCount >= 3 then
+    PkgArg := Trim(ParamStr(3));
+
+  if (SubCmd = 'list') or (SubCmd = 'ls') or (SubCmd = '') then
+  begin
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Packages & Tools Registry');
+    WriteLn('======================================================================');
+    WriteLn('  Workspace Dir:  ', GetCurrentDir);
+    WriteLn('  Official Dir:   ', PackagesDir);
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    ListDirPackages('Official Core System (frontend/server/packages/core)', CoreDir);
+    ListDirPackages('Official Scientific Packages (frontend/server/packages/external)', ExtDir);
+    ListDirPackages('Official Auxiliary Tools (frontend/server/packages/tools)', ToolsDir);
+    ListDirPackages('Workspace Third-Party Packages (./packages/)', UserPkgDir);
+
+    WriteLn('======================================================================');
+    WriteLn('  Tips:');
+    WriteLn('    bvnb pkg search [query]       Search community registry packages');
+    WriteLn('    bvnb pkg install <name>       Install package into ./packages/');
+    WriteLn('    bvnb pkg create <name>        Scaffold new package in ./packages/');
+    WriteLn('    bvnb pkg create <name> --tool Scaffold official tool in packages/tools/');
+    WriteLn('    bvnb pkg remove <name>        Remove third-party package from ./packages/');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
+  if (SubCmd = 'search') or (SubCmd = 'find') then
+  begin
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Ecosystem Registry Search');
+    WriteLn('======================================================================');
+    if PkgArg <> '' then
+      WriteLn('  Search Query:   "', PkgArg, '"')
+    else
+      WriteLn('  Listing all available ecosystem packages');
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    // Check local ecosystem repository first: C:\Users\Pichau\Documents\blaiseNotebook-ecosystem
+    LocalEcoRepo := 'C:' + DirectorySeparator + 'Users' + DirectorySeparator + 'Pichau' + DirectorySeparator + 'Documents' + DirectorySeparator + 'blaiseNotebook-ecosystem';
+    EcoJsonFile := LocalEcoRepo + DirectorySeparator + 'ecosystem.json';
+
+    FoundAny := False;
+    if FileExists(EcoJsonFile) then
+    begin
+      WriteLn('  [+] Connected to local ecosystem registry: ' + LocalEcoRepo);
+      WriteLn('');
+      // Scan packages directory in blaiseNotebook-ecosystem
+      if DirectoryExists(LocalEcoRepo + DirectorySeparator + 'packages') then
+      begin
+        Lines := TStringList.Create;
+        try
+          if FindFirst(LocalEcoRepo + DirectorySeparator + 'packages' + DirectorySeparator + '*', faAnyFile, SR) = 0 then
+          begin
+            repeat
+              if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') and (SR.Name <> '_template') then
+              begin
+                if (PkgArg = '') or (Pos(LowerCase(PkgArg), LowerCase(SR.Name)) > 0) then
+                begin
+                  ManifestFile := LocalEcoRepo + DirectorySeparator + 'packages' + DirectorySeparator + SR.Name + DirectorySeparator + 'package.json';
+                  PkgVer := ReadPackageJsonField(ManifestFile, 'version');
+                  if PkgVer = '' then PkgVer := '1.0.0';
+                  PkgDesc := ReadPackageJsonField(ManifestFile, 'description');
+
+                  Write('    * ' + PadRight(SR.Name, 22) + ' [v' + PkgVer + ']');
+                  if DirectoryExists(UserPkgDir + DirectorySeparator + SR.Name) then
+                    Write('  [INSTALLED IN WORKSPACE]')
+                  else
+                    Write('  [AVAILABLE]');
+                  WriteLn('');
+                  if PkgDesc <> '' then
+                    WriteLn('        ' + PkgDesc);
+                  FoundAny := True;
+                end;
+              end;
+            until FindNext(SR) <> 0;
+            FindClose(SR);
+          end;
+        finally
+          Lines.Free;
+        end;
+      end;
+    end
+    else
+    begin
+      WriteLn('  [INFO] Querying online GitHub registry (affonsoelias/blaiseNotebook-ecosystem)...');
+      ExecCmdCapture('curl -s https://raw.githubusercontent.com/affonsoelias/blaiseNotebook-ecosystem/main/ecosystem.json', EcoContent);
+      if Pos('"packages"', EcoContent) > 0 then
+      begin
+        WriteLn('  [v] Registry online catalog reachable.');
+        FoundAny := True;
+      end
+      else
+        WriteLn('  [!] Remote registry currently offline or initializing.');
+    end;
+
+    if not FoundAny then
+    begin
+      WriteLn('    No packages matching "' + PkgArg + '" were found.');
+      WriteLn('    Submit your package at: https://github.com/affonsoelias/blaiseNotebook-ecosystem');
+    end;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
+  if (SubCmd = 'install') or (SubCmd = 'add') or (SubCmd = 'i') then
+  begin
+    if PkgArg = '' then
+    begin
+      WriteLn('Usage: bvnb pkg install <package-name>[@version]');
+      Halt(1);
+    end;
+
+    p := Pos('@', PkgArg);
+    if p > 0 then
+    begin
+      PkgName := Copy(PkgArg, 1, p - 1);
+      PkgVer := Copy(PkgArg, p + 1, MaxInt);
+    end
+    else
+    begin
+      PkgName := PkgArg;
+      PkgVer := 'latest';
+    end;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Package Installer (bvnb pkg install)');
+    WriteLn('======================================================================');
+    WriteLn('  Target Package: ', PkgName, ' (', PkgVer, ')');
+    WriteLn('  Install Path:   ', UserPkgDir + DirectorySeparator + PkgName);
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    ForceDirectories(UserPkgDir);
+    DestDir := UserPkgDir + DirectorySeparator + PkgName;
+
+    // Check local ecosystem repository first
+    LocalEcoRepo := 'C:' + DirectorySeparator + 'Users' + DirectorySeparator + 'Pichau' + DirectorySeparator + 'Documents' + DirectorySeparator + 'blaiseNotebook-ecosystem';
+    LocalEcoPkg := LocalEcoRepo + DirectorySeparator + 'packages' + DirectorySeparator + PkgName;
+
+    if DirectoryExists(LocalEcoPkg) then
+    begin
+      WriteLn('  [+] Installing package from local ecosystem: ' + LocalEcoPkg + '...');
+      if DirectoryExists(DestDir) then
+        DeleteDirRecursive(DestDir);
+      CopyDirectory(LocalEcoPkg, DestDir);
+    end
+    else
+    begin
+      WriteLn('  [+] Fetching package from GitHub releases (affonsoelias/blaiseNotebook-ecosystem)...');
+      DummyOut := '';
+      ExecCmdCapture('curl -s -L "https://github.com/affonsoelias/blaiseNotebook-ecosystem/releases/download/' + PkgName + '-' + PkgVer + '/' + PkgName + '-' + PkgVer + '.zip" -o "' + UserPkgDir + DirectorySeparator + PkgName + '.zip"', DummyOut);
+      if FileExists(UserPkgDir + DirectorySeparator + PkgName + '.zip') then
+      begin
+        {$IFDEF WINDOWS}
+        ExecCmdCapture('tar -xf "' + UserPkgDir + DirectorySeparator + PkgName + '.zip" -C "' + DestDir + '"', DummyOut);
+        {$ELSE}
+        ExecCmdCapture('unzip -q -o "' + UserPkgDir + DirectorySeparator + PkgName + '.zip" -d "' + DestDir + '"', DummyOut);
+        {$ENDIF}
+        DeleteFile(UserPkgDir + DirectorySeparator + PkgName + '.zip');
+      end
+      else
+      begin
+        WriteLn('  [ERROR] Package "' + PkgName + '" not found in ecosystem registry.');
+        WriteLn('          Verify package name with: bvnb pkg search');
+        Halt(1);
+      end;
+    end;
+
+    if DirectoryExists(DestDir) then
+    begin
+      WriteLn('  [SUCCESS] Package "' + PkgName + '" installed successfully in ./packages/' + PkgName + '!');
+
+      // Check if requirements.txt exists and install python dependencies
+      if FileExists(DestDir + DirectorySeparator + 'requirements.txt') then
+      begin
+        WriteLn('');
+        WriteLn('  [+] Detected Python requirements.txt. Installing dependencies via pip...');
+        if FindPythonExecutable(PyExe, PyVer, PySource) then
+        begin
+          ExecCmdInteractive('"' + PyExe + '" -m pip install -r "' + DestDir + DirectorySeparator + 'requirements.txt"', GetCurrentDir);
+        end
+        else
+          WriteLn('  [WARNING] Python executable not found. Run "bvnb setup-python" after setup.');
+      end;
+
+      ManifestFile := DestDir + DirectorySeparator + 'package.json';
+      MainUnit := ReadPackageJsonField(ManifestFile, 'main');
+      if MainUnit = '' then MainUnit := PkgName + '.pas';
+      UnitName := ChangeFileExt(MainUnit, '');
+
+      WriteLn('');
+      WriteLn('  Ready to use inside your notebook code cells:');
+      WriteLn('    uses');
+      WriteLn('      BlaiseOutput,');
+      WriteLn('      ' + UnitName + ';');
+      WriteLn('');
+      WriteLn('======================================================================');
+      WriteLn('');
+    end;
+    Exit;
+  end;
+
+  if (SubCmd = 'remove') or (SubCmd = 'uninstall') or (SubCmd = 'rm') then
+  begin
+    if PkgArg = '' then
+    begin
+      WriteLn('Usage: bvnb pkg remove <package-name>');
+      Halt(1);
+    end;
+
+    // Safety: Protect official packages
+    if (LowerCase(PkgArg) = 'core') or (LowerCase(PkgArg) = 'math') or
+       (LowerCase(PkgArg) = 'pandas') or (LowerCase(PkgArg) = 'sklearn') or
+       (LowerCase(PkgArg) = 'python_bridge') or (LowerCase(PkgArg) = 'data_generator') then
+    begin
+      WriteLn('  [ERROR] "' + PkgArg + '" is a protected official BlaiseNotebook package/tool.');
+      WriteLn('          Official packages cannot be removed with "bvnb pkg remove".');
+      Halt(1);
+    end;
+
+    DestDir := UserPkgDir + DirectorySeparator + PkgArg;
+    if not DirectoryExists(DestDir) then
+    begin
+      WriteLn('  [ERROR] Package "' + PkgArg + '" is not installed in ./packages/');
+      Halt(1);
+    end;
+
+    WriteLn('  [+] Removing package ./packages/' + PkgArg + '...');
+    DeleteDirRecursive(DestDir);
+    WriteLn('  [SUCCESS] Package "' + PkgArg + '" removed successfully.');
+    Exit;
+  end;
+
+  if (SubCmd = 'create') or (SubCmd = 'new') then
+  begin
+    if PkgArg = '' then
+    begin
+      WriteLn('Usage: bvnb pkg create <package-name> [--tool]');
+      Halt(1);
+    end;
+
+    IsTool := False;
+    for i := 3 to ParamCount do
+      if (ParamStr(i) = '--tool') or (ParamStr(i) = '-t') then
+        IsTool := True;
+
+    if IsTool then
+      DestDir := ToolsDir + DirectorySeparator + PkgArg
+    else
+      DestDir := UserPkgDir + DirectorySeparator + PkgArg;
+
+    if DirectoryExists(DestDir) then
+    begin
+      WriteLn('  [ERROR] Directory already exists: ' + DestDir);
+      Halt(1);
+    end;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Package & Tool Scaffolder');
+    WriteLn('======================================================================');
+    WriteLn('  Name:           ', PkgArg);
+    if IsTool then
+      WriteLn('  Category:       Official Auxiliary Tool (frontend/server/packages/tools/)')
+    else
+      WriteLn('  Category:       Workspace Third-Party Package (./packages/)');
+    WriteLn('  Target Dir:     ', DestDir);
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    ForceDirectories(DestDir);
+    ForceDirectories(DestDir + DirectorySeparator + 'examples');
+
+    UnitName := 'u' + UpperCase(Copy(PkgArg, 1, 1)) + Copy(PkgArg, 2, MaxInt);
+    UnitName := StringReplace(UnitName, '-', '_', [rfReplaceAll]);
+
+    // 1. Unit Pascal
+    Lines := TStringList.Create;
+    try
+      Lines.Add('unit ' + UnitName + ';');
+      Lines.Add('');
+      Lines.Add('{$mode objfpc}{$H+}');
+      Lines.Add('');
+      Lines.Add('interface');
+      Lines.Add('');
+      Lines.Add('uses');
+      Lines.Add('  SysUtils, Classes;');
+      Lines.Add('');
+      Lines.Add('function ' + UnitName + 'Info: string;');
+      Lines.Add('function ' + UnitName + 'Calculate(const AValue: Double): Double;');
+      Lines.Add('');
+      Lines.Add('implementation');
+      Lines.Add('');
+      Lines.Add('function ' + UnitName + 'Info: string;');
+      Lines.Add('begin');
+      Lines.Add('  Result := ''Package ' + PkgArg + ' v1.0.0 (Ready)'';');
+      Lines.Add('end;');
+      Lines.Add('');
+      Lines.Add('function ' + UnitName + 'Calculate(const AValue: Double): Double;');
+      Lines.Add('begin');
+      Lines.Add('  Result := AValue * 2.0;');
+      Lines.Add('end;');
+      Lines.Add('');
+      Lines.Add('end.');
+      Lines.SaveToFile(DestDir + DirectorySeparator + UnitName + '.pas');
+    finally
+      Lines.Free;
+    end;
+
+    // 2. package.json
+    ManifestLines := TStringList.Create;
+    try
+      ManifestLines.Add('{');
+      ManifestLines.Add('  "name": "' + PkgArg + '",');
+      ManifestLines.Add('  "version": "1.0.0",');
+      if IsTool then
+        ManifestLines.Add('  "description": "Official auxiliary tool ' + PkgArg + ' for BlaiseNotebook",')
+      else
+        ManifestLines.Add('  "description": "Community extension ' + PkgArg + ' for BlaiseNotebook",');
+      ManifestLines.Add('  "author": "BlaiseNotebook Developer",');
+      ManifestLines.Add('  "license": "Modified LGPL v2.1 with Static Linking Exception",');
+      ManifestLines.Add('  "main": "' + UnitName + '.pas",');
+      if IsTool then
+        ManifestLines.Add('  "category": "tool",')
+      else
+        ManifestLines.Add('  "category": "extension",');
+      ManifestLines.Add('  "keywords": ["' + PkgArg + '", "blaisenotebook"]');
+      ManifestLines.Add('}');
+      ManifestLines.SaveToFile(DestDir + DirectorySeparator + 'package.json');
+    finally
+      ManifestLines.Free;
+    end;
+
+    // 3. README.md
+    Lines := TStringList.Create;
+    try
+      Lines.Add('# 📦 ' + PkgArg);
+      Lines.Add('');
+      Lines.Add('Modular package for BlaiseNotebook.');
+      Lines.Add('');
+      Lines.Add('## Quick Notebook Usage');
+      Lines.Add('');
+      Lines.Add('```pascal');
+      Lines.Add('uses');
+      Lines.Add('  BlaiseOutput,');
+      Lines.Add('  ' + UnitName + ';');
+      Lines.Add('');
+      Lines.Add('begin');
+      Lines.Add('  Writeln(' + UnitName + 'Info());');
+      Lines.Add('  Writeln(''Calculated: '', ' + UnitName + 'Calculate(21.0):0:2);');
+      Lines.Add('end;');
+      Lines.Add('```');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'README.md');
+    finally
+      Lines.Free;
+    end;
+
+    // 4. requirements.txt
+    Lines := TStringList.Create;
+    try
+      Lines.Add('# Add Python pip dependencies here (e.g. numpy>=2.0.0)');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'requirements.txt');
+    finally
+      Lines.Free;
+    end;
+
+    // 5. In-Package Example Notebook (examples/demo.bynb)
+    Lines := TStringList.Create;
+    try
+      Lines.Add('{');
+      Lines.Add('  "metadata": {');
+      Lines.Add('    "name": "demo_' + PkgArg + '",');
+      Lines.Add('    "framework": "BlaiseVue",');
+      Lines.Add('    "engine": "Synopse mORMot 2 + Free Pascal + Python",');
+      Lines.Add('    "license": "Modified LGPL v2.1 with Static Linking Exception",');
+      Lines.Add('    "created_at": "2026-11-09T00:00:00.000Z"');
+      Lines.Add('  },');
+      Lines.Add('  "cells": [');
+      Lines.Add('    {');
+      Lines.Add('      "id": "cell_1",');
+      Lines.Add('      "type": "markdown",');
+      Lines.Add('      "source": "# 📦 Demo: ' + PkgArg + '\nThis notebook demonstrates using ' + UnitName + ' directly.",');
+      Lines.Add('      "execution_count": 0,');
+      Lines.Add('      "status": "idle",');
+      Lines.Add('      "execution_time_ms": 0,');
+      Lines.Add('      "outputs": []');
+      Lines.Add('    },');
+      Lines.Add('    {');
+      Lines.Add('      "id": "cell_2",');
+      Lines.Add('      "type": "code",');
+      Lines.Add('      "source": "uses\n  BlaiseOutput,\n  ' + UnitName + ';\n\nbegin\n  Writeln(' + UnitName + 'Info());\n  Writeln(''Calculation: '', ' + UnitName + 'Calculate(21.0):0:2);\nend;",');
+      Lines.Add('      "execution_count": 0,');
+      Lines.Add('      "status": "idle",');
+      Lines.Add('      "execution_time_ms": 0,');
+      Lines.Add('      "outputs": []');
+      Lines.Add('    }');
+      Lines.Add('  ]');
+      Lines.Add('}');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'examples' + DirectorySeparator + 'demo_' + PkgArg + '.bynb');
+    finally
+      Lines.Free;
+    end;
+
+    WriteLn('  [SUCCESS] Package scaffolded successfully!');
+    WriteLn('    * Pascal Unit: ' + DestDir + DirectorySeparator + UnitName + '.pas');
+    WriteLn('    * Manifest:    ' + DestDir + DirectorySeparator + 'package.json');
+    WriteLn('    * Docs:        ' + DestDir + DirectorySeparator + 'README.md');
+    WriteLn('    * Examples:    ' + DestDir + DirectorySeparator + 'examples' + DirectorySeparator + 'demo_' + PkgArg + '.bynb');
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
+  WriteLn('Unknown pkg sub-command: "', SubCmd, '". Use "list", "search", "install", "remove", or "create".');
+end;
+
+// =====================================================================
+//  ROLLBACK UTILITY (bvnb rollback)
+// =====================================================================
+
+procedure CmdRollback;
+var
+  RepoDir, BinDir, ActiveBin, BakBin, DummyOut: string;
+begin
+  RepoDir := GetRepoRoot;
+  BinDir := RepoDir + DirectorySeparator + 'bin';
+  {$IFDEF WINDOWS}
+  ActiveBin := BinDir + DirectorySeparator + 'bvnb.exe';
+  BakBin := BinDir + DirectorySeparator + 'bvnb.bak.exe';
+  {$ELSE}
+  ActiveBin := BinDir + DirectorySeparator + 'bvnb';
+  BakBin := BinDir + DirectorySeparator + 'bvnb.bak';
+  {$ENDIF}
+
+  WriteLn('');
+  WriteLn('======================================================================');
+  WriteLn('  BlaiseNotebook CLI Rollback Utility (bvnb rollback)');
+  WriteLn('======================================================================');
+
+  if not FileExists(BakBin) then
+  begin
+    WriteLn('  [ERROR] No previous backup found at: ', BakBin);
+    WriteLn('          Backups are automatically created before each "bvnb self-update".');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Halt(1);
+  end;
+
+  WriteLn('  [+] Restoring backup: ' + ExtractFileName(BakBin) + ' -> ' + ExtractFileName(ActiveBin) + '...');
+  {$IFDEF WINDOWS}
+  ExecCmdCapture('cmd.exe /c cd /d "' + BinDir + '" && copy /y bvnb.bak.exe bvnb.exe > nul 2>&1', DummyOut);
+  {$ELSE}
+  ExecCmdCapture('cp -f "' + BakBin + '" "' + ActiveBin + '" && chmod +x "' + ActiveBin + '"', DummyOut);
+  {$ENDIF}
+
+  if FileExists(ActiveBin) then
+  begin
+    WriteLn('  [SUCCESS] Previous working CLI binary restored successfully!');
+    WriteLn('======================================================================');
+    WriteLn('');
+  end
+  else
+  begin
+    WriteLn('  [ERROR] Failed to restore binary.');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Halt(1);
+  end;
+end;
+
 procedure CmdBuild;
 var
   RepoDir, FrontendDir, BvExe, BvDesc: string;
@@ -718,9 +1412,9 @@ procedure CmdSelfUpdate;
 var
   RepoDir, CurBranch, TargetBranch, GitVer, GitStatusOut, FilteredStatus, LineStr, FetchOut: string;
   DiffOut, BehindOut, AheadOut, CheckoutOut, PullOut, FpcExe, FpcVer, FpcSource: string;
-  BinDir, CompCmd, CompOut, TargetBin, MoveCmd, DummyOut: string;
+  BinDir, CompCmd, CompOut, TargetBin, MoveCmd, DummyOut, NewBin: string;
   DiffList: TStringList;
-  CheckOnly, NeedRecompile, HadLocalBinMod: Boolean;
+  CheckOnly, ForceUpdate, NeedRecompile, HadLocalBinMod: Boolean;
   i: Integer;
 begin
   RepoDir := GetRepoRoot;
@@ -739,12 +1433,15 @@ begin
   end;
 
   CheckOnly := False;
+  ForceUpdate := False;
   TargetBranch := '';
 
   for i := 2 to ParamCount do
   begin
     if (ParamStr(i) = '--check') or (ParamStr(i) = '-c') then
       CheckOnly := True
+    else if (ParamStr(i) = '--force') or (ParamStr(i) = '-f') then
+      ForceUpdate := True
     else if Copy(ParamStr(i), 1, 10) = '--channel=' then
       TargetBranch := LowerCase(Trim(Copy(ParamStr(i), 11, MaxInt)))
     else if Copy(ParamStr(i), 1, 9) = '--branch=' then
@@ -757,6 +1454,7 @@ begin
       WriteLn('');
       WriteLn('  Options:');
       WriteLn('    --check              Check for GitHub updates without applying');
+      WriteLn('    --force, -f          Force update and reset uncommitted local files');
       WriteLn('    --channel=<name>     Switch to channel (main | develop)');
       WriteLn('    --branch=<name>      Alias for --channel');
       WriteLn('    -h, --help           Show this help message');
@@ -790,7 +1488,7 @@ begin
   WriteLn('======================================================================');
   WriteLn('');
 
-  // Safety check for uncommitted local changes (ignoring compiled binaries and .env)
+  // Safety check for uncommitted local changes (ignoring compiled binaries, logs and untracked files)
   ExecCmdCapture('git -C "' + RepoDir + '" status --porcelain', GitStatusOut);
   FilteredStatus := '';
   HadLocalBinMod := False;
@@ -801,9 +1499,13 @@ begin
     begin
       LineStr := StringReplace(Trim(DiffList[i]), '\', '/', [rfReplaceAll]);
       if LineStr = '' then Continue;
+      // Untracked (??) or ignored (!!) files are not uncommitted tracked modifications
+      if (Copy(LineStr, 1, 2) = '??') or (Copy(LineStr, 1, 2) = '!!') then
+        Continue;
       if (Pos('bin/bvnb', LineStr) > 0) or
          (Pos('frontend/.env', LineStr) > 0) or
-         (Pos('.env', LineStr) > 0) then
+         (Pos('.env', LineStr) > 0) or
+         (Pos('.log', LineStr) > 0) then
       begin
         if Pos('bin/bvnb', LineStr) > 0 then HadLocalBinMod := True;
         Continue;
@@ -818,10 +1520,20 @@ begin
 
   if (Trim(GitStatusOut) <> '') and (not CheckOnly) then
   begin
-    WriteLn('  [WARNING] You have uncommitted local changes in the BlaiseNotebook repository:');
-    WriteLn(GitStatusOut);
-    WriteLn('  Run "git stash" or commit before updating to avoid overwriting your work.');
-    Halt(1);
+    if ForceUpdate then
+    begin
+      WriteLn('  [INFO] Local changes detected, but --force was specified.');
+      WriteLn('         Resetting local modifications to synchronize cleanly with GitHub...');
+      ExecCmdCapture('git -C "' + RepoDir + '" checkout -- .', DummyOut);
+      HadLocalBinMod := True;
+    end
+    else
+    begin
+      WriteLn('  [WARNING] You have uncommitted local changes in the BlaiseNotebook repository:');
+      WriteLn(GitStatusOut);
+      WriteLn('  Run "git stash" or commit before updating, or run "bvnb self-update --force".');
+      Halt(1);
+    end;
   end;
 
   WriteLn('  Connecting to GitHub (affonsoelias/BlaiseNotebook)...');
@@ -894,28 +1606,37 @@ begin
   WriteLn('  [+] Synchronizing files (git pull origin ' + TargetBranch + ')...');
   ExecCmdCapture('git -C "' + RepoDir + '" pull origin ' + TargetBranch, PullOut);
 
-  NeedRecompile := (TargetBranch <> CurBranch) or (Pos('bin/bvnb.pas', DiffOut) > 0) or (Pos('bin\bvnb.pas', DiffOut) > 0) or HadLocalBinMod;
+    // Persistent backup of active binary before recompile
+  BinDir := RepoDir + DirectorySeparator + 'bin';
+  {$IFDEF WINDOWS}
+  ExecCmdCapture('cmd.exe /c cd /d "' + BinDir + '" && if exist bvnb.exe copy /y bvnb.exe bvnb.bak.exe > nul 2>&1', DummyOut);
+  {$ELSE}
+  ExecCmdCapture('cd "' + BinDir + '" && if [ -f bvnb ]; then cp -f bvnb bvnb.bak 2>/dev/null; fi', DummyOut);
+  {$ENDIF}
+
+  NeedRecompile := (TargetBranch <> CurBranch) or (Pos('bin/bvnb.pas', DiffOut) > 0) or (Pos('bin\bvnb.pas', DiffOut) > 0) or HadLocalBinMod or ForceUpdate;
   if NeedRecompile and FindFPCExecutable(FpcExe, FpcVer, FpcSource) then
   begin
     WriteLn('  [BUILD] Recompiling bvnb CLI binary with Free Pascal...');
-    BinDir := RepoDir + DirectorySeparator + 'bin';
     {$IFDEF WINDOWS}
-    MoveCmd := 'cmd.exe /c cd /d "' + BinDir + '" && move /y bvnb.exe bvnb_old.exe > nul 2>&1';
-    ExecCmdCapture(MoveCmd, DummyOut);
-    CompCmd := 'cmd.exe /c cd /d "' + BinDir + '" && "' + FpcExe + '" -MObjFPC -Sh bvnb.pas';
+    NewBin := BinDir + DirectorySeparator + 'bvnb.new.exe';
+    CompCmd := 'cmd.exe /c cd /d "' + BinDir + '" && "' + FpcExe + '" -MObjFPC -Sh -o"bvnb.new.exe" bvnb.pas';
     ExecCmdCapture(CompCmd, CompOut);
-    {$ELSE}
-    CompCmd := 'sh -c "cd ''' + BinDir + ''' && ''' + FpcExe + ''' -MObjFPC -Sh bvnb.pas && chmod +x bvnb"';
-    ExecCmdCapture(CompCmd, CompOut);
-    {$ENDIF}
-    TargetBin := BinDir + DirectorySeparator + {$IFDEF WINDOWS}'bvnb.exe'{$ELSE}'bvnb'{$ENDIF};
-    if FileExists(TargetBin) then
+    if FileExists(NewBin) then
     begin
-      WriteLn('  [SUCCESS] CLI binary ' + ExtractFileName(TargetBin) + ' recompiled!');
-      {$IFDEF WINDOWS}
-      ExecCmdCapture('cmd.exe /c cd /d "' + BinDir + '" && del /f /q bvnb_old.exe > nul 2>&1', DummyOut);
-      {$ENDIF}
-    end;
+      // Safe Windows binary swap: move running exe to old, move new to active
+      ExecCmdCapture('cmd.exe /c cd /d "' + BinDir + '" && move /y bvnb.exe bvnb.old.exe > nul 2>&1 && move /y bvnb.new.exe bvnb.exe > nul 2>&1', DummyOut);
+      WriteLn('  [SUCCESS] CLI binary bvnb.exe recompiled successfully!');
+    end
+    else
+      WriteLn('  [WARNING] Recompilation output: ' + CompOut);
+    {$ELSE}
+    CompCmd := 'sh -c "cd ''' + BinDir + '''' && ''' + FpcExe + '''' -MObjFPC -Sh bvnb.pas && chmod +x bvnb"';
+    ExecCmdCapture(CompCmd, CompOut);
+    TargetBin := BinDir + DirectorySeparator + 'bvnb';
+    if FileExists(TargetBin) then
+      WriteLn('  [SUCCESS] CLI binary bvnb recompiled successfully!');
+    {$ENDIF}
   end;
 
   // Rebuild Frontend + Server after pulling updates
@@ -1014,8 +1735,10 @@ begin
   WriteLn('');
   WriteLn('  # === Diagnostics & Git Auto-Updater ===');
   WriteLn('  bvnb doctor                  Diagnoses environment (Git, FPC, bv, Python, NumPy, Pandas, Sklearn)');
-  WriteLn('  bvnb self-update [--check]   Syncs & rebuilds BlaiseNotebook directly from GitHub via Git');
+  WriteLn('  bvnb self-update [--check]   Syncs & rebuilds BlaiseNotebook directly from GitHub via Git (--force)');
   WriteLn('  bvnb channel [use <name>]    Inspects or switches repository branch (main | develop)');
+  WriteLn('  bvnb rollback                Restores previous working CLI binary from persistent backup');
+  WriteLn('  bvnb pkg <list|search|...>   Manages official and community packages & tools');
   WriteLn('');
   WriteLn('  # === Build, Execution & Process Management ===');
   WriteLn('  bvnb build                   Compiles Frontend SPA + Native mORMot 2 Server');
@@ -1043,6 +1766,10 @@ begin
     CmdSelfUpdate
   else if (Cmd = 'channel') or (Cmd = 'branch') then
     CmdChannel
+  else if (Cmd = 'rollback') or (Cmd = 'revert-cli') then
+    CmdRollback
+  else if (Cmd = 'pkg') or (Cmd = 'package') or (Cmd = 'packages') or (Cmd = 'lib') then
+    CmdPackage
   else if (Cmd = 'build') or (Cmd = 'compile') then
     CmdBuild
   else if (Cmd = 'run') or (Cmd = 'start') or (Cmd = 'serve') then

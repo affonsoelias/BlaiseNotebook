@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "name": "demo_tool_template",
+    "framework": "BlaiseVue",
+    "engine": "Synopse mORMot 2 + Free Pascal + Python",
+    "license": "Modified LGPL v2.1 with Static Linking Exception",
+    "created_at": "2026-11-09T00:00:00.000Z"
+  },
+  "cells": [
+    {
+      "id": "cell_1",
+      "type": "markdown",
+      "source": "# 🛠️ Official Tool Template Demo\nDemonstrates consuming the official auxiliary tool template in a notebook cell.",
+      "execution_count": 0,
+      "status": "idle",
+      "execution_time_ms": 0,
+      "outputs": []
+    },
+    {
+      "id": "cell_2",
+      "type": "code",
+      "source": "uses\n  BlaiseOutput,\n  uToolTemplate;\n\nbegin\n  Writeln('Loaded: ', GetToolName());\n  Writeln('Version: ', GetToolVersion());\nend;",
+      "execution_count": 0,
+      "status": "idle",
+      "execution_time_ms": 0,
+      "outputs": []
+    }
+  ]
+}

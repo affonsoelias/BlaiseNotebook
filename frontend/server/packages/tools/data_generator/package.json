@@ -1,0 +1,9 @@
+{
+  "name": "data_generator",
+  "version": "1.0.0",
+  "description": "Official synthetic data generator for test vectors, regression datasets, and matrices",
+  "author": "BlaiseNotebook Official",
+  "license": "Modified LGPL v2.1 with Static Linking Exception",
+  "main": "uDataGenerator.pas",
+  "category": "tool"
+}

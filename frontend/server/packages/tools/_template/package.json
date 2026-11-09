@@ -1,0 +1,9 @@
+{
+  "name": "tool_template",
+  "version": "1.0.0",
+  "description": "Template for official auxiliary tools accompanying BlaiseNotebook",
+  "author": "BlaiseNotebook Official",
+  "license": "Modified LGPL v2.1 with Static Linking Exception",
+  "main": "uToolTemplate.pas",
+  "category": "tool"
+}
