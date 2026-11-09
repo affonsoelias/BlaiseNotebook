@@ -263,6 +263,43 @@ begin
       Exit(True);
     end;
   end;
+
+  // macOS Homebrew & standard Linux fallbacks
+  Cand := '/opt/homebrew/bin/python3';
+  if FileExists(Cand) then
+  begin
+    if ExecCmdCapture('"' + Cand + '" --version', OutStr) and (Pos('Python ', OutStr) > 0) then
+    begin
+      PyExe := Cand;
+      PyVer := Trim(OutStr);
+      SourceDesc := 'Homebrew (' + Cand + ')';
+      Exit(True);
+    end;
+  end;
+
+  Cand := '/usr/local/bin/python3';
+  if FileExists(Cand) then
+  begin
+    if ExecCmdCapture('"' + Cand + '" --version', OutStr) and (Pos('Python ', OutStr) > 0) then
+    begin
+      PyExe := Cand;
+      PyVer := Trim(OutStr);
+      SourceDesc := '/usr/local/bin/python3';
+      Exit(True);
+    end;
+  end;
+
+  Cand := '/usr/bin/python3';
+  if FileExists(Cand) then
+  begin
+    if ExecCmdCapture('"' + Cand + '" --version', OutStr) and (Pos('Python ', OutStr) > 0) then
+    begin
+      PyExe := Cand;
+      PyVer := Trim(OutStr);
+      SourceDesc := '/usr/bin/python3';
+      Exit(True);
+    end;
+  end;
   {$ENDIF}
 end;
 
@@ -603,6 +640,34 @@ begin
   end;
 end;
 
+function FindLocalEcosystemRepo: string;
+var
+  Candidate: string;
+begin
+  Result := '';
+  // 1. Sibling directory to BlaiseNotebook repo (works across Windows, Linux, macOS)
+  Candidate := ExpandFileName(GetRepoRoot + DirectorySeparator + '..' + DirectorySeparator + 'blaiseNotebook-ecosystem');
+  if DirectoryExists(Candidate) and FileExists(Candidate + DirectorySeparator + 'ecosystem.json') then
+    Exit(Candidate);
+
+  // 2. User's Documents/blaiseNotebook-ecosystem directory (cross-platform via GetUserDir)
+  Candidate := ExcludeTrailingPathDelimiter(GetUserDir) + DirectorySeparator + 'Documents' + DirectorySeparator + 'blaiseNotebook-ecosystem';
+  if DirectoryExists(Candidate) and FileExists(Candidate + DirectorySeparator + 'ecosystem.json') then
+    Exit(Candidate);
+
+  // 3. User home directory ~/blaiseNotebook-ecosystem
+  Candidate := ExcludeTrailingPathDelimiter(GetUserDir) + DirectorySeparator + 'blaiseNotebook-ecosystem';
+  if DirectoryExists(Candidate) and FileExists(Candidate + DirectorySeparator + 'ecosystem.json') then
+    Exit(Candidate);
+
+  // 4. Windows default dev environment fallback
+  {$IFDEF WINDOWS}
+  Candidate := 'C:' + DirectorySeparator + 'Users' + DirectorySeparator + 'Pichau' + DirectorySeparator + 'Documents' + DirectorySeparator + 'blaiseNotebook-ecosystem';
+  if DirectoryExists(Candidate) and FileExists(Candidate + DirectorySeparator + 'ecosystem.json') then
+    Exit(Candidate);
+  {$ENDIF}
+end;
+
 // =====================================================================
 //  PACKAGE & EXTENSIONS MANAGER (bvnb pkg)
 // =====================================================================
@@ -735,9 +800,12 @@ begin
     WriteLn('======================================================================');
     WriteLn('');
 
-    // Check local ecosystem repository first: C:\Users\Pichau\Documents\blaiseNotebook-ecosystem
-    LocalEcoRepo := 'C:' + DirectorySeparator + 'Users' + DirectorySeparator + 'Pichau' + DirectorySeparator + 'Documents' + DirectorySeparator + 'blaiseNotebook-ecosystem';
-    EcoJsonFile := LocalEcoRepo + DirectorySeparator + 'ecosystem.json';
+    // Check local ecosystem repository first (Windows, Linux, macOS)
+    LocalEcoRepo := FindLocalEcosystemRepo;
+    if LocalEcoRepo <> '' then
+      EcoJsonFile := LocalEcoRepo + DirectorySeparator + 'ecosystem.json'
+    else
+      EcoJsonFile := '';
 
     FoundAny := False;
     if FileExists(EcoJsonFile) then
@@ -837,9 +905,12 @@ begin
     ForceDirectories(UserPkgDir);
     DestDir := UserPkgDir + DirectorySeparator + PkgName;
 
-    // Check local ecosystem repository first
-    LocalEcoRepo := 'C:' + DirectorySeparator + 'Users' + DirectorySeparator + 'Pichau' + DirectorySeparator + 'Documents' + DirectorySeparator + 'blaiseNotebook-ecosystem';
-    LocalEcoPkg := LocalEcoRepo + DirectorySeparator + 'packages' + DirectorySeparator + PkgName;
+    // Check local ecosystem repository first (Windows, Linux, macOS)
+    LocalEcoRepo := FindLocalEcosystemRepo;
+    if LocalEcoRepo <> '' then
+      LocalEcoPkg := LocalEcoRepo + DirectorySeparator + 'packages' + DirectorySeparator + PkgName
+    else
+      LocalEcoPkg := '';
 
     if DirectoryExists(LocalEcoPkg) then
     begin
@@ -1068,7 +1139,24 @@ begin
       Lines.Free;
     end;
 
-    // 5. In-Package Example Notebook (examples/demo.bynb)
+    // 5. Optional In-Package Extended Documentation (doc/guide.md)
+    ForceDirectories(DestDir + DirectorySeparator + 'doc');
+    Lines := TStringList.Create;
+    try
+      Lines.Add('# 📖 ' + PkgArg + ' Documentation');
+      Lines.Add('');
+      Lines.Add('This optional directory stores extended Markdown (.md) documentation.');
+      Lines.Add('');
+      Lines.Add('## API Reference');
+      Lines.Add('* `' + UnitName + 'Info`: Returns package metadata.');
+      Lines.Add('* `' + UnitName + 'Calculate`: Core processing routine.');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'doc' + DirectorySeparator + 'guide.md');
+    finally
+      Lines.Free;
+    end;
+
+    // 6. Optional In-Package Example Notebook (examples/demo.bynb)
+    ForceDirectories(DestDir + DirectorySeparator + 'examples');
     Lines := TStringList.Create;
     try
       Lines.Add('{');
@@ -1108,8 +1196,9 @@ begin
     WriteLn('  [SUCCESS] Package scaffolded successfully!');
     WriteLn('    * Pascal Unit: ' + DestDir + DirectorySeparator + UnitName + '.pas');
     WriteLn('    * Manifest:    ' + DestDir + DirectorySeparator + 'package.json');
-    WriteLn('    * Docs:        ' + DestDir + DirectorySeparator + 'README.md');
-    WriteLn('    * Examples:    ' + DestDir + DirectorySeparator + 'examples' + DirectorySeparator + 'demo_' + PkgArg + '.bynb');
+    WriteLn('    * README:      ' + DestDir + DirectorySeparator + 'README.md');
+    WriteLn('    * Docs:        ' + DestDir + DirectorySeparator + 'doc' + DirectorySeparator + 'guide.md (optional)');
+    WriteLn('    * Examples:    ' + DestDir + DirectorySeparator + 'examples' + DirectorySeparator + 'demo_' + PkgArg + '.bynb (optional)');
     WriteLn('');
     WriteLn('======================================================================');
     WriteLn('');
@@ -1261,7 +1350,7 @@ begin
   {$IFDEF WINDOWS}
   ExecCmdCapture('taskkill /F /IM server.exe', DummyOut);
   {$ELSE}
-  ExecCmdCapture('killall -9 server', DummyOut);
+  ExecCmdCapture('killall -9 server >/dev/null 2>&1; pkill -9 -f "server" >/dev/null 2>&1', DummyOut);
   {$ENDIF}
   WriteLn('  [+] Lingering server.exe processes terminated.');
   WriteLn('  [+] Sockets and ports released.');
@@ -1286,7 +1375,7 @@ begin
   {$IFDEF WINDOWS}
   ExecCmdCapture('taskkill /F /IM server.exe', DummyOut);
   {$ELSE}
-  ExecCmdCapture('killall -9 server', DummyOut);
+  ExecCmdCapture('killall -9 server >/dev/null 2>&1; pkill -9 -f "server" >/dev/null 2>&1', DummyOut);
   {$ENDIF}
 
   // 2. Parse command-line port if explicitly requested (e.g. bvnb run --port 8092)
@@ -1348,11 +1437,15 @@ begin
   WriteLn('======================================================================');
   WriteLn('');
 
-  // 4. Launch browser automatically in the background
+  // 4. Launch browser automatically in the background (Windows, Linux, macOS)
   {$IFDEF WINDOWS}
   ExecCmdCapture('start "" "' + Url + '"', DummyOut);
   {$ELSE}
-  ExecCmdCapture('xdg-open "' + Url + '" >/dev/null 2>&1 &', DummyOut);
+    {$IFDEF DARWIN}
+    ExecCmdCapture('open "' + Url + '" >/dev/null 2>&1 &', DummyOut);
+    {$ELSE}
+    ExecCmdCapture('xdg-open "' + Url + '" >/dev/null 2>&1 &', DummyOut);
+    {$ENDIF}
   {$ENDIF}
 
   // 5. Run native server with selected free port
@@ -1631,7 +1724,7 @@ begin
     else
       WriteLn('  [WARNING] Recompilation output: ' + CompOut);
     {$ELSE}
-    CompCmd := 'sh -c "cd ''' + BinDir + '''' && ''' + FpcExe + '''' -MObjFPC -Sh bvnb.pas && chmod +x bvnb"';
+    CompCmd := 'cd "' + BinDir + '" && "' + FpcExe + '" -MObjFPC -Sh bvnb.pas && chmod +x bvnb';
     ExecCmdCapture(CompCmd, CompOut);
     TargetBin := BinDir + DirectorySeparator + 'bvnb';
     if FileExists(TargetBin) then
