@@ -933,6 +933,11 @@ begin
     if CurArg <> '' then
       ArgsList.Add(CurArg);
 
+    {$IFNDEF WINDOWS}
+    if (ArgsList.Count > 0) and (ArgsList[0] = 'install') and (ArgsList.IndexOf('--break-system-packages') = -1) then
+      ArgsList.Add('--break-system-packages');
+    {$ENDIF}
+
     for i := 0 to ArgsList.Count - 1 do
       Proc.Parameters.Add(ArgsList[i]);
 

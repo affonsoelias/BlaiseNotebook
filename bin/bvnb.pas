@@ -1653,7 +1653,11 @@ begin
   WriteLn('======================================================================');
   WriteLn('');
 
+  {$IFDEF WINDOWS}
   Code := ExecCmdInteractive('"' + PyExe + '" -m pip install --upgrade numpy pandas scikit-learn', GetRepoRoot);
+  {$ELSE}
+  Code := ExecCmdInteractive('"' + PyExe + '" -m pip install --upgrade --break-system-packages numpy pandas scikit-learn', GetRepoRoot);
+  {$ENDIF}
   if Code = 0 then
   begin
     WriteLn('');
