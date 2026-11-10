@@ -66,6 +66,7 @@ implementation
 constructor TCodeRunner.Create(const AWorkspaceDir: string);
 var
   SR: TSearchRec;
+  CleanMask: string;
 begin
   inherited Create;
   if AWorkspaceDir <> '' then
@@ -85,7 +86,9 @@ begin
     FPackagesDir := ExpandFileName('frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages');
 
   // Purge any stale package unit artifacts from workspace to avoid PPU checksum mismatch
-  if FindFirst(FWorkspaceDir + DirectorySeparator + '*.*', faAnyFile, SR) = 0 then
+  CleanMask := FWorkspaceDir + DirectorySeparator + '*.*';
+  SetCodePage(RawByteString(CleanMask), DefaultSystemCodePage, False);
+  if FindFirst(CleanMask, faAnyFile, SR) = 0 then
   begin
     try
       repeat
@@ -249,6 +252,7 @@ var
   Client: TFPHttpClient;
   Stream: TStringStream;
   SR: TSearchRec;
+  CleanMask: string;
 begin
   // 1. Reset Python daemon state
   try
@@ -270,7 +274,9 @@ begin
   EnsureSessionDaemon;
 
   // 3. Purge workspace binaries and temp files
-  if FindFirst(FWorkspaceDir + DirectorySeparator + '*.*', faAnyFile, SR) = 0 then
+  CleanMask := FWorkspaceDir + DirectorySeparator + '*.*';
+  SetCodePage(RawByteString(CleanMask), DefaultSystemCodePage, False);
+  if FindFirst(CleanMask, faAnyFile, SR) = 0 then
   begin
     try
       repeat
@@ -305,19 +311,25 @@ var
   procedure AddDirAndSubdirs(const ABaseDir: string);
   var
     SubSR: TSearchRec;
+    Mask: string;
+    SubDir: string;
   begin
     if (ABaseDir = '') or (not DirectoryExists(ABaseDir)) then Exit;
     if ADirs.IndexOf(ABaseDir) < 0 then
       ADirs.Add(ABaseDir);
 
-    if FindFirst(ABaseDir + DirectorySeparator + '*', faAnyFile, SubSR) = 0 then
+    Mask := ABaseDir + DirectorySeparator + '*';
+    SetCodePage(RawByteString(Mask), DefaultSystemCodePage, False);
+
+    if FindFirst(Mask, faAnyFile, SubSR) = 0 then
     begin
       try
         repeat
-          if ((SubSR.Attr and faDirectory) <> 0) and (SubSR.Name <> '.') and (SubSR.Name <> '..') and (SubSR.Name[1] <> '.') then
+          if (SubSR.Name <> '.') and (SubSR.Name <> '..') and (SubSR.Name[1] <> '.') then
           begin
-            if DirectoryExists(ABaseDir + DirectorySeparator + SubSR.Name) and (ADirs.IndexOf(ABaseDir + DirectorySeparator + SubSR.Name) < 0) then
-              ADirs.Add(ABaseDir + DirectorySeparator + SubSR.Name);
+            SubDir := ABaseDir + DirectorySeparator + SubSR.Name;
+            if DirectoryExists(SubDir) and (ADirs.IndexOf(SubDir) < 0) then
+              ADirs.Add(SubDir);
           end;
         until FindNext(SubSR) <> 0;
       finally
@@ -564,6 +576,7 @@ begin
     Proc.Parameters.Add('-Sh');
     Proc.Parameters.Add('-O2');
     Proc.Parameters.Add('-FE' + FWorkspaceDir);
+    Proc.Parameters.Add('-FU' + FWorkspaceDir);
     // Dynamically discover and register all package directories
     DiscoverPackageDirs(PackageDirs);
     for i := 0 to PackageDirs.Count - 1 do
