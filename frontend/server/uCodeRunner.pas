@@ -306,7 +306,7 @@ end;
 
 procedure TCodeRunner.DiscoverPackageDirs(ADirs: TStrings);
 var
-  CoreDir, ExtDir, ToolsDir, UserPkgDir, RootUserPkgDir: string;
+  CoreDir, ExtDir, ToolsDir, UserPkgDir, RootUserPkgDir, UserToolsDir, RootUserToolsDir: string;
 
   procedure AddDirAndSubdirs(const ABaseDir: string);
   var
@@ -350,7 +350,15 @@ begin
   if (RootUserPkgDir <> '') and (RootUserPkgDir <> UserPkgDir) and (RootUserPkgDir <> FPackagesDir) then
     AddDirAndSubdirs(RootUserPkgDir);
 
-  // 2. Official auxiliary tools (frontend/server/packages/tools)
+  // 2. User / Co-Official / Third-party tools in active workspace (./tools/)
+  UserToolsDir := FWorkspaceDir + DirectorySeparator + 'tools';
+  AddDirAndSubdirs(UserToolsDir);
+
+  RootUserToolsDir := ExpandFileName('tools');
+  if (RootUserToolsDir <> '') and (RootUserToolsDir <> UserToolsDir) and (RootUserToolsDir <> (FPackagesDir + DirectorySeparator + 'tools')) then
+    AddDirAndSubdirs(RootUserToolsDir);
+
+  // 3. Official built-in auxiliary tools (frontend/server/packages/tools)
   ToolsDir := FPackagesDir + DirectorySeparator + 'tools';
   AddDirAndSubdirs(ToolsDir);
 

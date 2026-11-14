@@ -234,9 +234,32 @@ If you want to wrap a Python library into typed Pascal methods:
 
 ---
 
-## 📦 5. Distributing & Sharing Packages
+## 🏛️ 6. 3-Tier Classification Model: Packages vs. Tools
 
-Because each package is an independent folder:
-- **To distribute**: Just zip the folder (e.g. `finance.zip`).
-- **To install**: Unzip into `frontend/server/packages/external/`.
-- That's it! Instant plug-and-play.
+BlaiseNotebook separates reusable assets into two canonical commands aligned with the BlaiseVue ecosystem:
+
+| Classification | Prefix & Naming | Shipped in Framework? | Installation Path | Example |
+| :--- | :--- | :--- | :--- | :--- |
+| **`[Built-in]`** | `bvnb-*` / `bvnb-tool-*` | **Yes** (core framework bundle) | `frontend/server/packages/` (`core/`, `external/`, `tools/`) | `bvnb-math`, `bvnb-pandas`, `bvnb-tool-data-generator` |
+| **`[Co-Official]`** | `bvnb-*` (libs) / `bvnb-tool-*` (tools) | **No** (downloaded on demand from ecosystem) | User workspace: `./packages/<name>/` or `./tools/<name>/` | `bvnb-stats`, `bvnb-tool-sqlite` |
+| **`[Third-Party]`** | Community unique names | **No** (downloaded from ecosystem/git) | User workspace: `./packages/<name>/` or `./tools/<name>/` | `fast-fft`, `dataset-validator` |
+
+### CLI Management Commands
+
+#### 📦 Computational Packages (`bvnb pkg` | alias: `bvnb lib`)
+* `bvnb pkg list` — Displays built-in core, scientific packages, and workspace packages.
+* `bvnb pkg search [query]` — Queries the ecosystem packages registry.
+* `bvnb pkg info <name>` — Displays metadata, classification, and Pascal unit entry point.
+* `bvnb pkg install <name>` — Installs a co-official or community package into `./packages/<name>/`.
+* `bvnb pkg remove <name>` — Removes a package from `./packages/<name>/`.
+* `bvnb pkg create <name> [--co-official]` — Scaffolds a complete package structure in `./packages/<name>/`.
+
+#### 🛠️ Auxiliary Tools & Utilities (`bvnb tools` | alias: `bvnb tool`)
+* `bvnb tools list` — Displays built-in tools (`packages/tools/`) and workspace tools (`./tools/`).
+* `bvnb tools search [query]` — Queries the ecosystem tools registry.
+* `bvnb tools info <name>` — Displays tool metadata, documentation, and demo notebooks.
+* `bvnb tools run <name> [args...]` — Executes the tool's runner (`run.py`, native binary, or manifest entry) directly from CLI!
+* `bvnb tools install <name>` — Installs a co-official or community tool into `./tools/<name>/`.
+* `bvnb tools remove <name>` — Removes a tool from `./tools/<name>/`.
+* `bvnb tools create <name> [--official | --co-official]` — Scaffolds complete tool structure with `tool.json`, `u<Name>.pas`, `run.py`, `doc/`, and `examples/demo.bynb`.
+

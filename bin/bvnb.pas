@@ -680,12 +680,32 @@ begin
   if (Pos('bvnb-', L) = 1) or (Pos('blaise-', L) = 1) then
     Exit(True);
 
-  // 2. Reserved core, scientific, and tool aliases
+  // 2. Reserved core and scientific aliases
   Result := (L = 'core') or (L = 'math') or (L = 'pandas') or (L = 'sklearn') or
             (L = 'datascience') or (L = 'python_bridge') or (L = 'bridge') or
-            (L = 'python') or (L = 'tools') or (L = 'data_generator') or
-            (L = 'sdk') or (L = 'kernel') or (L = 'runtime') or (L = 'std') or
-            (L = 'bvnb');
+            (L = 'python') or (L = 'sdk') or (L = 'kernel') or (L = 'runtime') or
+            (L = 'std') or (L = 'bvnb') or (L = 'tools');
+end;
+
+function IsCoOfficialPackageName(const AName: string): Boolean;
+var
+  L: string;
+begin
+  L := LowerCase(Trim(AName));
+  if (Length(L) > 0) and (L[1] = '@') then
+    L := Copy(L, 2, MaxInt);
+  Result := (Pos('bvnb-', L) = 1) or (Pos('blaise-', L) = 1);
+end;
+
+function IsCoOfficialToolName(const AName: string): Boolean;
+var
+  L: string;
+begin
+  L := LowerCase(Trim(AName));
+  if (Length(L) > 0) and (L[1] = '@') then
+    L := Copy(L, 2, MaxInt);
+  Result := (Pos('bvnb-tool-', L) = 1) or (Pos('bvnb-', L) = 1) or
+            (Pos('blaise-tool-', L) = 1) or (Pos('blaise-', L) = 1);
 end;
 
 function ResolveCanonicalPackageName(const AName: string): string;
@@ -705,9 +725,18 @@ begin
     Result := 'bvnb-datascience'
   else if (L = 'python_bridge') or (L = 'bridge') or (L = 'blaise-python-bridge') or (L = 'bvnb-python-bridge') then
     Result := 'bvnb-python-bridge'
-  else if (L = 'data_generator') or (L = 'generator') or (L = 'bvnb-tool-data-generator') then
+  else
+    Result := AName;
+end;
+
+function ResolveCanonicalToolName(const AName: string): string;
+var
+  L: string;
+begin
+  L := LowerCase(Trim(AName));
+  if (L = 'data_generator') or (L = 'generator') or (L = 'bvnb-tool-data-generator') then
     Result := 'bvnb-tool-data-generator'
-  else if (L = '_template') or (L = 'bvnb-tool-template') or (L = 'tool_template') then
+  else if (L = '_template') or (L = 'template') or (L = 'bvnb-tool-template') or (L = 'tool_template') then
     Result := 'bvnb-tool-template'
   else
     Result := AName;
@@ -757,16 +786,27 @@ begin
     ACategory := 'Official Scientific Package (frontend/server/packages/external/bvnb-python-bridge)';
     AUnitName := 'BlaisePyKernel.pas';
     Result := True;
-  end
-  else if Canonical = 'bvnb-tool-data-generator' then
+  end;
+end;
+
+function IsOfficialBuiltinTool(const AName: string; out ACategory, AUnitName: string): Boolean;
+var
+  Canonical: string;
+begin
+  Result := False;
+  ACategory := '';
+  AUnitName := '';
+  Canonical := ResolveCanonicalToolName(AName);
+
+  if Canonical = 'bvnb-tool-data-generator' then
   begin
-    ACategory := 'Official Auxiliary Tool (frontend/server/packages/tools/bvnb-tool-data-generator)';
+    ACategory := 'Official Built-in Auxiliary Tool (frontend/server/packages/tools/bvnb-tool-data-generator)';
     AUnitName := 'uDataGenerator.pas';
     Result := True;
   end
   else if Canonical = 'bvnb-tool-template' then
   begin
-    ACategory := 'Official Tool Template (frontend/server/packages/tools/_template)';
+    ACategory := 'Official Built-in Tool Template (frontend/server/packages/tools/_template)';
     AUnitName := 'uToolTemplate.pas';
     Result := True;
   end;
@@ -788,24 +828,40 @@ begin
   else Result := '';
 end;
 
+function ReadManifestField(const AItemDir, AFieldName: string): string;
+var
+  ToolFile, PkgFile: string;
+begin
+  Result := '';
+  ToolFile := IncludeTrailingPathDelimiter(AItemDir) + 'tool.json';
+  if FileExists(ToolFile) then
+    Result := ReadPackageJsonField(ToolFile, AFieldName);
+  if Result = '' then
+  begin
+    PkgFile := IncludeTrailingPathDelimiter(AItemDir) + 'package.json';
+    if FileExists(PkgFile) then
+      Result := ReadPackageJsonField(PkgFile, AFieldName);
+  end;
+end;
+
 // =====================================================================
-//  PACKAGE & EXTENSIONS MANAGER (bvnb pkg)
+//  PACKAGE & LIBRARY MANAGER (bvnb pkg / bvnb lib)
 // =====================================================================
 
 procedure CmdPackage;
 var
-  SubCmd, PkgArg, PkgName, PkgVer, RepoDir, PackagesDir, CoreDir, ExtDir, ToolsDir, UserPkgDir: string;
-  LocalEcoRepo, LocalEcoPkg, ManifestFile, PkgDesc, MainUnit, UnitName, TemplateDir, DestDir: string;
-  EcoJsonFile, EcoContent, TarCmd, DummyOut, PyExe, PyVer, PySource: string;
+  SubCmd, PkgArg, PkgName, PkgVer, RepoDir, PackagesDir, CoreDir, ExtDir, UserPkgDir: string;
+  LocalEcoRepo, LocalEcoPkg, ManifestFile, PkgDesc, MainUnit, UnitName, DestDir, TargetDir: string;
+  EcoJsonFile, EcoContent, DummyOut, PyExe, PyVer, PySource: string;
   Lines, ManifestLines: TStringList;
-  IsTool, FoundAny: Boolean;
+  FoundAny, IsCoOff: Boolean;
   p, i: Integer;
   SR: TSearchRec;
 
-  procedure ListDirPackages(const ATitle, ABaseDir: string);
+  procedure ListDirPackages(const ATitle, ABaseDir: string; const ADefaultType: string);
   var
     SR: TSearchRec;
-    ItemDir, MFile, MName, MVer, MDesc, MUnit: string;
+    ItemDir, MFile, MName, MVer, MDesc, MUnit, TierTag: string;
     Count: Integer;
   begin
     WriteLn('  --- ' + ATitle + ' ---');
@@ -825,7 +881,14 @@ var
       if MVer = '' then MVer := '1.0.0';
       MDesc := ReadPackageJsonField(MFile, 'description');
       MUnit := ReadPackageJsonField(MFile, 'main');
-      Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + ']');
+      if ADefaultType <> '' then
+        TierTag := '[' + ADefaultType + ']'
+      else if IsCoOfficialPackageName(MName) then
+        TierTag := '[CO-OFFICIAL]'
+      else
+        TierTag := '[COMMUNITY]';
+
+      Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + '] ' + PadRight(TierTag, 14));
       if MUnit <> '' then
         Write(' (Unit: ' + MUnit + ')');
       WriteLn('');
@@ -850,7 +913,14 @@ var
             MUnit := ReadPackageJsonField(MFile, 'main');
             if MUnit = '' then MUnit := SR.Name + '.pas';
 
-            Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + ']');
+            if ADefaultType <> '' then
+              TierTag := '[' + ADefaultType + ']'
+            else if IsCoOfficialPackageName(MName) or IsCoOfficialPackageName(SR.Name) then
+              TierTag := '[CO-OFFICIAL]'
+            else
+              TierTag := '[COMMUNITY]';
+
+            Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + '] ' + PadRight(TierTag, 14));
             if MUnit <> '' then
               Write(' (Unit: ' + MUnit + ')');
             if GetShortAlias(MName) <> '' then
@@ -877,7 +947,6 @@ begin
   PackagesDir := RepoDir + DirectorySeparator + 'frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages';
   CoreDir := PackagesDir + DirectorySeparator + 'core';
   ExtDir := PackagesDir + DirectorySeparator + 'external';
-  ToolsDir := PackagesDir + DirectorySeparator + 'tools';
   UserPkgDir := GetCurrentDir + DirectorySeparator + 'packages';
 
   SubCmd := '';
@@ -891,24 +960,23 @@ begin
   begin
     WriteLn('');
     WriteLn('======================================================================');
-    WriteLn('  BlaiseNotebook Packages & Tools Registry');
+    WriteLn('  BlaiseNotebook Packages & Libraries (bvnb pkg)');
     WriteLn('======================================================================');
     WriteLn('  Workspace Dir:  ', GetCurrentDir);
     WriteLn('  Official Dir:   ', PackagesDir);
     WriteLn('======================================================================');
     WriteLn('');
 
-    ListDirPackages('Official Core System (frontend/server/packages/core)', CoreDir);
-    ListDirPackages('Official Scientific Packages (frontend/server/packages/external)', ExtDir);
-    ListDirPackages('Official Auxiliary Tools (frontend/server/packages/tools)', ToolsDir);
-    ListDirPackages('Workspace Third-Party Packages (./packages/)', UserPkgDir);
+    ListDirPackages('Official Built-in Core System (frontend/server/packages/core)', CoreDir, 'BUILT-IN');
+    ListDirPackages('Official Built-in Scientific Packages (frontend/server/packages/external)', ExtDir, 'BUILT-IN');
+    ListDirPackages('Workspace Packages (./packages/)', UserPkgDir, '');
 
     WriteLn('======================================================================');
     WriteLn('  Tips:');
     WriteLn('    bvnb pkg search [query]       Search community registry packages');
+    WriteLn('    bvnb pkg info <name>          View detailed package information');
     WriteLn('    bvnb pkg install <name>       Install package into ./packages/');
     WriteLn('    bvnb pkg create <name>        Scaffold new package in ./packages/');
-    WriteLn('    bvnb pkg create <name> --tool Scaffold official tool in packages/tools/');
     WriteLn('    bvnb pkg remove <name>        Remove third-party package from ./packages/');
     WriteLn('======================================================================');
     WriteLn('');
@@ -919,7 +987,7 @@ begin
   begin
     WriteLn('');
     WriteLn('======================================================================');
-    WriteLn('  BlaiseNotebook Ecosystem Registry Search');
+    WriteLn('  BlaiseNotebook Ecosystem Package Search (bvnb pkg search)');
     WriteLn('======================================================================');
     if PkgArg <> '' then
       WriteLn('  Search Query:   "', PkgArg, '"')
@@ -928,7 +996,6 @@ begin
     WriteLn('======================================================================');
     WriteLn('');
 
-    // Check local ecosystem repository first (Windows, Linux, macOS)
     LocalEcoRepo := FindLocalEcosystemRepo;
     if LocalEcoRepo <> '' then
       EcoJsonFile := LocalEcoRepo + DirectorySeparator + 'ecosystem.json'
@@ -940,7 +1007,6 @@ begin
     begin
       WriteLn('  [+] Connected to local ecosystem registry: ' + LocalEcoRepo);
       WriteLn('');
-      // Scan packages directory in blaiseNotebook-ecosystem
       if DirectoryExists(LocalEcoRepo + DirectorySeparator + 'packages') then
       begin
         Lines := TStringList.Create;
@@ -958,6 +1024,11 @@ begin
                   PkgDesc := ReadPackageJsonField(ManifestFile, 'description');
 
                   Write('    * ' + PadRight(SR.Name, 22) + ' [v' + PkgVer + ']');
+                  if IsCoOfficialPackageName(SR.Name) then
+                    Write(' [CO-OFFICIAL]')
+                  else
+                    Write(' [COMMUNITY]  ');
+
                   if DirectoryExists(UserPkgDir + DirectorySeparator + SR.Name) then
                     Write('  [INSTALLED IN WORKSPACE]')
                   else
@@ -1001,6 +1072,66 @@ begin
     Exit;
   end;
 
+  if (SubCmd = 'info') or (SubCmd = 'show') or (SubCmd = 'view') then
+  begin
+    if PkgArg = '' then
+    begin
+      WriteLn('Usage: bvnb pkg info <package-name>');
+      Halt(1);
+    end;
+
+    TargetDir := '';
+    if DirectoryExists(UserPkgDir + DirectorySeparator + PkgArg) then
+      TargetDir := UserPkgDir + DirectorySeparator + PkgArg
+    else if DirectoryExists(ExtDir + DirectorySeparator + ResolveCanonicalPackageName(PkgArg)) then
+      TargetDir := ExtDir + DirectorySeparator + ResolveCanonicalPackageName(PkgArg)
+    else if DirectoryExists(CoreDir) and ((LowerCase(PkgArg) = 'core') or (LowerCase(PkgArg) = 'bvnb-core')) then
+      TargetDir := CoreDir;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Package Technical Card (bvnb pkg info)');
+    WriteLn('======================================================================');
+    WriteLn('  Package Name:   ', PkgArg);
+
+    if TargetDir <> '' then
+    begin
+      ManifestFile := TargetDir + DirectorySeparator + 'package.json';
+      PkgVer := ReadPackageJsonField(ManifestFile, 'version');
+      if PkgVer = '' then PkgVer := '1.0.0';
+      PkgDesc := ReadPackageJsonField(ManifestFile, 'description');
+      MainUnit := ReadPackageJsonField(ManifestFile, 'main');
+      if MainUnit = '' then MainUnit := PkgArg + '.pas';
+
+      WriteLn('  Version:        ', PkgVer);
+      if (TargetDir = CoreDir) or (Pos(ExtDir, TargetDir) = 1) then
+        WriteLn('  Classification: [Built-in Core Component]')
+      else if IsCoOfficialPackageName(PkgArg) then
+        WriteLn('  Classification: [Co-Official Ecosystem Package]')
+      else
+        WriteLn('  Classification: [Community Third-Party Package]');
+
+      WriteLn('  Main Unit:      ', MainUnit);
+      WriteLn('  Installed Path: ', TargetDir);
+      if PkgDesc <> '' then
+        WriteLn('  Description:    ', PkgDesc);
+      if FileExists(TargetDir + DirectorySeparator + 'requirements.txt') then
+        WriteLn('  Python Deps:    Yes (requirements.txt)');
+      if DirectoryExists(TargetDir + DirectorySeparator + 'doc') then
+        WriteLn('  Documentation:  Available in doc/');
+      if DirectoryExists(TargetDir + DirectorySeparator + 'examples') then
+        WriteLn('  Examples:       Available in examples/');
+    end
+    else
+    begin
+      WriteLn('  Status:         Not installed locally in ./packages/');
+      WriteLn('  Ecosystem:      Try searching via "bvnb pkg search ' + PkgArg + '"');
+    end;
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
   if (SubCmd = 'install') or (SubCmd = 'add') or (SubCmd = 'i') then
   begin
     if PkgArg = '' then
@@ -1030,19 +1161,19 @@ begin
     WriteLn('======================================================================');
     WriteLn('');
 
-    // Security & Namespace Protection: Block installing official built-in packages in ./packages/
+    // Security & Protection: Block installing official built-in packages that already ship in framework
     if IsOfficialBuiltinPackage(PkgName, PkgDesc, MainUnit) then
     begin
       WriteLn('  [INFO] "' + ResolveCanonicalPackageName(PkgName) + '" is already an official built-in component:');
       WriteLn('         Category: ' + PkgDesc);
       WriteLn('         Unit:     ' + MainUnit);
       WriteLn('');
-      WriteLn('         It is permanently included and ready to use in your notebooks:');
+      WriteLn('         It is permanently included in the framework distribution:');
       WriteLn('           uses');
       WriteLn('             BlaiseOutput,');
       WriteLn('             ' + ChangeFileExt(MainUnit, '') + ';');
       WriteLn('');
-      WriteLn('         Installation into ./packages/ blocked to prevent namespace shadowing.');
+      WriteLn('         Installation into ./packages/ skipped to avoid redundant duplicate units.');
       WriteLn('======================================================================');
       WriteLn('');
       Exit;
@@ -1051,7 +1182,6 @@ begin
     ForceDirectories(UserPkgDir);
     DestDir := UserPkgDir + DirectorySeparator + PkgName;
 
-    // Check local ecosystem repository first (Windows, Linux, macOS)
     LocalEcoRepo := FindLocalEcosystemRepo;
     if LocalEcoRepo <> '' then
       LocalEcoPkg := LocalEcoRepo + DirectorySeparator + 'packages' + DirectorySeparator + PkgName
@@ -1091,15 +1221,12 @@ begin
     begin
       WriteLn('  [SUCCESS] Package "' + PkgName + '" installed successfully in ./packages/' + PkgName + '!');
 
-      // Check if requirements.txt exists and install python dependencies
       if FileExists(DestDir + DirectorySeparator + 'requirements.txt') then
       begin
         WriteLn('');
         WriteLn('  [+] Detected Python requirements.txt. Installing dependencies via pip...');
         if FindPythonExecutable(PyExe, PyVer, PySource) then
-        begin
-          ExecCmdInteractive('"' + PyExe + '" -m pip install -r "' + DestDir + DirectorySeparator + 'requirements.txt"', GetCurrentDir);
-        end
+          ExecCmdInteractive('"' + PyExe + '" -m pip install -r "' + DestDir + DirectorySeparator + 'requirements.txt"', GetCurrentDir)
         else
           WriteLn('  [WARNING] Python executable not found. Run "bvnb setup-python" after setup.');
       end;
@@ -1129,13 +1256,10 @@ begin
       Halt(1);
     end;
 
-    // Safety: Protect official packages
-    if (LowerCase(PkgArg) = 'core') or (LowerCase(PkgArg) = 'math') or
-       (LowerCase(PkgArg) = 'pandas') or (LowerCase(PkgArg) = 'sklearn') or
-       (LowerCase(PkgArg) = 'python_bridge') or (LowerCase(PkgArg) = 'data_generator') then
+    if IsOfficialBuiltinPackage(PkgArg, PkgDesc, MainUnit) then
     begin
-      WriteLn('  [ERROR] "' + PkgArg + '" is a protected official BlaiseNotebook package/tool.');
-      WriteLn('          Official packages cannot be removed with "bvnb pkg remove".');
+      WriteLn('  [ERROR] "' + PkgArg + '" is a protected built-in BlaiseNotebook component.');
+      WriteLn('          Framework built-in packages cannot be removed.');
       Halt(1);
     end;
 
@@ -1156,43 +1280,30 @@ begin
   begin
     if PkgArg = '' then
     begin
-      WriteLn('Usage: bvnb pkg create <package-name> [--tool]');
+      WriteLn('Usage: bvnb pkg create <package-name> [--co-official]');
       Halt(1);
     end;
 
-    IsTool := False;
+    IsCoOff := False;
     for i := 3 to ParamCount do
-      if (ParamStr(i) = '--tool') or (ParamStr(i) = '-t') then
-        IsTool := True;
+      if (ParamStr(i) = '--co-official') or (ParamStr(i) = '-c') or (ParamStr(i) = '--official') then
+        IsCoOff := True;
 
-    // Security & Namespace Reservation Check
-    if (not IsTool) and IsReservedPackageName(PkgArg) then
+    if (not IsCoOff) and IsReservedPackageName(PkgArg) then
     begin
       WriteLn('');
       WriteLn('  [ERROR] Cannot create third-party package with reserved name: "' + PkgArg + '"');
       WriteLn('          Names starting with "bvnb-", "blaise-", or matching official components');
-      WriteLn('          (core, math, pandas, sklearn, datascience, python_bridge, data_generator, tools, sdk)');
-      WriteLn('          are strictly reserved for the official BlaiseNotebook distribution.');
+      WriteLn('          are reserved for official and co-official BlaiseNotebook distributions.');
       WriteLn('');
       WriteLn('  Tip: Choose a unique community name (e.g. "my-' + PkgArg + '", "fast-' + PkgArg + '").');
-      WriteLn('       If you are authoring an official tool, use: bvnb pkg create <name> --tool');
+      WriteLn('       If you are authoring a co-official ecosystem package, pass: --co-official');
       WriteLn('');
       Halt(1);
     end;
 
-    if IsTool then
-    begin
-      if (Pos('bvnb-tool-', PkgArg) <> 1) and (Pos('bvnb-', PkgArg) <> 1) then
-        PkgName := 'bvnb-tool-' + PkgArg
-      else
-        PkgName := PkgArg;
-      DestDir := ToolsDir + DirectorySeparator + PkgArg;
-    end
-    else
-    begin
-      PkgName := PkgArg;
-      DestDir := UserPkgDir + DirectorySeparator + PkgArg;
-    end;
+    PkgName := PkgArg;
+    DestDir := UserPkgDir + DirectorySeparator + PkgArg;
 
     if DirectoryExists(DestDir) then
     begin
@@ -1202,18 +1313,19 @@ begin
 
     WriteLn('');
     WriteLn('======================================================================');
-    WriteLn('  BlaiseNotebook Package & Tool Scaffolder');
+    WriteLn('  BlaiseNotebook Package Scaffolder (bvnb pkg create)');
     WriteLn('======================================================================');
     WriteLn('  Name:           ', PkgArg);
-    if IsTool then
-      WriteLn('  Category:       Official Auxiliary Tool (frontend/server/packages/tools/)')
+    if IsCoOff then
+      WriteLn('  Classification: [Co-Official Ecosystem Package]')
     else
-      WriteLn('  Category:       Workspace Third-Party Package (./packages/)');
+      WriteLn('  Classification: [Community Third-Party Package]');
     WriteLn('  Target Dir:     ', DestDir);
     WriteLn('======================================================================');
     WriteLn('');
 
     ForceDirectories(DestDir);
+    ForceDirectories(DestDir + DirectorySeparator + 'doc');
     ForceDirectories(DestDir + DirectorySeparator + 'examples');
 
     UnitName := 'u' + UpperCase(Copy(PkgArg, 1, 1)) + Copy(PkgArg, 2, MaxInt);
@@ -1258,17 +1370,14 @@ begin
       ManifestLines.Add('{');
       ManifestLines.Add('  "name": "' + PkgName + '",');
       ManifestLines.Add('  "version": "1.0.0",');
-      if IsTool then
-        ManifestLines.Add('  "description": "Official auxiliary tool ' + PkgArg + ' for BlaiseNotebook",')
+      if IsCoOff then
+        ManifestLines.Add('  "description": "Co-official package ' + PkgArg + ' for BlaiseNotebook",')
       else
-        ManifestLines.Add('  "description": "Community extension ' + PkgArg + ' for BlaiseNotebook",');
+        ManifestLines.Add('  "description": "Community package ' + PkgArg + ' for BlaiseNotebook",');
       ManifestLines.Add('  "author": "BlaiseNotebook Developer",');
       ManifestLines.Add('  "license": "Modified LGPL v2.1 with Static Linking Exception",');
       ManifestLines.Add('  "main": "' + UnitName + '.pas",');
-      if IsTool then
-        ManifestLines.Add('  "category": "tool",')
-      else
-        ManifestLines.Add('  "category": "extension",');
+      ManifestLines.Add('  "category": "package",');
       ManifestLines.Add('  "keywords": ["' + PkgArg + '", "blaisenotebook"]');
       ManifestLines.Add('}');
       ManifestLines.SaveToFile(DestDir + DirectorySeparator + 'package.json');
@@ -1309,13 +1418,12 @@ begin
       Lines.Free;
     end;
 
-    // 5. Optional In-Package Extended Documentation (doc/guide.md)
-    ForceDirectories(DestDir + DirectorySeparator + 'doc');
+    // 5. doc/guide.md
     Lines := TStringList.Create;
     try
       Lines.Add('# 📖 ' + PkgArg + ' Documentation');
       Lines.Add('');
-      Lines.Add('This optional directory stores extended Markdown (.md) documentation.');
+      Lines.Add('Extended Markdown documentation for ' + PkgArg + '.');
       Lines.Add('');
       Lines.Add('## API Reference');
       Lines.Add('* `' + UnitName + 'Info`: Returns package metadata.');
@@ -1325,17 +1433,16 @@ begin
       Lines.Free;
     end;
 
-    // 6. Optional In-Package Example Notebook (examples/demo.bynb)
-    ForceDirectories(DestDir + DirectorySeparator + 'examples');
+    // 6. examples/demo.bynb
     Lines := TStringList.Create;
     try
       Lines.Add('{');
       Lines.Add('  "metadata": {');
       Lines.Add('    "name": "demo_' + PkgArg + '",');
-      Lines.Add('    "framework": "BlaiseVue",');
+      Lines.Add('    "framework": "BlaiseNotebook",');
       Lines.Add('    "engine": "Synopse mORMot 2 + Free Pascal + Python",');
       Lines.Add('    "license": "Modified LGPL v2.1 with Static Linking Exception",');
-      Lines.Add('    "created_at": "2026-11-09T00:00:00.000Z"');
+      Lines.Add('    "created_at": "2026-11-13T00:00:00.000Z"');
       Lines.Add('  },');
       Lines.Add('  "cells": [');
       Lines.Add('    {');
@@ -1375,7 +1482,724 @@ begin
     Exit;
   end;
 
-  WriteLn('Unknown pkg sub-command: "', SubCmd, '". Use "list", "search", "install", "remove", or "create".');
+  WriteLn('Unknown pkg sub-command: "', SubCmd, '". Use "list", "search", "info", "install", "remove", or "create".');
+end;
+
+// =====================================================================
+//  DEVELOPER & AUXILIARY TOOLS MANAGER (bvnb tools / bvnb tool)
+// =====================================================================
+
+procedure CmdTools;
+var
+  SubCmd, ToolArg, ToolName, ToolVer, RepoDir, ToolsDir, UserToolsDir, UnitName: string;
+  LocalEcoRepo, LocalEcoTool, ManifestFile, ToolDesc, MainUnit, BinCmd, DestDir, TargetDir: string;
+  EcoJsonFile, EcoContent, DummyOut, PyExe, PyVer, PySource, RunCmd, RunExe, ExtraArgs: string;
+  Lines, ManifestLines: TStringList;
+  FoundAny, IsOfficial, IsCoOff: Boolean;
+  p, i, ExitCode: Integer;
+  SR: TSearchRec;
+
+  procedure ListDirTools(const ATitle, ABaseDir: string; const ADefaultType: string);
+  var
+    SR: TSearchRec;
+    ItemDir, MName, MVer, MDesc, MUnit, MBin, TierTag: string;
+    Count: Integer;
+  begin
+    WriteLn('  --- ' + ATitle + ' ---');
+    if not DirectoryExists(ABaseDir) then
+    begin
+      WriteLn('      (Directory not found: ' + ExtractRelativePath(GetCurrentDir + DirectorySeparator, ABaseDir) + ')');
+      WriteLn('');
+      Exit;
+    end;
+    Count := 0;
+    if FindFirst(IncludeTrailingPathDelimiter(ABaseDir) + '*', faAnyFile, SR) = 0 then
+    begin
+      try
+        repeat
+          if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') and (SR.Name[1] <> '.') then
+          begin
+            ItemDir := IncludeTrailingPathDelimiter(ABaseDir) + SR.Name;
+            MName := ReadManifestField(ItemDir, 'name');
+            if MName = '' then MName := SR.Name;
+            MVer := ReadManifestField(ItemDir, 'version');
+            if MVer = '' then MVer := '1.0.0';
+            MDesc := ReadManifestField(ItemDir, 'description');
+            MUnit := ReadManifestField(ItemDir, 'main');
+            MBin := ReadManifestField(ItemDir, 'bin');
+
+            if ADefaultType <> '' then
+              TierTag := '[' + ADefaultType + ']'
+            else if IsCoOfficialToolName(MName) or IsCoOfficialToolName(SR.Name) then
+              TierTag := '[CO-OFFICIAL]'
+            else
+              TierTag := '[COMMUNITY]';
+
+            Write('    * ' + PadRight(MName, 26) + ' [v' + MVer + '] ' + PadRight(TierTag, 14));
+            if MBin <> '' then
+              Write(' (Runner: ' + MBin + ')')
+            else if MUnit <> '' then
+              Write(' (Unit: ' + MUnit + ')');
+            WriteLn('');
+            if MDesc <> '' then
+              WriteLn('        ' + MDesc);
+            Inc(Count);
+          end;
+        until FindNext(SR) <> 0;
+      finally
+        FindClose(SR);
+      end;
+    end;
+    if Count = 0 then
+      WriteLn('      (No tools found)');
+    WriteLn('');
+  end;
+
+begin
+  RepoDir := GetRepoRoot;
+  ToolsDir := RepoDir + DirectorySeparator + 'frontend' + DirectorySeparator + 'server' + DirectorySeparator + 'packages' + DirectorySeparator + 'tools';
+  UserToolsDir := GetCurrentDir + DirectorySeparator + 'tools';
+
+  SubCmd := '';
+  ToolArg := '';
+  if ParamCount >= 2 then
+    SubCmd := LowerCase(Trim(ParamStr(2)));
+  if ParamCount >= 3 then
+    ToolArg := Trim(ParamStr(3));
+
+  if (SubCmd = 'list') or (SubCmd = 'ls') or (SubCmd = '') then
+  begin
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Developer & Auxiliary Tools (bvnb tools)');
+    WriteLn('======================================================================');
+    WriteLn('  Workspace Dir:  ', GetCurrentDir);
+    WriteLn('  Tools Dir:      ', UserToolsDir);
+    WriteLn('  Official Dir:   ', ToolsDir);
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    ListDirTools('Official Built-in Tools (frontend/server/packages/tools)', ToolsDir, 'BUILT-IN');
+    ListDirTools('Workspace Tools (./tools/)', UserToolsDir, '');
+
+    WriteLn('======================================================================');
+    WriteLn('  Tips:');
+    WriteLn('    bvnb tools run <name> [args]  Execute tool entry runner directly');
+    WriteLn('    bvnb tools search [query]     Search community registry tools');
+    WriteLn('    bvnb tools info <name>        View detailed tool information');
+    WriteLn('    bvnb tools install <name>     Install tool into ./tools/');
+    WriteLn('    bvnb tools create <name>      Scaffold new tool in ./tools/');
+    WriteLn('    bvnb tools remove <name>      Remove tool from ./tools/');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
+  if (SubCmd = 'search') or (SubCmd = 'find') then
+  begin
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Ecosystem Tool Search (bvnb tools search)');
+    WriteLn('======================================================================');
+    if ToolArg <> '' then
+      WriteLn('  Search Query:   "', ToolArg, '"')
+    else
+      WriteLn('  Listing all available ecosystem tools');
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    LocalEcoRepo := FindLocalEcosystemRepo;
+    if LocalEcoRepo <> '' then
+      EcoJsonFile := LocalEcoRepo + DirectorySeparator + 'ecosystem.json'
+    else
+      EcoJsonFile := '';
+
+    FoundAny := False;
+    if FileExists(EcoJsonFile) then
+    begin
+      WriteLn('  [+] Connected to local ecosystem registry: ' + LocalEcoRepo);
+      WriteLn('');
+      if DirectoryExists(LocalEcoRepo + DirectorySeparator + 'tools') then
+      begin
+        Lines := TStringList.Create;
+        try
+          if FindFirst(LocalEcoRepo + DirectorySeparator + 'tools' + DirectorySeparator + '*', faAnyFile, SR) = 0 then
+          begin
+            repeat
+              if ((SR.Attr and faDirectory) <> 0) and (SR.Name <> '.') and (SR.Name <> '..') and (SR.Name <> '_template') then
+              begin
+                if (ToolArg = '') or (Pos(LowerCase(ToolArg), LowerCase(SR.Name)) > 0) then
+                begin
+                  ManifestFile := LocalEcoRepo + DirectorySeparator + 'tools' + DirectorySeparator + SR.Name;
+                  ToolVer := ReadManifestField(ManifestFile, 'version');
+                  if ToolVer = '' then ToolVer := '1.0.0';
+                  ToolDesc := ReadManifestField(ManifestFile, 'description');
+
+                  Write('    * ' + PadRight(SR.Name, 22) + ' [v' + ToolVer + ']');
+                  if IsCoOfficialToolName(SR.Name) then
+                    Write(' [CO-OFFICIAL]')
+                  else
+                    Write(' [COMMUNITY]  ');
+
+                  if DirectoryExists(UserToolsDir + DirectorySeparator + SR.Name) or DirectoryExists(ToolsDir + DirectorySeparator + SR.Name) then
+                    Write('  [INSTALLED]')
+                  else
+                    Write('  [AVAILABLE]');
+                  WriteLn('');
+                  if ToolDesc <> '' then
+                    WriteLn('        ' + ToolDesc);
+                  FoundAny := True;
+                end;
+              end;
+            until FindNext(SR) <> 0;
+            FindClose(SR);
+          end;
+        finally
+          Lines.Free;
+        end;
+      end;
+    end
+    else
+    begin
+      WriteLn('  [INFO] Querying online GitHub registry (affonsoelias/blaiseNotebook-ecosystem)...');
+      ExecCmdCapture('curl -s https://raw.githubusercontent.com/affonsoelias/blaiseNotebook-ecosystem/main/ecosystem.json', EcoContent);
+      if Pos('"tools"', EcoContent) > 0 then
+      begin
+        WriteLn('  [v] Registry online catalog reachable.');
+        FoundAny := True;
+      end
+      else
+        WriteLn('  [!] Remote registry currently offline or initializing.');
+    end;
+
+    if not FoundAny then
+    begin
+      WriteLn('    No tools matching "' + ToolArg + '" were found.');
+      WriteLn('    Submit your tool at: https://github.com/affonsoelias/blaiseNotebook-ecosystem');
+    end;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
+  if (SubCmd = 'info') or (SubCmd = 'show') or (SubCmd = 'view') then
+  begin
+    if ToolArg = '' then
+    begin
+      WriteLn('Usage: bvnb tools info <tool-name>');
+      Halt(1);
+    end;
+
+    TargetDir := '';
+    if DirectoryExists(UserToolsDir + DirectorySeparator + ToolArg) then
+      TargetDir := UserToolsDir + DirectorySeparator + ToolArg
+    else if DirectoryExists(ToolsDir + DirectorySeparator + ResolveCanonicalToolName(ToolArg)) then
+      TargetDir := ToolsDir + DirectorySeparator + ResolveCanonicalToolName(ToolArg)
+    else if DirectoryExists(ToolsDir + DirectorySeparator + ToolArg) then
+      TargetDir := ToolsDir + DirectorySeparator + ToolArg;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Tool Technical Card (bvnb tools info)');
+    WriteLn('======================================================================');
+    WriteLn('  Tool Name:      ', ToolArg);
+
+    if TargetDir <> '' then
+    begin
+      ToolVer := ReadManifestField(TargetDir, 'version');
+      if ToolVer = '' then ToolVer := '1.0.0';
+      ToolDesc := ReadManifestField(TargetDir, 'description');
+      MainUnit := ReadManifestField(TargetDir, 'main');
+      BinCmd := ReadManifestField(TargetDir, 'bin');
+
+      WriteLn('  Version:        ', ToolVer);
+      if Pos(ToolsDir, TargetDir) = 1 then
+        WriteLn('  Classification: [Built-in Tool]')
+      else if IsCoOfficialToolName(ToolArg) then
+        WriteLn('  Classification: [Co-Official Ecosystem Tool]')
+      else
+        WriteLn('  Classification: [Community Third-Party Tool]');
+
+      if BinCmd <> '' then
+        WriteLn('  CLI Runner:     ', BinCmd)
+      else if FileExists(TargetDir + DirectorySeparator + 'run.py') then
+        WriteLn('  CLI Runner:     run.py (Python)')
+      else if MainUnit <> '' then
+        WriteLn('  Main Unit:      ', MainUnit);
+
+      WriteLn('  Installed Path: ', TargetDir);
+      if ToolDesc <> '' then
+        WriteLn('  Description:    ', ToolDesc);
+      if FileExists(TargetDir + DirectorySeparator + 'requirements.txt') then
+        WriteLn('  Python Deps:    Yes (requirements.txt)');
+      if DirectoryExists(TargetDir + DirectorySeparator + 'doc') then
+        WriteLn('  Documentation:  Available in doc/');
+      if DirectoryExists(TargetDir + DirectorySeparator + 'examples') then
+        WriteLn('  Examples:       Available in examples/');
+    end
+    else
+    begin
+      WriteLn('  Status:         Not installed locally in ./tools/');
+      WriteLn('  Ecosystem:      Try searching via "bvnb tools search ' + ToolArg + '"');
+    end;
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
+  if (SubCmd = 'run') or (SubCmd = 'exec') then
+  begin
+    if ToolArg = '' then
+    begin
+      WriteLn('Usage: bvnb tools run <tool-name> [arguments...]');
+      Halt(1);
+    end;
+
+    TargetDir := '';
+    if DirectoryExists(UserToolsDir + DirectorySeparator + ToolArg) then
+      TargetDir := UserToolsDir + DirectorySeparator + ToolArg
+    else if DirectoryExists(UserToolsDir + DirectorySeparator + 'bvnb-tool-' + ToolArg) then
+      TargetDir := UserToolsDir + DirectorySeparator + 'bvnb-tool-' + ToolArg
+    else if DirectoryExists(ToolsDir + DirectorySeparator + ResolveCanonicalToolName(ToolArg)) then
+      TargetDir := ToolsDir + DirectorySeparator + ResolveCanonicalToolName(ToolArg)
+    else if DirectoryExists(ToolsDir + DirectorySeparator + ToolArg) then
+      TargetDir := ToolsDir + DirectorySeparator + ToolArg;
+
+    if TargetDir = '' then
+    begin
+      WriteLn('  [ERROR] Tool "' + ToolArg + '" not found in ./tools/ or framework tools directory.');
+      WriteLn('          Verify installed tools with: bvnb tools list');
+      Halt(1);
+    end;
+
+    // Collect extra arguments
+    ExtraArgs := '';
+    for i := 4 to ParamCount do
+      ExtraArgs := ExtraArgs + ' ' + ParamStr(i);
+
+    BinCmd := ReadManifestField(TargetDir, 'bin');
+    MainUnit := ReadManifestField(TargetDir, 'main');
+
+    // 1. Python runner run.py
+    if FileExists(TargetDir + DirectorySeparator + 'run.py') then
+    begin
+      if not FindPythonExecutable(PyExe, PyVer, PySource) then PyExe := 'python';
+      RunCmd := '"' + PyExe + '" run.py' + ExtraArgs;
+      ExitCode := ExecCmdInteractive(RunCmd, TargetDir);
+      Halt(ExitCode);
+    end;
+
+    // 2. Custom bin runner from manifest
+    if BinCmd <> '' then
+    begin
+      RunCmd := BinCmd + ExtraArgs;
+      ExitCode := ExecCmdInteractive(RunCmd, TargetDir);
+      Halt(ExitCode);
+    end;
+
+    // 3. Native binary
+    RunExe := TargetDir + DirectorySeparator + ToolArg + {$IFDEF WINDOWS}'.exe'{$ELSE}''{$ENDIF};
+    if FileExists(RunExe) then
+    begin
+      RunCmd := '"' + RunExe + '"' + ExtraArgs;
+      ExitCode := ExecCmdInteractive(RunCmd, TargetDir);
+      Halt(ExitCode);
+    end;
+
+    // 4. Pascal unit only
+    if MainUnit <> '' then
+    begin
+      WriteLn('  [INFO] Tool "' + ToolArg + '" is a Pascal library unit (' + MainUnit + ').');
+      WriteLn('         Import it directly in your notebook cells:');
+      WriteLn('           uses BlaiseOutput, ' + ChangeFileExt(MainUnit, '') + ';');
+      Exit;
+    end;
+
+    WriteLn('  [ERROR] No runnable entry point found for tool "' + ToolArg + '".');
+    Exit;
+  end;
+
+  if (SubCmd = 'install') or (SubCmd = 'add') or (SubCmd = 'i') then
+  begin
+    if ToolArg = '' then
+    begin
+      WriteLn('Usage: bvnb tools install <tool-name>[@version]');
+      Halt(1);
+    end;
+
+    p := Pos('@', ToolArg);
+    if p > 0 then
+    begin
+      ToolName := Copy(ToolArg, 1, p - 1);
+      ToolVer := Copy(ToolArg, p + 1, MaxInt);
+    end
+    else
+    begin
+      ToolName := ToolArg;
+      ToolVer := 'latest';
+    end;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Tool Installer (bvnb tools install)');
+    WriteLn('======================================================================');
+    WriteLn('  Target Tool:    ', ToolName, ' (', ToolVer, ')');
+    WriteLn('  Install Path:   ', UserToolsDir + DirectorySeparator + ToolName);
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    if IsOfficialBuiltinTool(ToolName, ToolDesc, MainUnit) then
+    begin
+      WriteLn('  [INFO] "' + ResolveCanonicalToolName(ToolName) + '" is already an official built-in tool:');
+      WriteLn('         Category: ' + ToolDesc);
+      WriteLn('         Unit:     ' + MainUnit);
+      WriteLn('');
+      WriteLn('         It is permanently included in the framework distribution.');
+      WriteLn('         Installation into ./tools/ skipped.');
+      WriteLn('======================================================================');
+      WriteLn('');
+      Exit;
+    end;
+
+    ForceDirectories(UserToolsDir);
+    DestDir := UserToolsDir + DirectorySeparator + ToolName;
+
+    LocalEcoRepo := FindLocalEcosystemRepo;
+    if LocalEcoRepo <> '' then
+      LocalEcoTool := LocalEcoRepo + DirectorySeparator + 'tools' + DirectorySeparator + ToolName
+    else
+      LocalEcoTool := '';
+
+    if DirectoryExists(LocalEcoTool) then
+    begin
+      WriteLn('  [+] Installing tool from local ecosystem: ' + LocalEcoTool + '...');
+      if DirectoryExists(DestDir) then
+        DeleteDirRecursive(DestDir);
+      CopyDirectory(LocalEcoTool, DestDir);
+    end
+    else
+    begin
+      WriteLn('  [+] Fetching tool from GitHub releases (affonsoelias/blaiseNotebook-ecosystem)...');
+      DummyOut := '';
+      ExecCmdCapture('curl -s -L "https://github.com/affonsoelias/blaiseNotebook-ecosystem/releases/download/' + ToolName + '-' + ToolVer + '/' + ToolName + '-' + ToolVer + '.zip" -o "' + UserToolsDir + DirectorySeparator + ToolName + '.zip"', DummyOut);
+      if FileExists(UserToolsDir + DirectorySeparator + ToolName + '.zip') then
+      begin
+        {$IFDEF WINDOWS}
+        ExecCmdCapture('tar -xf "' + UserToolsDir + DirectorySeparator + ToolName + '.zip" -C "' + DestDir + '"', DummyOut);
+        {$ELSE}
+        ExecCmdCapture('unzip -q -o "' + UserToolsDir + DirectorySeparator + ToolName + '.zip" -d "' + DestDir + '"', DummyOut);
+        {$ENDIF}
+        DeleteFile(UserToolsDir + DirectorySeparator + ToolName + '.zip');
+      end
+      else
+      begin
+        WriteLn('  [ERROR] Tool "' + ToolName + '" not found in ecosystem registry.');
+        WriteLn('          Verify tool name with: bvnb tools search');
+        Halt(1);
+      end;
+    end;
+
+    if DirectoryExists(DestDir) then
+    begin
+      WriteLn('  [SUCCESS] Tool "' + ToolName + '" installed successfully in ./tools/' + ToolName + '!');
+
+      if FileExists(DestDir + DirectorySeparator + 'requirements.txt') then
+      begin
+        WriteLn('');
+        WriteLn('  [+] Detected Python requirements.txt. Installing dependencies via pip...');
+        if FindPythonExecutable(PyExe, PyVer, PySource) then
+          ExecCmdInteractive('"' + PyExe + '" -m pip install -r "' + DestDir + DirectorySeparator + 'requirements.txt"', GetCurrentDir)
+        else
+          WriteLn('  [WARNING] Python executable not found. Run "bvnb setup-python" after setup.');
+      end;
+
+      if FileExists(DestDir + DirectorySeparator + 'run.py') then
+      begin
+        WriteLn('');
+        WriteLn('  Execute tool anytime via CLI:');
+        WriteLn('    bvnb tools run ' + ToolName + ' [arguments...]');
+      end;
+      WriteLn('======================================================================');
+      WriteLn('');
+    end;
+    Exit;
+  end;
+
+  if (SubCmd = 'remove') or (SubCmd = 'uninstall') or (SubCmd = 'rm') then
+  begin
+    if ToolArg = '' then
+    begin
+      WriteLn('Usage: bvnb tools remove <tool-name>');
+      Halt(1);
+    end;
+
+    if IsOfficialBuiltinTool(ToolArg, ToolDesc, MainUnit) then
+    begin
+      WriteLn('  [ERROR] "' + ToolArg + '" is a protected built-in BlaiseNotebook tool.');
+      WriteLn('          Framework built-in tools cannot be removed.');
+      Halt(1);
+    end;
+
+    DestDir := UserToolsDir + DirectorySeparator + ToolArg;
+    if not DirectoryExists(DestDir) then
+      DestDir := UserToolsDir + DirectorySeparator + 'bvnb-tool-' + ToolArg;
+
+    if not DirectoryExists(DestDir) then
+    begin
+      WriteLn('  [ERROR] Tool "' + ToolArg + '" is not installed in ./tools/');
+      Halt(1);
+    end;
+
+    WriteLn('  [+] Removing tool: ' + DestDir + '...');
+    DeleteDirRecursive(DestDir);
+    WriteLn('  [SUCCESS] Tool "' + ToolArg + '" removed successfully.');
+    Exit;
+  end;
+
+  if (SubCmd = 'create') or (SubCmd = 'new') then
+  begin
+    if ToolArg = '' then
+    begin
+      WriteLn('Usage: bvnb tools create <tool-name> [--official | --co-official]');
+      Halt(1);
+    end;
+
+    IsOfficial := False;
+    IsCoOff := False;
+    for i := 3 to ParamCount do
+    begin
+      if (ParamStr(i) = '--official') then
+        IsOfficial := True
+      else if (ParamStr(i) = '--co-official') or (ParamStr(i) = '-c') then
+        IsCoOff := True;
+    end;
+
+    if IsOfficial then
+    begin
+      if Pos('bvnb-tool-', ToolArg) <> 1 then
+        ToolName := 'bvnb-tool-' + ToolArg
+      else
+        ToolName := ToolArg;
+      DestDir := ToolsDir + DirectorySeparator + ToolName;
+    end
+    else if IsCoOff then
+    begin
+      if Pos('bvnb-tool-', ToolArg) <> 1 then
+        ToolName := 'bvnb-tool-' + ToolArg
+      else
+        ToolName := ToolArg;
+      DestDir := UserToolsDir + DirectorySeparator + ToolName;
+    end
+    else
+    begin
+      ToolName := ToolArg;
+      DestDir := UserToolsDir + DirectorySeparator + ToolArg;
+    end;
+
+    if DirectoryExists(DestDir) then
+    begin
+      WriteLn('  [ERROR] Directory already exists: ' + DestDir);
+      Halt(1);
+    end;
+
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('  BlaiseNotebook Developer Tool Scaffolder (bvnb tools create)');
+    WriteLn('======================================================================');
+    WriteLn('  Name:           ', ToolName);
+    if IsOfficial then
+      WriteLn('  Classification: [Official Built-in Framework Tool]')
+    else if IsCoOff then
+      WriteLn('  Classification: [Co-Official Ecosystem Tool]')
+    else
+      WriteLn('  Classification: [Community Third-Party Tool]');
+    WriteLn('  Target Dir:     ', DestDir);
+    WriteLn('======================================================================');
+    WriteLn('');
+
+    ForceDirectories(DestDir);
+    ForceDirectories(DestDir + DirectorySeparator + 'doc');
+    ForceDirectories(DestDir + DirectorySeparator + 'examples');
+
+    UnitName := 'u' + UpperCase(Copy(ToolArg, 1, 1)) + Copy(ToolArg, 2, MaxInt);
+    UnitName := StringReplace(UnitName, '-', '_', [rfReplaceAll]);
+
+    // 1. Tool Pascal Unit
+    Lines := TStringList.Create;
+    try
+      Lines.Add('unit ' + UnitName + ';');
+      Lines.Add('');
+      Lines.Add('{$mode objfpc}{$H+}');
+      Lines.Add('');
+      Lines.Add('interface');
+      Lines.Add('');
+      Lines.Add('uses');
+      Lines.Add('  SysUtils, Classes;');
+      Lines.Add('');
+      Lines.Add('function ' + UnitName + 'Info: string;');
+      Lines.Add('function ' + UnitName + 'Execute(const AParams: string): Boolean;');
+      Lines.Add('');
+      Lines.Add('implementation');
+      Lines.Add('');
+      Lines.Add('function ' + UnitName + 'Info: string;');
+      Lines.Add('begin');
+      Lines.Add('  Result := ''Tool ' + ToolName + ' v1.0.0 (Ready)'';');
+      Lines.Add('end;');
+      Lines.Add('');
+      Lines.Add('function ' + UnitName + 'Execute(const AParams: string): Boolean;');
+      Lines.Add('begin');
+      Lines.Add('  Writeln(''[' + ToolName + '] Executing with params: '', AParams);');
+      Lines.Add('  Result := True;');
+      Lines.Add('end;');
+      Lines.Add('');
+      Lines.Add('end.');
+      Lines.SaveToFile(DestDir + DirectorySeparator + UnitName + '.pas');
+    finally
+      Lines.Free;
+    end;
+
+    // 2. tool.json manifest
+    ManifestLines := TStringList.Create;
+    try
+      ManifestLines.Add('{');
+      ManifestLines.Add('  "name": "' + ToolName + '",');
+      ManifestLines.Add('  "version": "1.0.0",');
+      ManifestLines.Add('  "description": "Auxiliary tool ' + ToolName + ' for BlaiseNotebook",');
+      ManifestLines.Add('  "author": "BlaiseNotebook Developer",');
+      ManifestLines.Add('  "license": "Modified LGPL v2.1 with Static Linking Exception",');
+      ManifestLines.Add('  "main": "' + UnitName + '.pas",');
+      ManifestLines.Add('  "bin": "run.py",');
+      ManifestLines.Add('  "category": "tool",');
+      ManifestLines.Add('  "keywords": ["' + ToolArg + '", "tool", "blaisenotebook"]');
+      ManifestLines.Add('}');
+      ManifestLines.SaveToFile(DestDir + DirectorySeparator + 'tool.json');
+    finally
+      ManifestLines.Free;
+    end;
+
+    // 3. run.py runner script
+    Lines := TStringList.Create;
+    try
+      Lines.Add('#!/usr/bin/env python3');
+      Lines.Add('"""');
+      Lines.Add('CLI Runner for ' + ToolName);
+      Lines.Add('Invoked via: bvnb tools run ' + ToolArg + ' [args...]');
+      Lines.Add('"""');
+      Lines.Add('import sys');
+      Lines.Add('');
+      Lines.Add('def main():');
+      Lines.Add('    print(f"=== [' + ToolName + ' Runner] ===")');
+      Lines.Add('    args = sys.argv[1:]');
+      Lines.Add('    if args:');
+      Lines.Add('        arg_str = " ".join(args)');
+      Lines.Add('        print(f"Arguments received ({len(args)}): {arg_str}")');
+      Lines.Add('    else:');
+      Lines.Add('        print("No arguments provided. Running default routine...")');
+      Lines.Add('    print("Tool task completed successfully.")');
+      Lines.Add('');
+      Lines.Add('if __name__ == "__main__":');
+      Lines.Add('    main()');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'run.py');
+    finally
+      Lines.Free;
+    end;
+
+    // 4. README.md
+    Lines := TStringList.Create;
+    try
+      Lines.Add('# 🛠️ ' + ToolName);
+      Lines.Add('');
+      Lines.Add('Auxiliary tool for the BlaiseNotebook environment.');
+      Lines.Add('');
+      Lines.Add('## Direct CLI Execution');
+      Lines.Add('```bash');
+      Lines.Add('bvnb tools run ' + ToolArg + ' --help');
+      Lines.Add('```');
+      Lines.Add('');
+      Lines.Add('## Notebook Usage');
+      Lines.Add('```pascal');
+      Lines.Add('uses');
+      Lines.Add('  BlaiseOutput,');
+      Lines.Add('  ' + UnitName + ';');
+      Lines.Add('');
+      Lines.Add('begin');
+      Lines.Add('  Writeln(' + UnitName + 'Info());');
+      Lines.Add('  ' + UnitName + 'Execute(''default-pipeline'');');
+      Lines.Add('end;');
+      Lines.Add('```');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'README.md');
+    finally
+      Lines.Free;
+    end;
+
+    // 5. doc/tool_guide.md
+    Lines := TStringList.Create;
+    try
+      Lines.Add('# 📖 ' + ToolName + ' User Guide');
+      Lines.Add('');
+      Lines.Add('Technical manual and documentation for ' + ToolName + '.');
+      Lines.Add('');
+      Lines.Add('## Capabilities');
+      Lines.Add('* Direct CLI execution via `bvnb tools run`.');
+      Lines.Add('* Native Pascal integration in notebook cells via `' + UnitName + '`.');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'doc' + DirectorySeparator + 'tool_guide.md');
+    finally
+      Lines.Free;
+    end;
+
+    // 6. examples/demo.bynb
+    Lines := TStringList.Create;
+    try
+      Lines.Add('{');
+      Lines.Add('  "metadata": {');
+      Lines.Add('    "name": "demo_' + ToolArg + '",');
+      Lines.Add('    "framework": "BlaiseNotebook",');
+      Lines.Add('    "engine": "Synopse mORMot 2 + Free Pascal + Python",');
+      Lines.Add('    "license": "Modified LGPL v2.1 with Static Linking Exception",');
+      Lines.Add('    "created_at": "2026-11-13T00:00:00.000Z"');
+      Lines.Add('  },');
+      Lines.Add('  "cells": [');
+      Lines.Add('    {');
+      Lines.Add('      "id": "cell_1",');
+      Lines.Add('      "type": "markdown",');
+      Lines.Add('      "source": "# 🛠️ Tool Demo: ' + ToolName + '\nThis notebook demonstrates using ' + UnitName + ' from `./tools/`.",');
+      Lines.Add('      "execution_count": 0,');
+      Lines.Add('      "status": "idle",');
+      Lines.Add('      "execution_time_ms": 0,');
+      Lines.Add('      "outputs": []');
+      Lines.Add('    },');
+      Lines.Add('    {');
+      Lines.Add('      "id": "cell_2",');
+      Lines.Add('      "type": "code",');
+      Lines.Add('      "source": "uses\n  BlaiseOutput,\n  ' + UnitName + ';\n\nbegin\n  Writeln(' + UnitName + 'Info());\n  ' + UnitName + 'Execute(''dataset-test'');\nend;",');
+      Lines.Add('      "execution_count": 0,');
+      Lines.Add('      "status": "idle",');
+      Lines.Add('      "execution_time_ms": 0,');
+      Lines.Add('      "outputs": []');
+      Lines.Add('    }');
+      Lines.Add('  ]');
+      Lines.Add('}');
+      Lines.SaveToFile(DestDir + DirectorySeparator + 'examples' + DirectorySeparator + 'demo_' + ToolArg + '.bynb');
+    finally
+      Lines.Free;
+    end;
+
+    WriteLn('  [SUCCESS] Tool scaffolded successfully!');
+    WriteLn('    * Pascal Unit: ' + DestDir + DirectorySeparator + UnitName + '.pas');
+    WriteLn('    * Manifest:    ' + DestDir + DirectorySeparator + 'tool.json');
+    WriteLn('    * CLI Runner:  ' + DestDir + DirectorySeparator + 'run.py');
+    WriteLn('    * README:      ' + DestDir + DirectorySeparator + 'README.md');
+    WriteLn('    * Docs:        ' + DestDir + DirectorySeparator + 'doc' + DirectorySeparator + 'tool_guide.md');
+    WriteLn('    * Demo:        ' + DestDir + DirectorySeparator + 'examples' + DirectorySeparator + 'demo_' + ToolArg + '.bynb');
+    WriteLn('');
+    WriteLn('======================================================================');
+    WriteLn('');
+    Exit;
+  end;
+
+  WriteLn('Unknown tools sub-command: "', SubCmd, '". Use "list", "search", "info", "run", "install", "remove", or "create".');
 end;
 
 // =====================================================================
@@ -2005,7 +2829,9 @@ begin
   WriteLn('  bvnb self-update [--check]   Syncs & rebuilds BlaiseNotebook directly from GitHub via Git (--force)');
   WriteLn('  bvnb channel [use <name>]    Inspects or switches repository branch (main | develop)');
   WriteLn('  bvnb rollback                Restores previous working CLI binary from persistent backup');
-  WriteLn('  bvnb pkg <list|search|...>   Manages official and community packages & tools');
+  WriteLn('  # === Package & Tool Management ===');
+  WriteLn('  bvnb pkg <list|search|info|install|remove|create>   Manages computational packages (alias: lib)');
+  WriteLn('  bvnb tools <list|search|info|run|install|create>    Manages auxiliary workflow tools (alias: tool)');
   WriteLn('');
   WriteLn('  # === Build, Execution & Process Management ===');
   WriteLn('  bvnb build                   Compiles Frontend SPA + Native mORMot 2 Server');
@@ -2037,6 +2863,8 @@ begin
     CmdRollback
   else if (Cmd = 'pkg') or (Cmd = 'package') or (Cmd = 'packages') or (Cmd = 'lib') then
     CmdPackage
+  else if (Cmd = 'tools') or (Cmd = 'tool') or (Cmd = 'extension') or (Cmd = 'extensions') then
+    CmdTools
   else if (Cmd = 'build') or (Cmd = 'compile') then
     CmdBuild
   else if (Cmd = 'run') or (Cmd = 'start') or (Cmd = 'serve') then
