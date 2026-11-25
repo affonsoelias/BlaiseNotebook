@@ -22,6 +22,9 @@ temp_lib.zip
 *.dbg
 *.compiled
 *.or
+ppas.bat
+ppas.sh
+link*.res
 
 # Server build outputs
 server/bin/

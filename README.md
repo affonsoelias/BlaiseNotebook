@@ -20,7 +20,7 @@ By unifying the reactive Single File Component architecture of **BlaiseVue**, ha
 - 📋 **Interactive DataGrid Pro**: Render tabular datasets with interactive column sorting (numerical and alphabetical), instant in-memory multi-column search, flexible pagination (10, 25, 50, 100 rows), and one-click CSV export ("📋 Copy CSV" and "💾 Download CSV").
 - 📊 **One-Click Dashboard View (Streamlit / Voila Style)**: Toggle between code development and an executive presentation layout with a single click on **`📊 Dashboard View`**. Technical code editors, gutters, and helper cells are cleanly hidden, highlighting only executive Markdown prose, interactive charts, and DataGrid Pro tables.
 - ⠿ **Fluid Drag & Drop Cell Reordering**: Reorder Pascal code and Markdown cells smoothly via the `⠿` drag handle with live animated drop slots and full Undo (`Ctrl+Z`) support.
-- 📦 **Modular Extensibility & In-Cell `%pip install`**: Extensible package system (`packages/core/` and `packages/external/`) with dynamic discovery and instant pip package installation directly inside code cells.
+- 📦 **Modular Extensibility & In-Cell `%pip install`**: Extensible package system (`packages/core/` and `packages/external/`, powered by [blaiseNotebook-ecosystem](https://github.com/affonsoelias/blaiseNotebook-ecosystem)) with dynamic discovery and instant pip package installation directly inside code cells.
 - 📈 **Hardware-Accelerated Reactive Plots**: Generate Line, Bar, Scatter, and Pie charts directly from Pascal methods (`DF.PlotLine`, `DF.PlotBar`, `DF.PlotScatter`, `DF.PlotPie`) with sequential multi-output stacking.
 
 ---
@@ -165,6 +165,13 @@ Inspired by BlaiseVue's `bv` CLI, `bvnb` provides complete lifecycle management,
 ## 🗺️ Product Roadmap
 
 For the completed milestones and upcoming phases, see [ROADMAP.md](ROADMAP.md).
+
+---
+
+## 🌐 Ecosystem & Companion Repositories
+
+- 📦 **[BlaiseNotebook Ecosystem (`affonsoelias/blaiseNotebook-ecosystem`)](https://github.com/affonsoelias/blaiseNotebook-ecosystem)** — Official community registry, external scientific packages, and developer tools for BlaiseNotebook (`bvnb pkg` / `bvnb tools`).
+- 🛡️ **[BlaiseVue (`affonsoelias/BlaiseVue`)](https://github.com/affonsoelias/BlaiseVue)** — The universal Object Pascal reactive framework powering BlaiseNotebook's frontend.
 
 ---
 
